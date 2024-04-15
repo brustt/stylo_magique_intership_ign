@@ -1,0 +1,13 @@
+name: magic_pen
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pytorch=2.0.0
+  - torchvision=0.15
+  - ca-certificates
+  - openssl
+  - jupyterlab-lsp
+  - jupyterlab[version='>=4.1.0,<5.0.0a0']
+  - jupyter-lsp-python
+  - certifi
