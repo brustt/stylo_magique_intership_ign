@@ -12,3 +12,10 @@ levirCD_path = Path(root_data_path, "levir-cd")
 model_path = Path(project_path, "models")
 sam_model_path = Path(model_path, "sam")
 sam_model_large = Path(sam_model_path, "sam_vit_h_4b8939.pth")
+
+
+
+### constants
+
+SEED = 12
+DEVICE="cuda"
