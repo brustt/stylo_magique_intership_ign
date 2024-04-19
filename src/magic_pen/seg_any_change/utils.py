@@ -4,8 +4,19 @@ import os
 from magic_pen.config import levirCD_path, SEED
 from pathlib import Path
 import numpy as np
+import skimage.io as io
+import matplotlib.pyplot as plt
 
 from magic_pen.io import make_path
+
+def load_img(img_path):
+    img = io.imread(img_path)
+    return img
+
+def show_img(img, show_axis=False):
+    io.imshow(img)
+    if not show_axis:
+        plt.axis("off")
 
 def load_levircd_sample(size: Union[int, float, Any]=None, data_type="train", seed=SEED) -> pd.DataFrame:
     """Sample levir-cd pair images with change label (paths)
