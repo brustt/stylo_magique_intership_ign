@@ -181,6 +181,8 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
         # Iterate over image crops
         data = MaskData()
         for crop_box, layer_idx in zip(crop_boxes, layer_idxs):
+            print("== process crops ==")
+
             crop_data = self._process_crop(image, crop_box, layer_idx, orig_size)
             data.cat(crop_data)
 
@@ -220,6 +222,9 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
         # Generate masks for this crop in batches
         data = MaskData()
         for (points,) in batch_iterator(self.points_per_batch, points_for_image):
+            
+            print(f"== process batch for point : {points} ==")
+
             batch_data = self._process_batch(points, cropped_im_size, crop_box, orig_size)
             data.cat(batch_data)
             del batch_data
@@ -239,5 +244,78 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
         data["boxes"] = uncrop_boxes_xyxy(data["boxes"], crop_box)
         data["points"] = uncrop_points(data["points"], crop_box)
         data["crop_boxes"] = torch.tensor([crop_box for _ in range(len(data["rles"]))])
+
+        return data
+
+    def _process_batch(
+        self,
+        points: np.ndarray,
+        im_size: Tuple[int, ...],
+        crop_box: List[int],
+        orig_size: Tuple[int, ...],
+    ) -> MaskData:
+        orig_h, orig_w = orig_size
+
+        # Run model on this batch
+        transformed_points = self.predictor.transform.apply_coords(points, im_size)
+        in_points = torch.as_tensor(transformed_points, device=self.predictor.device)
+        in_labels = torch.ones(in_points.shape[0], dtype=torch.int, device=in_points.device)
+        # masks : 64 x 3 x 1024 x 1024
+        masks, iou_preds, _ = self.predictor.predict_torch(
+            in_points[:, None, :],
+            in_labels[:, None],
+            multimask_output=True,
+            return_logits=True,
+        )
+        print("------")
+        print(f"Output predict masks torch : {masks.shape}")
+
+        # Serialize predictions and store in MaskData
+        data = MaskData(
+            masks=masks.flatten(0, 1),
+            iou_preds=iou_preds.flatten(0, 1),
+            points=torch.as_tensor(points.repeat(masks.shape[1], axis=0)),
+        )
+        del masks
+            
+        print(f"""init  masks data: {len(data["masks"])}""")
+
+
+        # Filter by predicted IoU
+        if self.pred_iou_thresh > 0.0:
+            keep_mask = data["iou_preds"] > self.pred_iou_thresh
+            data.filter(keep_mask)
+          
+        print(f"""Output filter IoU masks data: {len(data["masks"])}""")
+
+
+        # Calculate stability score
+        data["stability_score"] = calculate_stability_score(
+            data["masks"], self.predictor.model.mask_threshold, self.stability_score_offset
+        )
+        if self.stability_score_thresh > 0.0:
+            keep_mask = data["stability_score"] >= self.stability_score_thresh
+            data.filter(keep_mask)
+        
+        print(f"""Output filter stability masks data: {len(data["masks"])}""")
+        print(f""" mask data : {data["masks"][0].shape if len(data["masks"]) > 0 else "empty masks"}""")
+
+        # Threshold masks and calculate boxes
+        data["masks"] = data["masks"] > self.predictor.model.mask_threshold
+        data["boxes"] = batched_mask_to_box(data["masks"])
+
+        print(f"""Output filter mask_threshold: {len(data["masks"])}""")
+
+
+        # Filter boxes that touch crop boundaries
+        keep_mask = ~is_box_near_crop_edge(data["boxes"], crop_box, [0, 0, orig_w, orig_h])
+        if not torch.all(keep_mask):
+            data.filter(keep_mask)
+        print(f"""Output filter boundary {len(data["masks"])}""")
+
+        # Compress to RLE
+        data["masks"] = uncrop_masks(data["masks"], crop_box, orig_h, orig_w)
+        data["rles"] = mask_to_rle_pytorch(data["masks"])
+        del data["masks"]
 
         return data

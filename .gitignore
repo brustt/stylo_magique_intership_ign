@@ -176,3 +176,5 @@ models/*
 
 *.tif
 *.tiff
+
+.virtual_documents/
