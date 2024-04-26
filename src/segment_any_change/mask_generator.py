@@ -94,7 +94,8 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
             For large resolutions, 'binary_mask' may consume large amounts of
             memory.
         """
-        super().__init__(model,
+        super().__init__(
+            model,
             points_per_side,
             points_per_batch,
             pred_iou_thresh,
@@ -107,9 +108,8 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
             crop_n_points_downscale_factor,
             point_grids,
             min_mask_region_area,
-            output_mode)
-
-
+            output_mode,
+        )
 
     @torch.no_grad()
     def generate(self, image: np.ndarray) -> List[Dict[str, Any]]:
@@ -150,7 +150,9 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
 
         # Encode masks
         if self.output_mode == "coco_rle":
-            mask_data["segmentations"] = [coco_encode_rle(rle) for rle in mask_data["rles"]]
+            mask_data["segmentations"] = [
+                coco_encode_rle(rle) for rle in mask_data["rles"]
+            ]
         elif self.output_mode == "binary_mask":
             mask_data["segmentations"] = [rle_to_mask(rle) for rle in mask_data["rles"]]
         else:
@@ -222,14 +224,16 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
         # Generate masks for this crop in batches
         data = MaskData()
         for (points,) in batch_iterator(self.points_per_batch, points_for_image):
-            
+
             print(f"== process batch for point : {len(points)} ==")
 
-            batch_data = self._process_batch(points, cropped_im_size, crop_box, orig_size)
+            batch_data = self._process_batch(
+                points, cropped_im_size, crop_box, orig_size
+            )
             data.cat(batch_data)
             del batch_data
-        
-        #self.predictor.reset_image()
+
+        # self.predictor.reset_image()
 
         # Remove duplicates within this crop.
         keep_by_nms = batched_nms(
@@ -259,7 +263,9 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
         # Run model on this batch
         transformed_points = self.predictor.transform.apply_coords(points, im_size)
         in_points = torch.as_tensor(transformed_points, device=self.predictor.device)
-        in_labels = torch.ones(in_points.shape[0], dtype=torch.int, device=in_points.device)
+        in_labels = torch.ones(
+            in_points.shape[0], dtype=torch.int, device=in_points.device
+        )
         # masks : 64 x 3 x 1024 x 1024
         masks, iou_preds, _ = self.predictor.predict_torch(
             in_points[:, None, :],
@@ -277,25 +283,26 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
             points=torch.as_tensor(points.repeat(masks.shape[1], axis=0)),
         )
         del masks
-            
+
         print(f"""init  masks data: {len(data["masks"])}""")
 
         # Filter by predicted IoU
         if self.pred_iou_thresh > 0.0:
             keep_mask = data["iou_preds"] > self.pred_iou_thresh
             data.filter(keep_mask)
-          
-        print(f"""Output filter IoU masks data: {len(data["masks"])}""")
 
+        print(f"""Output filter IoU masks data: {len(data["masks"])}""")
 
         # Calculate stability score
         data["stability_score"] = calculate_stability_score(
-            data["masks"], self.predictor.model.mask_threshold, self.stability_score_offset
+            data["masks"],
+            self.predictor.model.mask_threshold,
+            self.stability_score_offset,
         )
         if self.stability_score_thresh > 0.0:
             keep_mask = data["stability_score"] >= self.stability_score_thresh
             data.filter(keep_mask)
-        
+
         print(f"""Output filter stability masks data: {len(data["masks"])}""")
 
         # Threshold masks and calculate boxes
@@ -304,9 +311,10 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
 
         print(f"""Output filter mask_threshold: {len(data["masks"])}""")
 
-
         # Filter boxes that touch crop boundaries
-        keep_mask = ~is_box_near_crop_edge(data["boxes"], crop_box, [0, 0, orig_w, orig_h])
+        keep_mask = ~is_box_near_crop_edge(
+            data["boxes"], crop_box, [0, 0, orig_w, orig_h]
+        )
         if not torch.all(keep_mask):
             data.filter(keep_mask)
         print(f"""Output filter boundary {len(data["masks"])}""")

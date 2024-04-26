@@ -13,14 +13,10 @@ model_path = Path(project_path, "models")
 sam_model_path = Path(model_path, "sam")
 sam_model_large = Path(sam_model_path, "sam_vit_h_4b8939.pth")
 sam_model_small = Path(sam_model_path, "sam_vit_b_01ec64.pth")
-sam_dict_checkpoint = {
-    "vit_h":sam_model_large,
-    "vit_b":sam_model_small
-
-}
+sam_dict_checkpoint = {"vit_h": sam_model_large, "vit_b": sam_model_small}
 
 
 ### constants
 
 SEED = 12
-DEVICE="cuda"
+DEVICE = "cuda"

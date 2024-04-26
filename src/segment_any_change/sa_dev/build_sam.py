@@ -8,11 +8,19 @@ import torch
 
 from functools import partial
 
-from .modeling import ImageEncoderViT, MaskDecoder, PromptEncoder, Sam, TwoWayTransformer
+from .modeling import (
+    ImageEncoderViT,
+    MaskDecoder,
+    PromptEncoder,
+    Sam,
+    TwoWayTransformer,
+)
 import logging
-logging.basicConfig(format='%(asctime)s - %(levelname)s ::  %(message)s')
+
+logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 def build_sam_vit_h(checkpoint=None):
     return _build_sam(
@@ -63,7 +71,7 @@ def _build_sam(
     encoder_global_attn_indexes,
     checkpoint=None,
 ):
-    
+
     prompt_embed_dim = 256
     image_size = 1024
     vit_patch_size = 16

@@ -8,6 +8,5 @@ setup(
     description="change detection segmnentation with user prompt",
     author="martin dzr",
     license="Apache License 2.0",
-    install_requires= ["python-dotenv"]
-    
+    install_requires=["python-dotenv"],
 )
