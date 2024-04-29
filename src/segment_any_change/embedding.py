@@ -11,6 +11,8 @@ def compute_mask_embedding(mask: np.ndarray, img_embedding: np.ndarray) -> np.nd
     - map img embedding to mask value
     - aggregate over not-nan values
 
+    Notes : we could use directly low_res_mask (logits) from Sam Class => 256x256 logits mask
+
     Args:
         mask (np.ndarray): _description_
         img_embedding (np.ndarray): _description_

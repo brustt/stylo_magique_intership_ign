@@ -11,7 +11,7 @@ from segment_any_change.mask_items import (
 )
 
 
-def neg_cosine_sim(x1, x2):
+def neg_cosine_sim(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
     return -(x1 @ x2) / (np.linalg.norm(x1) * np.linalg.norm(x2))
 
 
@@ -86,3 +86,5 @@ def proposal_matching(
             filter_items.add_item(insert_item)
 
     return filter_items
+
+

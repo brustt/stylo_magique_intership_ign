@@ -1,7 +1,7 @@
 from enum import Enum
 import itertools
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 import numpy as np
 from skimage.filters import threshold_otsu
 from segment_any_change.utils import to_degre
@@ -19,10 +19,11 @@ class ItemProposal:
     """
 
     mask: np.ndarray
+    embedding: np.ndarray
     confidence_score: float
     id: int = field(
         default_factory=itertools.count().__next__, init=False
-    )  # check how it works
+    )
     meta: List[Dict]
     chgt_angle: float = None
     from_img: List[ImgType] = None
@@ -31,6 +32,9 @@ class ItemProposal:
         if self.chgt_angle is None:
             self.chgt_angle = to_degre(self.confidence_score)
 
+    # not sure it's the best way with dataclass
+    def setter(self, varname, value):
+            return setattr(self, varname, value)
 
 @dataclass
 class ListProposal:
@@ -63,18 +67,23 @@ class ListProposal:
     def __len__(self) -> int:
         return len(self.items)
 
-    def apply_change_filtering(self, method: str, **kwargs) -> List[ItemProposal]:
+    def apply_change_filtering(self, method: str, **kwargs) -> Any:
         method_factory = {"otsu": apply_otsu}
         if method not in method_factory:
             raise ValueError(
                 f"Please provide valid filtering method : {list(method_factory)}"
             )
         return method_factory[method](self.items, **kwargs)
-
+    
+    def update_field(self, field, values: List[Any]):
+        if len(values) != len(self.items):
+            raise ValueError("Values length and ListProposal length should be the same")
+        for i, v in enumerate(values):
+            self.items[i].setter(field, v)
 
 def apply_otsu(items: List[ItemProposal]) -> List[ItemProposal]:
     th = threshold_otsu(np.array([_.chgt_angle for _ in items]))
-    return [item for item in items if item.chgt_angle > th]
+    return ListProposal([item for item in items if item.chgt_angle > th])
 
 
 def create_union_object(item_A: ItemProposal, item_B: ItemProposal) -> ItemProposal:
@@ -98,11 +107,12 @@ def create_union_object(item_A: ItemProposal, item_B: ItemProposal) -> ItemPropo
         meta=([item_A.meta] + [item_B.meta]),
         chgt_angle=np.mean([item_A.chgt_angle, item_B.chgt_angle]),
         from_img=[item_A.from_img, item_B.from_img],
+        embedding=np.mean([item_A.embedding, item_B.embedding], axis=0)
     )
 
 
 def create_change_proposal_items(
-    masks: List[Dict], ci: List[float], type_img: ImgType
+    masks: List[Dict], ci: List[float], type_img: ImgType, embeddings: np.ndarray
 ) -> List[ItemProposal]:
     meta = [{k: v for k, v in it.items() if k != "segmentation"} for it in masks]
     return [
@@ -111,7 +121,8 @@ def create_change_proposal_items(
             confidence_score=c,
             meta=meta,
             from_img=type_img,
+            embedding=emb
         )
-        for mA, c in zip(masks, ci)
+        for mA, c, emb in zip(masks, ci, embeddings)
         if not np.isnan(c)
     ]
