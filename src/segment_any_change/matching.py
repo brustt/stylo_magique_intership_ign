@@ -86,5 +86,3 @@ def proposal_matching(
             filter_items.add_item(insert_item)
 
     return filter_items
-
-

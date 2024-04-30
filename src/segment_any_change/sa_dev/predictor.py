@@ -150,8 +150,6 @@ class SamPredictor:
             labels_torch = torch.as_tensor(
                 point_labels, dtype=torch.int, device=self.device
             )
-            print(coords_torch.shape)
-            print(labels_torch.shape)
             coords_torch, labels_torch = coords_torch[None, :, :], labels_torch[None, :]
         if box is not None:
             box = self.transform.apply_boxes(box, self.original_size)

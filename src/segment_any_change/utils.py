@@ -7,6 +7,15 @@ from magic_pen.io import load_levircd_sample
 from segment_any_change.sa_dev import sam_model_registry
 from magic_pen.config import DEVICE, sam_dict_checkpoint
 import time
+from collections.abc import Iterable
+
+
+def flush_memory():
+    import gc
+    import torch
+
+    gc.collect()
+    torch.cuda.empty_cache()
 
 
 def load_img_cv2(path: str):
@@ -73,6 +82,14 @@ def timeit(func):
         return result
 
     return timeit_wrapper
+
+
+def flatten(xs):
+    for x in xs:
+        if isinstance(x, Iterable) and not isinstance(x, (dict)):
+            yield from flatten(x)
+        else:
+            yield x
 
 
 if __name__ == "__main__":

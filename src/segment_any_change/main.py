@@ -1,12 +1,30 @@
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Union
 import numpy as np
-from segment_any_change.embedding import compute_mask_embedding, get_img_embedding_normed
-from segment_any_change.mask_items import ImgType, ListProposal, create_change_proposal_items
-from segment_any_change.matching import neg_cosine_sim, proposal_matching, temporal_matching
+from segment_any_change.embedding import (
+    compute_mask_embedding,
+    get_img_embedding_normed,
+)
+from segment_any_change.mask_items import (
+    FilteringType,
+    ImgType,
+    ListProposal,
+    create_change_proposal_items,
+)
+from segment_any_change.matching import (
+    neg_cosine_sim,
+    proposal_matching,
+    temporal_matching,
+)
 from segment_any_change.sa_dev.modeling.sam import Sam
 from segment_any_change.sa_dev.predictor import SamPredictor
 
-from segment_any_change.utils import load_img, load_levircd_sample, load_sam, to_degre
+from segment_any_change.utils import (
+    flush_memory,
+    load_img,
+    load_levircd_sample,
+    load_sam,
+    to_degre,
+)
 
 from segment_any_change.mask_generator import SegAnyMaskGenerator
 import logging
@@ -49,31 +67,25 @@ class BitemporalMatching:
         img_embedding_A = get_img_embedding_normed(self.mask_generator.predictor)
 
         # t -> t+1
-        x_t_mA, _, ci = temporal_matching(
-            img_embedding_A, img_embedding_B, masks_A
-        )
+        x_t_mA, _, ci = temporal_matching(img_embedding_A, img_embedding_B, masks_A)
         # t+1 -> t
-        _, x_t1_mB, ci1 = temporal_matching(
-            img_embedding_A, img_embedding_B, masks_B
-        )
+        _, x_t1_mB, ci1 = temporal_matching(img_embedding_A, img_embedding_B, masks_B)
 
         # TO DO : review nan values : object loss after resize
         print(f"nan values ci {np.sum(np.isnan(ci))}")
         print(f"nan values ci1 {np.sum(np.isnan(ci1))}")
 
-        self.items_A = create_change_proposal_items(masks=masks_A, 
-                                                    ci=ci, 
-                                                    type_img=ImgType.A,
-                                                    embeddings=x_t_mA)
-        self.items_B = create_change_proposal_items(masks=masks_B, 
-                                                    ci=ci1, 
-                                                    type_img=ImgType.B,
-                                                    embeddings=x_t1_mB)
+        self.items_A = create_change_proposal_items(
+            masks=masks_A, ci=ci, type_img=ImgType.A, embeddings=x_t_mA
+        )
+        self.items_B = create_change_proposal_items(
+            masks=masks_B, ci=ci1, type_img=ImgType.B, embeddings=x_t1_mB
+        )
 
         # filter on sim/chgt_angle before union ?
         logger.info("Proposal Matching ...")
         items_change = proposal_matching(self.items_A, self.items_B)
-        items_change = items_change.apply_change_filtering(filter_method)
+        th = items_change.apply_change_filtering(filter_method, FilteringType.Sup)
 
         return items_change
 
@@ -87,7 +99,7 @@ class BitemporalMatching:
             raise KeyError("please provide valid data type : A, B")
         if idx is None:
             return [i.mask.astype(np.uint8) for i in dict_type[temp_type]]
-        
+
 
 class PointQueryMecanism:
 
@@ -97,37 +109,64 @@ class PointQueryMecanism:
     def __init__(self, predictor: SamPredictor, items_change: ListProposal) -> None:
         self.predictor = predictor
         self.items_change = items_change
+        self.th_filtering = None
 
-    def run(self,
-            points: List[Tuple[int]], 
-            method_filtering: str,
-            image: np.ndarray=None,
-            labels: Optional[Tuple[int]]=None, 
-            multimask_output: bool=True) -> ListProposal:
-        
-        masks = self.extract_mask_from_multiple_prompt(points, image, labels, multimask_output)
+    def run(
+        self,
+        points: List[Tuple[int]],
+        method_filtering: Union[str, float],
+        image: np.ndarray = None,
+        labels: Optional[Tuple[int]] = None,
+        multimask_output: bool = True,
+    ) -> ListProposal:
+
+        masks = self.extract_mask_from_multiple_prompt(
+            points, image, labels, multimask_output
+        )
         embedding = self.extract_proposal_embedding(masks)
         self.match_changes(embedding, method_filtering)
 
         return self.items_change
 
-    def match_changes(self, 
-                      emb_proposal: np.ndarray, 
-                      method_filtering: str) -> ListProposal:
-        
-        scores_chg = [neg_cosine_sim(emb_proposal, item.embedding) for item in self.items_change]
+    def match_changes(
+        self, emb_proposal: np.ndarray, method_filtering: Union[str, float, int]
+    ) -> ListProposal:
+
+        scores_chg = [
+            neg_cosine_sim(emb_proposal, item.embedding) for item in self.items_change
+        ]
         self.items_change.update_field("confidence_score", scores_chg)
         self.items_change.update_field("chgt_angle", [to_degre(c) for c in scores_chg])
-        self.items_change.apply_change_filtering(method_filtering)
+        self.th_filtering = self.items_change.apply_change_filtering(
+            method_filtering, FilteringType.Inf
+        )
 
-    def extract_mask_from_multiple_prompt(self, 
-                            points: List[Tuple[int]], 
-                            image: np.ndarray=None,
-                            labels: Optional[Tuple[int]]=None, 
-                            multimask_output: bool=True
-                            ) -> np.ndarray:
+    def extract_mask_from_multiple_prompt(
+        self,
+        points: List[Tuple[int]],
+        image: np.ndarray = None,
+        labels: Optional[Tuple[int]] = None,
+        multimask_output: bool = True,
+    ) -> np.ndarray:
+        """Predict mask for each input points
+
+        Need to predict sequentially to avg mask embedding
+
+        Args:
+            points (List[Tuple[int]]): input points (x, y)
+            image (np.ndarray, optional): image np.ndarray. Defaults to None.
+            labels (Optional[Tuple[int]], optional): label of prompt (foreground / background). Defaults to None.
+            multimask_output (bool, optional): _description_. Defaults to True.
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            np.ndarray: _description_
+        """
 
         selected_masks = np.zeros((len(points), *self.S_MASK_EMB), dtype=np.uint8)
+
         if labels is None:
             # init point label as foreground by default
             labels = np.ones(len(points))
@@ -137,7 +176,8 @@ class PointQueryMecanism:
             if image is None:
                 raise ValueError("Please provide image to set")
             self.predictor.set_image(image)
-        
+
+        # predict mask for each prompt
         for i, input in enumerate(zip(points, labels)):
             # from demo notebook : best to keep multimask_output to True
             point, label = input
@@ -147,23 +187,26 @@ class PointQueryMecanism:
                 multimask_output=multimask_output,
             )
             # Choose the model's best mask
-            selected_masks[i,:,:] = masks[np.argmax(scores), :, :]  
-        
+            selected_masks[i, :, :] = masks[np.argmax(scores), :, :]
+
         return selected_masks
 
     def extract_proposal_embedding(self, masks: np.ndarray):
         embedding = np.zeros((len(masks), *self.S_CHGT_EMB))
-        
+
         for i in range(masks.shape[0]):
             embedding[i, :] = compute_mask_embedding(
-                            masks[i,:,:], 
-                            get_img_embedding_normed(self.predictor)
-                        )
+                masks[i, :, :], get_img_embedding_normed(self.predictor)
+            )
         # get avg of embedding mask
         embedding = np.mean(embedding, axis=0)
         return embedding
 
+
 if __name__ == "__main__":
+
+    flush_memory()
+
     pair_img = load_levircd_sample(1, seed=42)
     path_label, path_A, path_B = pair_img.iloc[0]
     # default parameters for auto-generation
@@ -183,28 +226,31 @@ if __name__ == "__main__":
         "output_mode": "binary_mask",
     }
     logger.info("==== start ====")
-    method_filtering = "otsu"
+    filter_change_proposals = "otsu"
+    filter_query_sim = 70
+
     logger.info("--- Bitemporal matching ---")
 
     matcher = BitemporalMatching(model_type="vit_b", **sam_params)
     items_change = matcher.run(
-        img_A=load_img(path_A), img_B=load_img(path_B), filter_method=method_filtering
+        img_A=load_img(path_A),
+        img_B=load_img(path_B),
+        filter_method=filter_change_proposals,
     )
     print(f"Done : {len(items_change)}")
 
-    input_points = np.array([[[130, 679]]])
+    input_points = np.array([[[272, 272]]])
     input_labels = np.array([[1]])
 
     logger.info("---Point Query Mecanism ---")
 
     sim_obj_change = PointQueryMecanism(
-                        predictor=matcher.mask_generator.predictor,
-                        items_change=items_change
-                    ).run(
-                        points=input_points,
-                        method_filtering=method_filtering,
-                        image=None,
-                        labels=input_labels
-                    )
-    
+        predictor=matcher.mask_generator.predictor, items_change=items_change
+    ).run(
+        points=input_points,
+        method_filtering=filter_query_sim,
+        image=None,
+        labels=input_labels,
+    )
+
     print(f"Done : {len(sim_obj_change)}")
