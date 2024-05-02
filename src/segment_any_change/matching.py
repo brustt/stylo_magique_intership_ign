@@ -62,7 +62,9 @@ def cover_same_zone(mask_1, mask_2, th=0.6) -> bool:
 def proposal_matching(
     items_A: ItemProposal, items_B: ItemProposal, th_union: float = 0.6
 ) -> ListProposal:
-    """Iterative masks fusion based on IoU treshold
+    """Iterative masks fusion based on IoU treshold.
+    
+    Not optimal : lack some fusions
 
     Args:
         items_A (ItemProposal): items computed from img A masks

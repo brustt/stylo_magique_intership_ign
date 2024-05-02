@@ -24,6 +24,7 @@ from segment_any_change.utils import (
     load_levircd_sample,
     load_sam,
     to_degre,
+    timeit
 )
 
 from segment_any_change.mask_generator import SegAnyMaskGenerator
@@ -42,6 +43,7 @@ class BitemporalMatching:
         self.items_A = None
         self.items_B = None
 
+    @timeit
     def run(
         self, img_A: np.ndarray, img_B: np.ndarray, filter_method: str, **params
     ) -> Any:
@@ -111,12 +113,13 @@ class PointQueryMecanism:
         self.items_change = items_change
         self.th_filtering = None
 
+    @timeit
     def run(
         self,
-        points: List[Tuple[int]],
+        points: np.ndarray,
         method_filtering: Union[str, float],
         image: np.ndarray = None,
-        labels: Optional[Tuple[int]] = None,
+        labels: Optional[np.ndarray] = None,
         multimask_output: bool = True,
     ) -> ListProposal:
 
@@ -143,29 +146,26 @@ class PointQueryMecanism:
 
     def extract_mask_from_multiple_prompt(
         self,
-        points: List[Tuple[int]],
+        points: np.ndarray,
         image: np.ndarray = None,
-        labels: Optional[Tuple[int]] = None,
+        labels: Optional[np.ndarray] = None,
         multimask_output: bool = True,
     ) -> np.ndarray:
         """Predict mask for each input points
 
-        Need to predict sequentially to avg mask embedding
+        To DO : batch inference with .predict_torch()
 
         Args:
-            points (List[Tuple[int]]): input points (x, y)
-            image (np.ndarray, optional): image np.ndarray. Defaults to None.
-            labels (Optional[Tuple[int]], optional): label of prompt (foreground / background). Defaults to None.
-            multimask_output (bool, optional): _description_. Defaults to True.
-
-        Raises:
-            ValueError: _description_
+            points (np.ndarray): input points (x, y) - shape : (N, 1, 2)
+            image (np.ndarray, optional): image np.ndarray. Defaults to None. 
+            labels (Optional[Tuple[int]], optional): label of prompt (foreground / background). Defaults to None. shape : (N, 1, 2)
+            multimask_output (bool, optional): output multimask for a prompt. Defaults to True (recommanded).
 
         Returns:
-            np.ndarray: _description_
+            np.ndarray: masks for objects NxHxW
         """
 
-        selected_masks = np.zeros((len(points), *self.S_MASK_EMB), dtype=np.uint8)
+        selected_masks = np.zeros((points.shape[0], *self.S_MASK_EMB), dtype=np.uint8)
 
         if labels is None:
             # init point label as foreground by default
@@ -178,6 +178,7 @@ class PointQueryMecanism:
             self.predictor.set_image(image)
 
         # predict mask for each prompt
+        # TO DO :  change for batch inference : use predict_torch instead
         for i, input in enumerate(zip(points, labels)):
             # from demo notebook : best to keep multimask_output to True
             point, label = input
@@ -239,7 +240,7 @@ if __name__ == "__main__":
     )
     print(f"Done : {len(items_change)}")
 
-    input_points = np.array([[[272, 272]]])
+    input_points = np.array([[[272, 272]]]) # weird dim caused by sequential inference
     input_labels = np.array([[1]])
 
     logger.info("---Point Query Mecanism ---")
