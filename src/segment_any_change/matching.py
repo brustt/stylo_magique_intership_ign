@@ -9,6 +9,7 @@ from segment_any_change.mask_items import (
     ListProposal,
     create_union_object,
 )
+from segment_any_change.utils import timeit
 
 
 def neg_cosine_sim(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
@@ -58,7 +59,7 @@ def cover_same_zone(mask_1, mask_2, th=0.6) -> bool:
     union_area = np.sum(np.logical_or(mask_1, mask_2))
     return inter_area > (union_area * th)
 
-
+@timeit
 def proposal_matching(
     items_A: ItemProposal, items_B: ItemProposal, th_union: float = 0.6
 ) -> ListProposal:

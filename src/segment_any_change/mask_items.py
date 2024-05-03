@@ -108,7 +108,6 @@ def apply_otsu(
 def apply_th(
     items: List[ItemProposal], mode: FilteringType, th: float
 ) -> Tuple[List[ItemProposal], float]:
-    print(th)
     sup_filtering = lambda l, th: [item for item in l if item.chgt_angle >= th]
     inf_filtering = lambda l, th: [item for item in l if item.chgt_angle <= th]
 

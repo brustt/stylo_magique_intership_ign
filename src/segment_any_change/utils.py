@@ -8,7 +8,12 @@ from segment_any_change.sa_dev import sam_model_registry
 from magic_pen.config import DEVICE, sam_dict_checkpoint
 import time
 from collections.abc import Iterable
+import logging
 
+# TO DO : define globally
+logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 def flush_memory():
     import gc
@@ -78,9 +83,8 @@ def timeit(func):
         result = func(*args, **kwargs)
         end_time = time.perf_counter()
         total_time = end_time - start_time
-        print(f"Function {func.__name__}{args} {kwargs} Took {total_time:.4f} seconds")
+        logger.info(f"Function {func.__name__} Took {total_time:.4f} seconds")
         return result
-
     return timeit_wrapper
 
 

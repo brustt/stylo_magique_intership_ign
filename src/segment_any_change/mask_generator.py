@@ -30,6 +30,7 @@ from segment_any_change.sa_dev.utils.amg import (
     uncrop_masks,
     uncrop_points,
 )
+from segment_any_change.utils import timeit
 
 
 class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
@@ -110,7 +111,8 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
             min_mask_region_area,
             output_mode,
         )
-
+        
+    @timeit
     @torch.no_grad()
     def generate(self, image: np.ndarray) -> List[Dict[str, Any]]:
         """
@@ -183,7 +185,6 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
         # Iterate over image crops
         data = MaskData()
         for crop_box, layer_idx in zip(crop_boxes, layer_idxs):
-            print("== process crops ==")
 
             crop_data = self._process_crop(image, crop_box, layer_idx, orig_size)
             data.cat(crop_data)
@@ -225,7 +226,7 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
         data = MaskData()
         for (points,) in batch_iterator(self.points_per_batch, points_for_image):
 
-            print(f"== process batch for point : {len(points)} ==")
+            #print(f"== process batch for point : {len(points)} ==")
 
             batch_data = self._process_batch(
                 points, cropped_im_size, crop_box, orig_size
@@ -273,8 +274,8 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
             multimask_output=True,
             return_logits=True,
         )
-        print("------")
-        print(f"Output predict masks torch : {masks.shape}")
+        #print("------")
+        #print(f"Output predict masks torch : {masks.shape}")
 
         # Serialize predictions and store in MaskData
         data = MaskData(
@@ -284,14 +285,14 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
         )
         del masks
 
-        print(f"""init  masks data: {len(data["masks"])}""")
+        #print(f"""init  masks data: {len(data["masks"])}""")
 
         # Filter by predicted IoU
         if self.pred_iou_thresh > 0.0:
             keep_mask = data["iou_preds"] > self.pred_iou_thresh
             data.filter(keep_mask)
 
-        print(f"""Output filter IoU masks data: {len(data["masks"])}""")
+        #print(f"""Output filter IoU masks data: {len(data["masks"])}""")
 
         # Calculate stability score
         data["stability_score"] = calculate_stability_score(
@@ -303,13 +304,13 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
             keep_mask = data["stability_score"] >= self.stability_score_thresh
             data.filter(keep_mask)
 
-        print(f"""Output filter stability masks data: {len(data["masks"])}""")
+        #print(f"""Output filter stability masks data: {len(data["masks"])}""")
 
         # Threshold masks and calculate boxes
         data["masks"] = data["masks"] > self.predictor.model.mask_threshold
         data["boxes"] = batched_mask_to_box(data["masks"])
 
-        print(f"""Output filter mask_threshold: {len(data["masks"])}""")
+        #print(f"""Output filter mask_threshold: {len(data["masks"])}""")
 
         # Filter boxes that touch crop boundaries
         keep_mask = ~is_box_near_crop_edge(
@@ -317,7 +318,7 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
         )
         if not torch.all(keep_mask):
             data.filter(keep_mask)
-        print(f"""Output filter boundary {len(data["masks"])}""")
+        #print(f"""Output filter boundary {len(data["masks"])}""")
 
         # Compress to RLE
         data["masks"] = uncrop_masks(data["masks"], crop_box, orig_h, orig_w)

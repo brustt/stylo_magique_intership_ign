@@ -60,12 +60,12 @@ class BitemporalMatching:
 
         # Image B : embedding + masks
         masks_B = self.mask_generator.generate(img_B)
-        print(f"N masks B : {len(masks_B)}")
+        #print(f"N masks B : {len(masks_B)}")
         img_embedding_B = get_img_embedding_normed(self.mask_generator.predictor)
 
         # Image A : embedding + masks
         masks_A = self.mask_generator.generate(img_A)
-        print(f"N masks A : {len(masks_A)}")
+        #print(f"N masks A : {len(masks_A)}")
         img_embedding_A = get_img_embedding_normed(self.mask_generator.predictor)
 
         # t -> t+1
@@ -74,8 +74,8 @@ class BitemporalMatching:
         _, x_t1_mB, ci1 = temporal_matching(img_embedding_A, img_embedding_B, masks_B)
 
         # TO DO : review nan values : object loss after resize
-        print(f"nan values ci {np.sum(np.isnan(ci))}")
-        print(f"nan values ci1 {np.sum(np.isnan(ci1))}")
+        logger.info(f"nan values ci {np.sum(np.isnan(ci))}")
+        logger.info(f"nan values ci1 {np.sum(np.isnan(ci1))}")
 
         self.items_A = create_change_proposal_items(
             masks=masks_A, ci=ci, type_img=ImgType.A, embeddings=x_t_mA
