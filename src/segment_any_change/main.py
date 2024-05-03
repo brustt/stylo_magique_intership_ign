@@ -9,10 +9,12 @@ from segment_any_change.mask_items import (
     ImgType,
     ListProposal,
     create_change_proposal_items,
+    thresholding_factory,
 )
 from segment_any_change.matching import (
     neg_cosine_sim,
     proposal_matching,
+    semantic_change_mask,
     temporal_matching,
 )
 from segment_any_change.sa_dev.modeling.sam import Sam
@@ -85,11 +87,15 @@ class BitemporalMatching:
         )
 
         # filter on sim/chgt_angle before union ?
-        logger.info("Proposal Matching ...")
-        items_change = proposal_matching(self.items_A, self.items_B)
-        th = items_change.apply_change_filtering(filter_method, FilteringType.Sup)
+        #logger.info("Proposal Matching ...")
+        #items_change = proposal_matching(self.items_A, self.items_B)
+        items_change = ListProposal()
+        items_change.set_items(self.items_A + self.items_B)
+        items_change.set_mask_ci(semantic_change_mask(items_change, agg_func="sum"))
+        mask_ci_binary, th = thresholding_factory(items_change.mask_ci, filter_method, FilteringType.Sup)
+        #th = items_change.apply_change_filtering(filter_method, FilteringType.Sup)
 
-        return items_change
+        return items_change,  mask_ci_binary, th
 
     def get_mask_proposal(self, temp_type: ImgType, idx=None) -> List[np.ndarray]:
 

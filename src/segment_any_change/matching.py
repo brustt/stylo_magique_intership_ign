@@ -2,21 +2,21 @@ import itertools
 import cv2
 import numpy as np
 from typing import Dict, List, Tuple
-
+from deprecated import deprecated
 from segment_any_change.embedding import compute_mask_embedding
 from segment_any_change.mask_items import (
     ItemProposal,
     ListProposal,
     create_union_object,
 )
-from segment_any_change.utils import timeit
-
+from segment_any_change.utils import timeit, to_tensor
+import torch
 
 def neg_cosine_sim(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
     return -(x1 @ x2) / (np.linalg.norm(x1) * np.linalg.norm(x2))
 
 
-def temporal_matching(
+def temporal_matching(                                         
     img_embedding_A: np.ndarray, img_embedding_B: np.ndarray, masks: List[Dict]
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[float]]:
     """Compute mask embedding and confidence score for both images for some masks (mt or mt+1)
@@ -59,17 +59,41 @@ def cover_same_zone(mask_1, mask_2, th=0.6) -> bool:
     union_area = np.sum(np.logical_or(mask_1, mask_2))
     return inter_area > (union_area * th)
 
+
+def semantic_change_mask(items: List[ItemProposal], 
+                         agg_func: str="sum") -> np.ndarray:
+    
+    agg_factory = {
+        "sum": np.sum,
+        "avg": np.mean
+    }
+    if agg_func not in agg_factory:
+        raise ValueError("Please provide valid agg function")
+
+    # N x H x W
+    masks = items.masks
+    ci = items.confidence_scores
+    mask_ci = agg_factory[agg_func]((masks * ci[:, None, None]), axis=0)
+
+    return mask_ci
+
+
+def to_numpy(tensor: torch.Tensor) -> np.ndarray:
+    return tensor.detach().cpu().numpy()
+
+
 @timeit
+@deprecated
 def proposal_matching(
-    items_A: ItemProposal, items_B: ItemProposal, th_union: float = 0.6
+    items_A: List[ItemProposal], items_B: List[ItemProposal], th_union: float = 0.6
 ) -> ListProposal:
     """Iterative masks fusion based on IoU treshold.
     
     Not optimal : lack some fusions
 
     Args:
-        items_A (ItemProposal): items computed from img A masks
-        items_B (ItemProposal): items computed from img B masks
+        items_A (List[ItemProposal]): items computed from img A masks
+        items_B (List[ItemProposal]): items computed from img B masks
 
     Returns:
         ListProposal: Change proposals

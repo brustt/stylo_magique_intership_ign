@@ -1,7 +1,7 @@
 from enum import Enum
 import itertools
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 from skimage.filters import threshold_otsu
 from segment_any_change.utils import flatten, to_degre
@@ -27,6 +27,7 @@ class ItemProposal:
     embedding: np.ndarray
     confidence_score: float
     id: int = field(default_factory=itertools.count().__next__, init=False)
+    _toto: bool = field(default=True, init=False)
     meta: List[Dict]
     chgt_angle: float = None
     from_img: List[ImgType] = None
@@ -38,6 +39,14 @@ class ItemProposal:
     # not sure it's the best way with dataclass
     def setter(self, varname, value):
         return setattr(self, varname, value)
+    
+    @property
+    def toto(self) -> bool:
+        return self._toto
+    
+    @toto.setter
+    def toto(self, value: bool) -> None:
+        self._toto = value
 
 
 @dataclass
@@ -53,6 +62,7 @@ class ListProposal:
     """
 
     items: Optional[List[ItemProposal]] = None
+    mask_ci: np.ndarray = None
 
     def __post_init__(self) -> None:
         if self.items is None:
@@ -61,7 +71,20 @@ class ListProposal:
     def add_item(self, item) -> None:
         if item.id not in [_.id for _ in self.items]:
             self.items.append(item)
+    @property
+    def masks(self) -> np.ndarray:
+        return np.stack([m.mask for m in self.items])
+    
+    @property
+    def confidence_scores(self) -> np.ndarray:
+        return np.stack([m.confidence_score for m in self.items])
 
+    def set_mask_ci(self, mask: np.ndarray) -> None:
+        self.mask_ci = mask
+    
+    def set_items(self, items: List[ItemProposal]) -> None:
+        self.items = items   
+    
     def rm_item(self, id: int) -> None:
         self.items = [_ for _ in self.items if _.id != id]
 
@@ -75,8 +98,8 @@ class ListProposal:
         self, method: str, mode: FilteringType, **kwargs
     ) -> float:
         method_factory = {
-            "otsu": apply_otsu,
-            "th": apply_th,
+            "otsu": apply_otsu_items,
+            "th": apply_th_items,
         }
         if method is None:
             return None
@@ -98,14 +121,14 @@ class ListProposal:
             self.items[i].setter(field, v)
 
 
-def apply_otsu(
+def apply_otsu_items(
     items: List[ItemProposal], mode: FilteringType
 ) -> Tuple[List[ItemProposal], float]:
     th = threshold_otsu(np.array([_.chgt_angle for _ in items]))
-    return apply_th(items, mode, th)
+    return apply_th_items(items, mode, th)
 
 
-def apply_th(
+def apply_th_items(
     items: List[ItemProposal], mode: FilteringType, th: float
 ) -> Tuple[List[ItemProposal], float]:
     sup_filtering = lambda l, th: [item for item in l if item.chgt_angle >= th]
@@ -154,3 +177,38 @@ def create_change_proposal_items(
         for mA, c, emb in zip(masks, ci, embeddings)
         if not np.isnan(c)
     ]
+
+
+
+def thresholding_factory(arr: np.ndarray, method, mode: FilteringType, **kwargs):
+    method_factory = {
+        "otsu": apply_otsu,
+        "th": apply_th,
+    }
+    if method is None:
+        return None
+    if method not in method_factory and isinstance(method, str):
+        raise ValueError(
+            f"Please provide valid filtering method : {list(method_factory)}"
+        )
+    if isinstance(method, (float, int)):
+        kwargs["th"] = method
+        method = "th"
+    
+    arr, th = method_factory[method](arr, mode, **kwargs)
+    return arr, th
+
+
+def apply_otsu(
+    arr: np.ndarray, mode: FilteringType
+) -> Tuple[np.ndarray, float]:
+    th = threshold_otsu(arr)
+    return apply_th(arr, mode, th)
+
+
+def apply_th(arr:np.ndarray, mode: FilteringType, th: Union[int, float]) -> Tuple[np.ndarray, float]:
+    mode_dict = {
+        FilteringType.Inf: lambda l, th: (arr <= th).astype(np.uint8), 
+        FilteringType.Sup: lambda arr, th: (arr >= th).astype(np.uint8)
+        }
+    return (mode_dict[mode](arr, th), th)

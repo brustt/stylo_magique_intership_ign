@@ -1,4 +1,5 @@
 from functools import wraps
+from typing import Tuple, Union
 import numpy as np
 import skimage.io as io
 import matplotlib.pyplot as plt
@@ -9,6 +10,7 @@ from magic_pen.config import DEVICE, sam_dict_checkpoint
 import time
 from collections.abc import Iterable
 import logging
+import torch
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
@@ -17,10 +19,17 @@ logger.setLevel(logging.INFO)
 
 def flush_memory():
     import gc
-    import torch
 
     gc.collect()
     torch.cuda.empty_cache()
+
+
+def to_tensor(arr: np.ndarray, transpose:bool=False, dtype=torch.float, device=DEVICE) -> torch.Tensor:
+    if transpose:
+        arr = arr.transpose((2, 0, 1))
+    return torch.as_tensor(
+                arr, dtype=dtype, device=device
+            )
 
 
 def load_img_cv2(path: str):
