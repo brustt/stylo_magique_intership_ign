@@ -180,7 +180,7 @@ def create_change_proposal_items(
 
 
 
-def thresholding_factory(arr: np.ndarray, method, mode: FilteringType, **kwargs):
+def thresholding_factory(arr: np.ndarray, method, mode: FilteringType, **kwargs) -> Tuple[np.ndarray, float]:
     method_factory = {
         "otsu": apply_otsu,
         "th": apply_th,

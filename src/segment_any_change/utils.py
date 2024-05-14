@@ -1,3 +1,4 @@
+from enum import Enum
 from functools import wraps
 from typing import Tuple, Union
 import numpy as np
@@ -11,11 +12,31 @@ import time
 from collections.abc import Iterable
 import logging
 import torch
+from skimage.exposure import match_histograms
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+NPDTYPE_TO_OPENCV_DTYPE = {
+    np.uint8: cv2.CV_8U,
+    np.uint16: cv2.CV_16U,
+    np.int32: cv2.CV_32S,
+    np.float32: cv2.CV_32F,
+    np.float64: cv2.CV_64F,
+    np.dtype("uint8"): cv2.CV_8U,
+    np.dtype("uint16"): cv2.CV_16U,
+    np.dtype("int32"): cv2.CV_32S,
+    np.dtype("float32"): cv2.CV_32F,
+    np.dtype("float64"): cv2.CV_64F
+}
+
+
+class SegAnyChangeVersion(Enum):
+    RAW = "v0"
+    MAP = "v1"
+
 
 def flush_memory():
     import gc
@@ -103,6 +124,39 @@ def flatten(xs):
             yield from flatten(x)
         else:
             yield x
+
+def apply_histogram(img: np.ndarray, reference_image: np.ndarray, blend_ratio: float = 0.5) -> np.ndarray:
+    """Apply histogram matching to an image.
+    Parameters
+    ----------
+    img : np.ndarray
+        Image to apply histogram matching on.
+    reference_image : np.ndarray
+        Image to use as reference for histogram matching.
+    blend_ratio : float, optional
+        Ratio of blending between the original image and the histogram matched image, by default 0.5
+    Returns
+    -------
+    np.ndarray
+        The image with histogram matching applied.
+    """
+    if img.dtype != reference_image.dtype:
+        raise RuntimeError(
+            f"Dtype of image and reference image must be the same. Got {img.dtype} and {reference_image.dtype}"
+        )
+    reference_image = cv2.resize(reference_image, dsize=(img.shape[1], img.shape[0]))
+    channel_axis = img.ndim - 1
+    matched = match_histograms(np.squeeze(img), np.squeeze(reference_image), channel_axis=channel_axis)
+    img = cv2.addWeighted(
+        matched,
+        blend_ratio,
+        img,
+        1 - blend_ratio,
+        0,
+        dtype=NPDTYPE_TO_OPENCV_DTYPE[img.dtype],
+    )
+    return img
+
 
 
 if __name__ == "__main__":

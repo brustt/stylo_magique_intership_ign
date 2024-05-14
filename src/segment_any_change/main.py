@@ -21,6 +21,7 @@ from segment_any_change.sa_dev.modeling.sam import Sam
 from segment_any_change.sa_dev.predictor import SamPredictor
 
 from segment_any_change.utils import (
+    SegAnyChangeVersion,
     flush_memory,
     load_img,
     load_levircd_sample,
@@ -38,12 +39,14 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+
 class BitemporalMatching:
-    def __init__(self, model_type: str, **sam_kwargs) -> None:
+    def __init__(self, model_type: str, version: SegAnyChangeVersion, **sam_kwargs) -> None:
         model = load_sam(model_type)
         self.mask_generator = SegAnyMaskGenerator(model, **sam_kwargs)
         self.items_A = None
         self.items_B = None
+        self.seganyversion = version
 
     @timeit
     def run(
@@ -59,6 +62,8 @@ class BitemporalMatching:
         Returns:
             Any: _description_
         """
+
+        # apply histogram matching
 
         # Image B : embedding + masks
         masks_B = self.mask_generator.generate(img_B)
@@ -86,16 +91,19 @@ class BitemporalMatching:
             masks=masks_B, ci=ci1, type_img=ImgType.B, embeddings=x_t1_mB
         )
 
-        # filter on sim/chgt_angle before union ?
-        #logger.info("Proposal Matching ...")
-        #items_change = proposal_matching(self.items_A, self.items_B)
+        # not so clean
+        items_change_0 = None
+        if self.seganyversion == SegAnyChangeVersion.RAW:
+            #logger.info("Proposal Matching ...")
+            items_change_0 = proposal_matching(self.items_A, self.items_B)
+            th = items_change_0.apply_change_filtering(filter_method, FilteringType.Sup)
+
         items_change = ListProposal()
         items_change.set_items(self.items_A + self.items_B)
-        items_change.set_mask_ci(semantic_change_mask(items_change, agg_func="sum"))
+        items_change.set_mask_ci(semantic_change_mask(items_change, agg_func="avg"))
         mask_ci_binary, th = thresholding_factory(items_change.mask_ci, filter_method, FilteringType.Sup)
-        #th = items_change.apply_change_filtering(filter_method, FilteringType.Sup)
 
-        return items_change,  mask_ci_binary, th
+        return items_change,  mask_ci_binary, th, items_change_0
 
     def get_mask_proposal(self, temp_type: ImgType, idx=None) -> List[np.ndarray]:
 
