@@ -80,10 +80,11 @@ class TwoWayTransformer(nn.Module):
           torch.Tensor: the processed image_embedding
         """
         # BxCxHxW -> BxHWxC == B x N_image_tokens x C
-        bs, c, h, w = image_embedding.shape
-        image_embedding = image_embedding.flatten(2).permute(0, 2, 1)
-        image_pe = image_pe.flatten(2).permute(0, 2, 1)
-
+        #bs, c, h, w = image_embedding.shape
+        # Rustt edit for images batch
+        image_embedding = image_embedding.flatten(0, 1).flatten(2).permute(0, 2, 1)
+        image_pe = image_pe.flatten(0, 1).flatten(2).permute(0, 2, 1)
+        point_embedding = point_embedding.flatten(0, 1)
         # Prepare queries
         queries = point_embedding
         keys = image_embedding

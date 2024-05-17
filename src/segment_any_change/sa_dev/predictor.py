@@ -237,6 +237,9 @@ class SamPredictor:
             masks=mask_input,
         )
 
+        print(f"sparse emb : {sparse_embeddings.shape}")
+        print(f"dense emb : {dense_embeddings.shape}")
+
         # Predict masks
         low_res_masks, iou_predictions = self.model.mask_decoder(
             image_embeddings=self.features,
@@ -246,10 +249,13 @@ class SamPredictor:
             multimask_output=multimask_output,
         )
 
+        print(f"low mask  predict torch : {low_res_masks.shape}")
+
         # Upscale the masks to the original image resolution
         masks = self.model.postprocess_masks(
             low_res_masks, self.input_size, self.original_size
         )
+        print(f"low mask  predict torch : {masks.shape}")
 
         if not return_logits:
             masks = masks > self.model.mask_threshold

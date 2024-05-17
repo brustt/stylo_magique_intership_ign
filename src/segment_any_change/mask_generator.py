@@ -267,7 +267,9 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
         in_labels = torch.ones(
             in_points.shape[0], dtype=torch.int, device=in_points.device
         )
-        # masks : 64 x 3 x 1024 x 1024
+        print(f"in points shape : {in_points[:, None, :].shape}")
+
+        # masks : N x 3 x 1024 x 1024
         masks, iou_preds, _ = self.predictor.predict_torch(
             in_points[:, None, :],
             in_labels[:, None],
@@ -276,6 +278,10 @@ class SegAnyMaskGenerator(SamAutomaticMaskGenerator):
         )
         #print("------")
         #print(f"Output predict masks torch : {masks.shape}")
+        print("predict torch - mode auto output")
+        print(f"out decoder masks raw shape : {masks.shape}")
+        print(f"out decoder iou raw shape : {iou_preds.shape}")
+
 
         # Serialize predictions and store in MaskData
         data = MaskData(

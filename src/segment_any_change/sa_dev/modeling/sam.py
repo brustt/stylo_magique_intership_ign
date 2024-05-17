@@ -10,6 +10,9 @@ from torch.nn import functional as F
 
 from typing import Any, Dict, List, Tuple
 
+from magic_pen.config import IMG_SIZE
+from segment_any_change.sa_dev.utils.amg import postprocess_filters
+
 from .image_encoder import ImageEncoderViT
 from .mask_decoder import MaskDecoder
 from .prompt_encoder import PromptEncoder
@@ -174,7 +177,7 @@ class Sam(nn.Module):
 
         # Pad
         h, w = x.shape[-2:]
-        padh = self.image_encoder.img_size - h
-        padw = self.image_encoder.img_size - w
-        x = F.pad(x, (0, padw, 0, padh))
+        # padh = self.image_encoder.img_size - h
+        # padw = self.image_encoder.img_size - w
+        # x = F.pad(x, (0, padw, 0, padh))
         return x

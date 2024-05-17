@@ -91,19 +91,14 @@ class BitemporalMatching:
             masks=masks_B, ci=ci1, type_img=ImgType.B, embeddings=x_t1_mB
         )
 
-        # not so clean
-        items_change_0 = None
-        if self.seganyversion == SegAnyChangeVersion.RAW:
-            #logger.info("Proposal Matching ...")
-            items_change_0 = proposal_matching(self.items_A, self.items_B)
-            th = items_change_0.apply_change_filtering(filter_method, FilteringType.Sup)
+        match self.seganyversion: 
+            case SegAnyChangeVersion.RAW:
+                items_change = proposal_matching(self.items_A, self.items_B)
+                th = items_change.apply_change_filtering(filter_method, FilteringType.Sup)
+            case _:
+                raise RuntimeError('SegAnyChange version unkwown')
 
-        items_change = ListProposal()
-        items_change.set_items(self.items_A + self.items_B)
-        items_change.set_mask_ci(semantic_change_mask(items_change, agg_func="avg"))
-        mask_ci_binary, th = thresholding_factory(items_change.mask_ci, filter_method, FilteringType.Sup)
-
-        return items_change,  mask_ci_binary, th, items_change_0
+        return items_change, th, 
 
     def get_mask_proposal(self, temp_type: ImgType, idx=None) -> List[np.ndarray]:
 

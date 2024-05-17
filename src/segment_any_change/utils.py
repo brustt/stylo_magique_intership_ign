@@ -45,7 +45,7 @@ def flush_memory():
     torch.cuda.empty_cache()
 
 
-def to_tensor(arr: np.ndarray, transpose:bool=False, dtype=torch.float, device=DEVICE) -> torch.Tensor:
+def to_tensor(arr: np.ndarray, transpose:bool=True, dtype=torch.float, device=DEVICE) -> torch.Tensor:
     if transpose:
         arr = arr.transpose((2, 0, 1))
     return torch.as_tensor(
