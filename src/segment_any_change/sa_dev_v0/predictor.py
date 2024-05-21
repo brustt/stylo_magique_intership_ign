@@ -7,7 +7,7 @@
 import numpy as np
 import torch
 
-from segment_anything.modeling import Sam
+from segment_any_change.sa_dev_v0.modeling import Sam
 
 from typing import Optional, Tuple
 
@@ -236,9 +236,11 @@ class SamPredictor:
             boxes=boxes,
             masks=mask_input,
         )
+        print(f"---- start predict torch ----")
 
         print(f"sparse emb : {sparse_embeddings.shape}")
         print(f"dense emb : {dense_embeddings.shape}")
+        print(f"img emb : {self.features.shape}")
 
         # Predict masks
         low_res_masks, iou_predictions = self.model.mask_decoder(

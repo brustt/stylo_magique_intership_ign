@@ -11,11 +11,11 @@ from torch.nn import functional as F
 from typing import Any, Dict, List, Tuple
 
 from magic_pen.config import IMG_SIZE
-from segment_any_change.sa_dev.utils.amg import postprocess_filters
+from segment_any_change.sa_dev_v0.utils.amg import postprocess_filters
 
-from .image_encoder import ImageEncoderViT
-from .mask_decoder import MaskDecoder
-from .prompt_encoder import PromptEncoder
+from segment_any_change.sa_dev_v0.modeling.image_encoder import ImageEncoderViT
+from segment_any_change.sa_dev_v0.modeling.mask_decoder import MaskDecoder
+from segment_any_change.sa_dev_v0.modeling.prompt_encoder import PromptEncoder
 
 
 class Sam(nn.Module):

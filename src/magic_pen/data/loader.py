@@ -65,7 +65,6 @@ class BiTemporalDataset(Dataset):
         return self.items.shape[0]
 
     def __getitem__(self, index) -> Any:
-
         label_path, A_path, B_path = self.items.iloc[index].values
         img_A = load_img(A_path)
         img_B = load_img(B_path)
@@ -74,7 +73,8 @@ class BiTemporalDataset(Dataset):
         sample = {
             "img_A":img_A,
             "img_B":img_B,
-            "label":label
+            "label":label,
+            "index": index
         }
 
         # add generation prompts based on each label zone

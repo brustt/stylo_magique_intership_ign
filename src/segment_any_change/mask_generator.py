@@ -10,9 +10,9 @@ from torchvision.ops.boxes import batched_nms, box_area  # type: ignore
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from segment_any_change.sa_dev.modeling import Sam
-from segment_any_change.sa_dev import SamAutomaticMaskGenerator
-from segment_any_change.sa_dev.utils.amg import (
+from segment_any_change.sa_dev_v0.modeling import Sam
+from segment_any_change.sa_dev_v0 import SamAutomaticMaskGenerator
+from segment_any_change.sa_dev_v0.utils.amg import (
     MaskData,
     area_from_rle,
     batch_iterator,

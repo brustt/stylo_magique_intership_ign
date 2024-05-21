@@ -65,7 +65,7 @@ class DefaultTransform:
 
     def __call__(self, sample: Dict) -> Dict:
 
-        img_A, img_B, label = sample.values()
+        img_A, img_B, label, index = sample.values()
 
         # ResizeLongestSide can be apply on a batch
         img_A = self.process(img_A)
@@ -75,7 +75,8 @@ class DefaultTransform:
         return {
             "img_A":img_A,
             "img_B":img_B,
-            "label":label
+            "label":label,
+            "index":index
         }
 
     def process(self, input: np.ndarray) -> torch.Tensor:

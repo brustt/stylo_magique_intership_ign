@@ -17,8 +17,8 @@ from segment_any_change.matching import (
     semantic_change_mask,
     temporal_matching,
 )
-from segment_any_change.sa_dev.modeling.sam import Sam
-from segment_any_change.sa_dev.predictor import SamPredictor
+from segment_any_change.sa_dev_v0.modeling.sam import Sam
+from segment_any_change.sa_dev_v0.predictor import SamPredictor
 
 from segment_any_change.utils import (
     SegAnyChangeVersion,
@@ -42,7 +42,7 @@ logger.setLevel(logging.INFO)
 
 class BitemporalMatching:
     def __init__(self, model_type: str, version: SegAnyChangeVersion, **sam_kwargs) -> None:
-        model = load_sam(model_type)
+        model = load_sam(model_type, version="raw")
         self.mask_generator = SegAnyMaskGenerator(model, **sam_kwargs)
         self.items_A = None
         self.items_B = None

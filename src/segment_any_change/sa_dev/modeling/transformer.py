@@ -80,11 +80,13 @@ class TwoWayTransformer(nn.Module):
           torch.Tensor: the processed image_embedding
         """
         # BxCxHxW -> BxHWxC == B x N_image_tokens x C
-        #bs, c, h, w = image_embedding.shape
-        # Rustt edit for images batch
-        image_embedding = image_embedding.flatten(0, 1).flatten(2).permute(0, 2, 1)
-        image_pe = image_pe.flatten(0, 1).flatten(2).permute(0, 2, 1)
-        point_embedding = point_embedding.flatten(0, 1)
+        bs,n, c, h, w = image_embedding.shape
+        image_embedding = image_embedding.flatten(3).permute(0, 1, 3, 2)
+        image_pe = image_pe.flatten(3).permute(0, 1, 3, 2)
+
+        print(f"- In transf src : {image_embedding.shape}")
+        print(f"- In transf image_pe : {image_pe.shape}")
+
         # Prepare queries
         queries = point_embedding
         keys = image_embedding
@@ -209,14 +211,14 @@ class Attention(nn.Module):
         self.out_proj = nn.Linear(self.internal_dim, embedding_dim)
 
     def _separate_heads(self, x: Tensor, num_heads: int) -> Tensor:
-        b, n, c = x.shape
-        x = x.reshape(b, n, num_heads, c // num_heads)
-        return x.transpose(1, 2)  # B x N_heads x N_tokens x C_per_head
+        b, np, n, c = x.shape
+        x = x.reshape(b, np, n, num_heads, c // num_heads)
+        return x.transpose(2, 3)  # B x N_heads x N_tokens x C_per_head
 
     def _recombine_heads(self, x: Tensor) -> Tensor:
-        b, n_heads, n_tokens, c_per_head = x.shape
-        x = x.transpose(1, 2)
-        return x.reshape(b, n_tokens, n_heads * c_per_head)  # B x N_tokens x C
+        b, np, n_heads, n_tokens, c_per_head = x.shape
+        x = x.transpose(2, 3)
+        return x.reshape(b, np, n_tokens, n_heads * c_per_head)  # B x N_tokens x C
 
     def forward(self, q: Tensor, k: Tensor, v: Tensor) -> Tensor:
         # Input projections
@@ -230,8 +232,8 @@ class Attention(nn.Module):
         v = self._separate_heads(v, self.num_heads)
 
         # Attention
-        _, _, _, c_per_head = q.shape
-        attn = q @ k.permute(0, 1, 3, 2)  # B x N_heads x N_tokens x N_tokens
+        _, _,_, _, c_per_head = q.shape
+        attn = q @ k.permute(0, 1, 2, 4, 3)  # B x N_heads x N_tokens x N_tokens
         attn = attn / math.sqrt(c_per_head)
         attn = torch.softmax(attn, dim=-1)
 

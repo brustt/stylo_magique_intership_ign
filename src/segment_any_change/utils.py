@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import cv2
 from magic_pen.io import load_levircd_sample
 from segment_any_change.sa_dev import sam_model_registry
+from segment_any_change.sa_dev_v0 import sam_model_registry as sam_model_registry_v0
+
 from magic_pen.config import DEVICE, sam_dict_checkpoint
 import time
 from collections.abc import Iterable
@@ -59,9 +61,17 @@ def load_img_cv2(path: str):
     return image
 
 
-def load_sam(model_type: str):
-    sam = sam_model_registry[model_type](checkpoint=sam_dict_checkpoint[model_type])
-    _ = sam.to(device=DEVICE)
+def load_sam(model_type: str, version: str="dev"):
+    
+    sam = None
+
+    match version:
+        case "dev":
+            sam = sam_model_registry[model_type](checkpoint=sam_dict_checkpoint[model_type]).to(device=DEVICE)
+        case "raw":
+            sam = sam_model_registry_v0[model_type](checkpoint=sam_dict_checkpoint[model_type]).to(device=DEVICE)
+        case _:
+            raise ValueError("Please provide valid sam verison implementation : dev, raw")
     return sam
 
 
