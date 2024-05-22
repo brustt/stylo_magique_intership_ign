@@ -4,14 +4,30 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+from functools import wraps
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from typing import Optional, Tuple, Type
-
 from .common import LayerNorm2d, MLPBlock
+import time
+import logging
+# TO DO : define globally
+logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
+def timeit(func):
+    @wraps(func)
+    def timeit_wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        total_time = end_time - start_time
+        print(f"Function {func.__name__} Took {total_time:.4f} seconds")
+        return result
+    return timeit_wrapper
 
 # This class and its supporting functions below lightly adapted from the ViTDet backbone available at: https://github.com/facebookresearch/detectron2/blob/main/detectron2/modeling/backbone/vit.py # noqa
 class ImageEncoderViT(nn.Module):

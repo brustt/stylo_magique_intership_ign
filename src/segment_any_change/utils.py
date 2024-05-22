@@ -61,15 +61,15 @@ def load_img_cv2(path: str):
     return image
 
 
-def load_sam(model_type: str, version: str="dev"):
+def load_sam(model_type: str, version: str="dev", device: str=DEVICE):
     
     sam = None
 
     match version:
         case "dev":
-            sam = sam_model_registry[model_type](checkpoint=sam_dict_checkpoint[model_type]).to(device=DEVICE)
+            sam = sam_model_registry[model_type](checkpoint=sam_dict_checkpoint[model_type]).to(device=device)
         case "raw":
-            sam = sam_model_registry_v0[model_type](checkpoint=sam_dict_checkpoint[model_type]).to(device=DEVICE)
+            sam = sam_model_registry_v0[model_type](checkpoint=sam_dict_checkpoint[model_type]).to(device=device)
         case _:
             raise ValueError("Please provide valid sam verison implementation : dev, raw")
     return sam

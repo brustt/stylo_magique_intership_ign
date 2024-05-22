@@ -176,7 +176,7 @@ class Sam(nn.Module):
         x = (x - self.pixel_mean) / self.pixel_std
 
         # Pad
-        h, w = x.shape[-2:]
+        #h, w = x.shape[-2:]
         # padh = self.image_encoder.img_size - h
         # padw = self.image_encoder.img_size - w
         # x = F.pad(x, (0, padw, 0, padh))
