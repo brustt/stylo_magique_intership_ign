@@ -5,8 +5,10 @@ import numpy as np
 from segment_any_change.mask_items import ImgType
 from segment_any_change.sa_dev.predictor import SamPredictor
 
-def resize2d(arr: np.ndarray, target_size:Tuple, method: int):
+
+def resize2d(arr: np.ndarray, target_size: Tuple, method: int):
     return cv2.resize(src=arr, dsize=target_size, interpolation=method)
+
 
 def compute_mask_embedding(mask: np.ndarray, img_embedding: np.ndarray) -> np.ndarray:
     """Compute mask embedding

@@ -20,4 +20,4 @@ sam_dict_checkpoint = {"vit_h": sam_model_large, "vit_b": sam_model_small}
 
 SEED = 12
 DEVICE = "cpu"
-IMG_SIZE = (1024,1024)
+IMG_SIZE = (1024, 1024)

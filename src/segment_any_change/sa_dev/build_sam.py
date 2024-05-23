@@ -29,8 +29,9 @@ def build_sam_vit_h(checkpoint=None, model=Sam):
         encoder_num_heads=16,
         encoder_global_attn_indexes=[7, 15, 23, 31],
         checkpoint=checkpoint,
-        model=model
+        model=model,
     )
+
 
 def build_sam_vit_l(checkpoint=None, model=Sam):
     return _build_sam(
@@ -39,7 +40,7 @@ def build_sam_vit_l(checkpoint=None, model=Sam):
         encoder_num_heads=16,
         encoder_global_attn_indexes=[5, 11, 17, 23],
         checkpoint=checkpoint,
-        model=model
+        model=model,
     )
 
 
@@ -50,8 +51,9 @@ def build_sam_vit_b(checkpoint=None, model=Sam):
         encoder_num_heads=12,
         encoder_global_attn_indexes=[2, 5, 8, 11],
         checkpoint=checkpoint,
-        model=model
+        model=model,
     )
+
 
 build_sam = build_sam_vit_h
 

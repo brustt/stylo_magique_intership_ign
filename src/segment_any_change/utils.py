@@ -31,7 +31,7 @@ NPDTYPE_TO_OPENCV_DTYPE = {
     np.dtype("uint16"): cv2.CV_16U,
     np.dtype("int32"): cv2.CV_32S,
     np.dtype("float32"): cv2.CV_32F,
-    np.dtype("float64"): cv2.CV_64F
+    np.dtype("float64"): cv2.CV_64F,
 }
 
 
@@ -47,18 +47,19 @@ def flush_memory():
     torch.cuda.empty_cache()
 
 
-def to_tensor(arr: np.ndarray, transpose:bool=True, dtype=torch.float, device=DEVICE) -> torch.Tensor:
+def to_tensor(
+    arr: np.ndarray, transpose: bool = True, dtype=torch.float, device=DEVICE
+) -> torch.Tensor:
     if transpose:
         arr = arr.transpose((2, 0, 1))
-    return torch.as_tensor(
-                arr, dtype=dtype, device=device
-            )
+    return torch.as_tensor(arr, dtype=dtype, device=device)
 
 
 def load_img_cv2(path: str):
     image = cv2.imread(path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     return image
+
 
 def batch_to_list(batch: Dict[str, Any]) -> List[Dict[str, Any]]:
     batch_size = next(iter(batch.values())).size(0)
@@ -69,17 +70,25 @@ def batch_to_list(batch: Dict[str, Any]) -> List[Dict[str, Any]]:
     return batch_list
 
 
-def load_sam(model_type: str, model_cls: Any, version: str="dev", device: str=DEVICE):
-    
+def load_sam(
+    model_type: str, model_cls: Any, version: str = "dev", device: str = DEVICE
+):
+
     sam = None
 
     match version:
         case "dev":
-            sam = sam_model_registry[model_type](checkpoint=sam_dict_checkpoint[model_type], model=model_cls).to(device=device)
+            sam = sam_model_registry[model_type](
+                checkpoint=sam_dict_checkpoint[model_type], model=model_cls
+            ).to(device=device)
         case "raw":
-            sam = sam_model_registry_v0[model_type](checkpoint=sam_dict_checkpoint[model_type], model=model_cls).to(device=device)
+            sam = sam_model_registry_v0[model_type](
+                checkpoint=sam_dict_checkpoint[model_type], model=model_cls
+            ).to(device=device)
         case _:
-            raise ValueError("Please provide valid sam verison implementation : dev, raw")
+            raise ValueError(
+                "Please provide valid sam verison implementation : dev, raw"
+            )
     return sam
 
 
@@ -115,7 +124,8 @@ def show_anns(anns):
         img[m] = color_mask
     ax.imshow(img)
 
-def show_pair_img(img_A:  Union[str, np.ndarray], img_B: Union[str, np.ndarray]):
+
+def show_pair_img(img_A: Union[str, np.ndarray], img_B: Union[str, np.ndarray]):
     if isinstance(img_A, str):
         img_A = load_img(img_A)
     if isinstance(img_B, str):
@@ -123,25 +133,45 @@ def show_pair_img(img_A:  Union[str, np.ndarray], img_B: Union[str, np.ndarray])
     pair = np.hstack((img_A, img_B))
     show_img(pair)
 
+
 def show_masks(masks, plt, alpha=0.7):
-    if len(masks) == 0: return
+    if len(masks) == 0:
+        return
     ax = plt.gca()
     ax.set_autoscale_on(False)
 
     img = np.ones((masks.shape[1], masks.shape[2], 4))
-    img[:,:,3] = 0
+    img[:, :, 3] = 0
     for ann in masks:
         color_mask = np.concatenate([np.random.random(3), [alpha]])
         img[ann] = color_mask
     ax.imshow(img)
     return img
 
+
 def show_points(coords, labels, ax, marker_size=25):
-    pos_points = coords[labels==1]
-    neg_points = coords[labels==0]
-    ax.scatter(pos_points[:, 0], pos_points[:, 1], color='green', marker='o', s=marker_size, edgecolor='white', linewidth=1.25)
-    ax.scatter(neg_points[:, 0], neg_points[:, 1], color='red', marker='o', s=marker_size, edgecolor='white', linewidth=1.25)   
-    
+    pos_points = coords[labels == 1]
+    neg_points = coords[labels == 0]
+    ax.scatter(
+        pos_points[:, 0],
+        pos_points[:, 1],
+        color="green",
+        marker="o",
+        s=marker_size,
+        edgecolor="white",
+        linewidth=1.25,
+    )
+    ax.scatter(
+        neg_points[:, 0],
+        neg_points[:, 1],
+        color="red",
+        marker="o",
+        s=marker_size,
+        edgecolor="white",
+        linewidth=1.25,
+    )
+
+
 def rad_to_degre(x):
     return x * 180 / np.pi
 
@@ -159,6 +189,7 @@ def timeit(func):
         total_time = end_time - start_time
         logger.info(f"Function {func.__name__} Took {total_time:.4f} seconds")
         return result
+
     return timeit_wrapper
 
 
@@ -169,7 +200,10 @@ def flatten(xs):
         else:
             yield x
 
-def apply_histogram(img: np.ndarray, reference_image: np.ndarray, blend_ratio: float = 0.5) -> np.ndarray:
+
+def apply_histogram(
+    img: np.ndarray, reference_image: np.ndarray, blend_ratio: float = 0.5
+) -> np.ndarray:
     """Apply histogram matching to an image.
     Parameters
     ----------
@@ -190,7 +224,9 @@ def apply_histogram(img: np.ndarray, reference_image: np.ndarray, blend_ratio: f
         )
     reference_image = cv2.resize(reference_image, dsize=(img.shape[1], img.shape[0]))
     channel_axis = img.ndim - 1
-    matched = match_histograms(np.squeeze(img), np.squeeze(reference_image), channel_axis=channel_axis)
+    matched = match_histograms(
+        np.squeeze(img), np.squeeze(reference_image), channel_axis=channel_axis
+    )
     img = cv2.addWeighted(
         matched,
         blend_ratio,
@@ -200,7 +236,6 @@ def apply_histogram(img: np.ndarray, reference_image: np.ndarray, blend_ratio: f
         dtype=NPDTYPE_TO_OPENCV_DTYPE[img.dtype],
     )
     return img
-
 
 
 if __name__ == "__main__":

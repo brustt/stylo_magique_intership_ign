@@ -349,67 +349,67 @@ def batched_mask_to_box(masks: torch.Tensor) -> torch.Tensor:
 
 
 # ADDED
-def postprocess_filters(masks: torch.Tensor, 
-                              iou_predictions: torch.Tensor, 
-                              mask_threshold: float) -> torch.Tensor:
+def postprocess_filters(
+    masks: torch.Tensor, iou_predictions: torch.Tensor, mask_threshold: float
+) -> torch.Tensor:
+    """
+    Return masks after postprocess : filters
+    Configuration*
+    TO DO :
+    - CHECK with maskgenerator filters
+    - Set threshold somewhere else
+    """
+    # pred_iou_thresh = 0.85
+    # stability_score_offset = 1.0
+    # stability_score_thresh = 0.85
+    # box_nms_thresh = 0.7
 
-      """
-      Return masks after postprocess : filters
-      Configuration*
-      TO DO : 
-      - CHECK with maskgenerator filters
-      - Set threshold somewhere else
-      """
-      # pred_iou_thresh = 0.85
-      # stability_score_offset = 1.0
-      # stability_score_thresh = 0.85
-      # box_nms_thresh = 0.7
+    pred_iou_thresh = 0.7
+    stability_score_offset = 1.0
+    stability_score_thresh = 0.7
+    box_nms_thresh = 0.7
 
+    orig_h, orig_w = masks.shape[2:]
 
-      pred_iou_thresh = 0.7
-      stability_score_offset = 1.0
-      stability_score_thresh = 0.7
-      box_nms_thresh = 0.7
+    # Serialize predictions and store in MaskData
+    data = MaskData(
+        masks=masks.flatten(0, 1),
+        iou_preds=iou_predictions.flatten(0, 1),
+    )
 
-      orig_h, orig_w = masks.shape[2:]
+    # Filter by predicted IoU
+    if pred_iou_thresh > 0.0:
+        keep_mask = data["iou_preds"] > pred_iou_thresh
+        data.filter(keep_mask)
 
-      # Serialize predictions and store in MaskData
-      data = MaskData(
-          masks=masks.flatten(0, 1),
-          iou_preds=iou_predictions.flatten(0, 1),          
-      )
+    # Calculate stability score
+    data["stability_score"] = calculate_stability_score(
+        data["masks"], mask_threshold, stability_score_offset
+    )
+    if stability_score_thresh > 0.0:
+        keep_mask = data["stability_score"] >= stability_score_thresh
+        data.filter(keep_mask)
 
-      # Filter by predicted IoU
-      if pred_iou_thresh > 0.0:
-          keep_mask = data["iou_preds"] > pred_iou_thresh
-          data.filter(keep_mask)
+    # Threshold masks and calculate boxes
+    data["masks"] = data["masks"] > mask_threshold
+    data["boxes"] = batched_mask_to_box(data["masks"])
 
-      # Calculate stability score
-      data["stability_score"] = calculate_stability_score(
-          data["masks"], mask_threshold, stability_score_offset
-      )
-      if stability_score_thresh > 0.0:
-          keep_mask = data["stability_score"] >= stability_score_thresh
-          data.filter(keep_mask)
+    # Filter boxes that touch crop boundaries
+    keep_mask = ~is_box_near_crop_edge(
+        data["boxes"], [0, 0, orig_w, orig_h], [0, 0, orig_w, orig_h]
+    )
+    if not torch.all(keep_mask):
+        data.filter(keep_mask)
+    data["masks"] = uncrop_masks(data["masks"], [0, 0, orig_w, orig_h], orig_h, orig_w)
 
-      # Threshold masks and calculate boxes
-      data["masks"] = data["masks"] > mask_threshold
-      data["boxes"] = batched_mask_to_box(data["masks"])
+    # Remove duplicates within this crop.
+    keep_by_nms = batched_nms(
+        data["boxes"].float(),
+        data["iou_preds"],
+        torch.zeros_like(data["boxes"][:, 0]),  # categories
+        iou_threshold=box_nms_thresh,
+    )
+    data.filter(keep_by_nms)
 
-      # Filter boxes that touch crop boundaries
-      keep_mask = ~is_box_near_crop_edge(data["boxes"], [0, 0, orig_w, orig_h], [0, 0, orig_w, orig_h])
-      if not torch.all(keep_mask):
-          data.filter(keep_mask)
-      data['masks'] = uncrop_masks(data["masks"], [0, 0, orig_w, orig_h], orig_h, orig_w)
-
-      # Remove duplicates within this crop.
-      keep_by_nms = batched_nms(
-          data["boxes"].float(),
-          data["iou_preds"],
-          torch.zeros_like(data["boxes"][:, 0]),  # categories
-          iou_threshold=box_nms_thresh,
-      )
-      data.filter(keep_by_nms)
-
-      # making masks
-      return data['masks']
+    # making masks
+    return data["masks"]

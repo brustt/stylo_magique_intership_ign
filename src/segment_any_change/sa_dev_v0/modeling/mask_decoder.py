@@ -113,7 +113,7 @@ class MaskDecoder(nn.Module):
 
         # Prepare output
         return masks, iou_pred
-    
+
     def predict_masks(
         self,
         image_embeddings: torch.Tensor,
@@ -139,11 +139,9 @@ class MaskDecoder(nn.Module):
         tokens = torch.cat((output_tokens, sparse_prompt_embeddings), dim=1)
         print(f"tokens shape : {tokens.shape}")
 
-
         # Expand per-image data in batch direction to be per-mask => B*B ?
         src = torch.repeat_interleave(image_embeddings, tokens.shape[0], dim=0)
         print(f"src first interleave shape : {src.shape}")
-
 
         print(f"src shape : {src.shape}")
         print(f"src dense_prompt_embeddings : {dense_prompt_embeddings.shape}")
@@ -164,7 +162,7 @@ class MaskDecoder(nn.Module):
         mask_tokens_out = hs[:, 1 : (1 + self.num_mask_tokens), :]
         print(f"iou out shape : {iou_token_out.shape}")
         print(f"masks tokens out shape : {mask_tokens_out.shape}")
-        
+
         # Upscale mask embeddings and predict masks using the mask tokens
         src = src.transpose(1, 2).view(b, c, h, w)
         upscaled_embedding = self.output_upscaling(src)

@@ -13,16 +13,14 @@ from segment_any_change.matching import (
 )
 from segment_any_change.sa_dev_v0.predictor import SamPredictor
 
-from segment_any_change.utils import (
-    to_degre,
-    timeit
-)
+from segment_any_change.utils import to_degre, timeit
 import logging
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 # To update with new batch version
 class PointQueryMecanism:
@@ -79,7 +77,7 @@ class PointQueryMecanism:
 
         Args:
             points (np.ndarray): input points (x, y) - shape : (N, 1, 2)
-            image (np.ndarray, optional): image np.ndarray. Defaults to None. 
+            image (np.ndarray, optional): image np.ndarray. Defaults to None.
             labels (Optional[Tuple[int]], optional): label of prompt (foreground / background). Defaults to None. shape : (N, 1, 2)
             multimask_output (bool, optional): output multimask for a prompt. Defaults to True (recommanded).
 

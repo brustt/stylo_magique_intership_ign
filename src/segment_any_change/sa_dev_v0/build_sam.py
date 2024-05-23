@@ -31,6 +31,7 @@ def build_sam_vit_h(checkpoint=None):
         checkpoint=checkpoint,
     )
 
+
 def build_sam_vit_l(checkpoint=None):
     return _build_sam(
         encoder_embed_dim=1024,
@@ -50,6 +51,7 @@ def build_sam_vit_b(checkpoint=None):
         encoder_global_attn_indexes=[2, 5, 8, 11],
         checkpoint=checkpoint,
     )
+
 
 build_sam = build_sam_vit_h
 

@@ -83,7 +83,7 @@ class PromptEncoder(nn.Module):
     ) -> torch.Tensor:
         """Embeds point prompts."""
         points = points + 0.5  # Shift to center of pixel
-        if pad:# if boxes is None
+        if pad:  # if boxes is None
             padding_point = torch.zeros((*points.shape[:2], 1, 2), device=points.device)
 
             padding_label = -torch.ones((*labels.shape[:2], 1), device=labels.device)
@@ -164,16 +164,16 @@ class PromptEncoder(nn.Module):
         sparse_embeddings = torch.empty(
             (B, bs, 0, self.embed_dim), device=self._get_device()
         )
-            
+
         if points is not None:
             coords, labels = points
             point_embeddings = self._embed_points(coords, labels, pad=(boxes is None))
             sparse_embeddings = torch.cat([sparse_embeddings, point_embeddings], dim=2)
-        
+
         if boxes is not None:
             box_embeddings = self._embed_boxes(boxes)
             sparse_embeddings = torch.cat([sparse_embeddings, box_embeddings], dim=1)
-                
+
         if masks is not None:
             dense_embeddings = self._embed_masks(masks)
         else:

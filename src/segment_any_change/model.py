@@ -2,9 +2,11 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from segment_any_change.sa_dev_v0.modeling.image_encoder import ImageEncoderViT # edited
-from segment_any_change.sa_dev_v0.modeling.mask_decoder import MaskDecoder # edited
-from segment_any_change.sa_dev_v0.modeling.prompt_encoder import PromptEncoder # edited
+from segment_any_change.sa_dev_v0.modeling.image_encoder import (
+    ImageEncoderViT,
+)  # edited
+from segment_any_change.sa_dev_v0.modeling.mask_decoder import MaskDecoder  # edited
+from segment_any_change.sa_dev_v0.modeling.prompt_encoder import PromptEncoder  # edited
 
 from typing import List, Dict, Any, Tuple
 
@@ -15,16 +17,18 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
 class BiSam(nn.Module):
     mask_threshold: float = 0.0
 
-
-    def __init__(self,
+    def __init__(
+        self,
         image_encoder: ImageEncoderViT,
         prompt_encoder: PromptEncoder,
         mask_decoder: MaskDecoder,
         pixel_mean: List[float] = [123.675, 116.28, 103.53],
-        pixel_std: List[float] = [58.395, 57.12, 57.375],) -> None:  
+        pixel_std: List[float] = [58.395, 57.12, 57.375],
+    ) -> None:
         """
         SAM predicts object masks from an batch of images and prompts
 
@@ -66,25 +70,28 @@ class BiSam(nn.Module):
         Returns:
             List[Dict[str, torch.Tensor]]: dict return as prediction batch tensor
         """
-       
+
         input_images = torch.cat([batched_input["img_A"], batched_input["img_B"]])
         original_size = input_images.shape[-2:]
         input_images = self.preprocess(input_images)
         self.image_embeddings = self.image_encoder(input_images)
 
         sparse_embeddings, dense_embeddings = self.prompt_encoder(
-                points=(batched_input["point_coords"][:,:,None,:], batched_input["point_labels"][...,None]),
-                boxes=None,
-                masks=None,
-            )
+            points=(
+                batched_input["point_coords"][:, :, None, :],
+                batched_input["point_labels"][..., None],
+            ),
+            boxes=None,
+            masks=None,
+        )
         print(f"sparse_embeddings: {sparse_embeddings.shape}")
         print(f"dense_embeddings: {dense_embeddings.shape}")
 
         low_res_masks, iou_predictions = self.mask_decoder.predict_masks_batch(
-            image_embeddings=self.image_embeddings, # (B, 256, 64, 64)
-            image_pe=self.prompt_encoder.get_dense_pe(), # (1, 256, 64, 64)
-            sparse_prompt_embeddings=sparse_embeddings, # (B, N, 2, 256)
-            dense_prompt_embeddings=dense_embeddings, # (B, N, 256, 64, 64)
+            image_embeddings=self.image_embeddings,  # (B, 256, 64, 64)
+            image_pe=self.prompt_encoder.get_dense_pe(),  # (1, 256, 64, 64)
+            sparse_prompt_embeddings=sparse_embeddings,  # (B, N, 2, 256)
+            dense_prompt_embeddings=dense_embeddings,  # (B, N, 256, 64, 64)
         )
 
         masks = self.upscale_masks(low_res_masks, original_size)
@@ -100,31 +107,29 @@ class BiSam(nn.Module):
             "masks": masks,
             "iou_predictions": iou_predictions,
             "low_res_logits": low_res_masks,
-            }
+        }
 
-
-    def upscale_masks(self, masks: torch.Tensor, original_size: Tuple[int]) -> torch.Tensor:
+    def upscale_masks(
+        self, masks: torch.Tensor, original_size: Tuple[int]
+    ) -> torch.Tensor:
 
         init_shape = masks.shape
-        masks= masks.flatten(0, 1) # interpolate take 4D data not 5D
+        masks = masks.flatten(0, 1)  # interpolate take 4D data not 5D
         masks = F.interpolate(
             masks, original_size, mode="bilinear", align_corners=False
         )
         masks = masks.reshape(init_shape[0], -1, *masks.shape[1:])
         return masks
 
-    
     def preprocess(self, x: torch.Tensor) -> torch.Tensor:
         """Normalize pixel values and pad to a square input."""
         # Normalize colors
         x = (x - self.pixel_mean) / self.pixel_std
         return x
-    
+
     def get_image_embedding(self, idx=None) -> torch.Tensor:
         if self.image_embeddings is None:
-            raise RuntimeError(
-                "Please compute batch images embedding first"
-            )
+            raise RuntimeError("Please compute batch images embedding first")
         if idx is None:
             return self.image_embeddings
-        return self.image_embeddings[idx,...]
+        return self.image_embeddings[idx, ...]

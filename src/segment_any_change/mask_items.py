@@ -39,11 +39,11 @@ class ItemProposal:
     # not sure it's the best way with dataclass
     def setter(self, varname, value):
         return setattr(self, varname, value)
-    
+
     @property
     def toto(self) -> bool:
         return self._toto
-    
+
     @toto.setter
     def toto(self, value: bool) -> None:
         self._toto = value
@@ -71,20 +71,21 @@ class ListProposal:
     def add_item(self, item) -> None:
         if item.id not in [_.id for _ in self.items]:
             self.items.append(item)
+
     @property
     def masks(self) -> np.ndarray:
         return np.stack([m.mask for m in self.items])
-    
+
     @property
     def confidence_scores(self) -> np.ndarray:
         return np.stack([m.confidence_score for m in self.items])
 
     def set_mask_ci(self, mask: np.ndarray) -> None:
         self.mask_ci = mask
-    
+
     def set_items(self, items: List[ItemProposal]) -> None:
-        self.items = items   
-    
+        self.items = items
+
     def rm_item(self, id: int) -> None:
         self.items = [_ for _ in self.items if _.id != id]
 
@@ -179,8 +180,9 @@ def create_change_proposal_items(
     ]
 
 
-
-def thresholding_factory(arr: np.ndarray, method, mode: FilteringType, **kwargs) -> Tuple[np.ndarray, float]:
+def thresholding_factory(
+    arr: np.ndarray, method, mode: FilteringType, **kwargs
+) -> Tuple[np.ndarray, float]:
     method_factory = {
         "otsu": apply_otsu,
         "th": apply_th,
@@ -194,21 +196,21 @@ def thresholding_factory(arr: np.ndarray, method, mode: FilteringType, **kwargs)
     if isinstance(method, (float, int)):
         kwargs["th"] = method
         method = "th"
-    
+
     arr, th = method_factory[method](arr, mode, **kwargs)
     return arr, th
 
 
-def apply_otsu(
-    arr: np.ndarray, mode: FilteringType
-) -> Tuple[np.ndarray, float]:
+def apply_otsu(arr: np.ndarray, mode: FilteringType) -> Tuple[np.ndarray, float]:
     th = threshold_otsu(arr)
     return apply_th(arr, mode, th)
 
 
-def apply_th(arr:np.ndarray, mode: FilteringType, th: Union[int, float]) -> Tuple[np.ndarray, float]:
+def apply_th(
+    arr: np.ndarray, mode: FilteringType, th: Union[int, float]
+) -> Tuple[np.ndarray, float]:
     mode_dict = {
-        FilteringType.Inf: lambda l, th: (arr <= th).astype(np.uint8), 
-        FilteringType.Sup: lambda arr, th: (arr >= th).astype(np.uint8)
-        }
+        FilteringType.Inf: lambda l, th: (arr <= th).astype(np.uint8),
+        FilteringType.Sup: lambda arr, th: (arr >= th).astype(np.uint8),
+    }
     return (mode_dict[mode](arr, th), th)

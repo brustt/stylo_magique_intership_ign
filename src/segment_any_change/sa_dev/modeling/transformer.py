@@ -80,7 +80,7 @@ class TwoWayTransformer(nn.Module):
           torch.Tensor: the processed image_embedding
         """
         # BxCxHxW -> BxHWxC == B x N_image_tokens x C
-        bs,n, c, h, w = image_embedding.shape
+        bs, n, c, h, w = image_embedding.shape
         # EDIT MD
         image_embedding = image_embedding.flatten(3).permute(0, 1, 3, 2)
         image_pe = image_pe.flatten(3).permute(0, 1, 3, 2)
@@ -236,7 +236,7 @@ class Attention(nn.Module):
 
         # Attention
         # EDIT MD
-        _, _,_, _, c_per_head = q.shape
+        _, _, _, _, c_per_head = q.shape
         attn = q @ k.permute(0, 1, 2, 4, 3)  # B x np x N_heads x N_tokens x N_tokens
         attn = attn / math.sqrt(c_per_head)
         attn = torch.softmax(attn, dim=-1)

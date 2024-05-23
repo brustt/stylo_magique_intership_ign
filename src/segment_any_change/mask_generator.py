@@ -12,7 +12,11 @@ from torchvision.ops.boxes import batched_nms, box_area  # type: ignore
 from typing import Any, Dict, List, Optional, Tuple
 
 from magic_pen.data.process import generate_grid_prompt
-from segment_any_change.mask_process import filters_masks, nms_wrapper, postprocess_small_regions
+from segment_any_change.mask_process import (
+    filters_masks,
+    nms_wrapper,
+    postprocess_small_regions,
+)
 from segment_any_change.model import BiSam
 from segment_any_change.sa_dev_v0.modeling import Sam
 from segment_any_change.sa_dev_v0 import SamAutomaticMaskGenerator
@@ -37,6 +41,7 @@ from segment_any_change.sa_dev_v0.utils.amg import (
 from segment_any_change.utils import timeit
 from magic_pen.config import *
 
+
 class SegAnyMaskGenerator:
     def __init__(
         self,
@@ -49,57 +54,64 @@ class SegAnyMaskGenerator:
         box_nms_thresh: float = 0.7,
         min_mask_region_area: int = 0,
     ) -> None:
-        
+
         self.model = model
         self.points_per_side = points_per_side
-        self.points_per_batch = points_per_batch # not used
+        self.points_per_batch = points_per_batch  # not used
         self.pred_iou_thresh = pred_iou_thresh
         self.stability_score_thresh = stability_score_thresh
         self.stability_score_offset = stability_score_offset
         self.box_nms_thresh = box_nms_thresh
         self.min_mask_region_area = min_mask_region_area
-        
+
     @timeit
     @torch.no_grad()
     def generate(self, batched_input: Dict[str, torch.Tensor]) -> List[Dict[str, Any]]:
-        
+
         batch_anns = []
         batch_size = batched_input[next(iter(batched_input))].shape[0]
         img_size = batched_input[next(iter(batched_input))].shape[-1:]
 
         # generate grid for batch - need to consider batch_size*2 cause of bi-temporal
-        batch_point = np.tile(generate_grid_prompt(self.points_per_side), (batch_size*2, 1, 1)) * img_size
-        batch_label = np.ones((batch_size*2, self.points_per_side*self.points_per_side))
+        batch_point = (
+            np.tile(generate_grid_prompt(self.points_per_side), (batch_size * 2, 1, 1))
+            * img_size
+        )
+        batch_label = np.ones(
+            (batch_size * 2, self.points_per_side * self.points_per_side)
+        )
 
         batched_input["point_coords"] = torch.as_tensor(
             batch_point, dtype=torch.float, device=DEVICE
         )
         batched_input["point_labels"] = torch.as_tensor(
             batch_label, dtype=torch.int, device=DEVICE
-        )   
+        )
 
         outputs = self.model(
-            batched_input=batched_input,
-            multimask_output=True,
-            return_logits=True
+            batched_input=batched_input, multimask_output=True, return_logits=True
         )
         masks, iou_predictions, _ = outputs.values()
 
-        for i_masks, i_iou_predictions, i_batch_point in zip(masks, iou_predictions, batch_point):
-          data = self.postprocess_masks(i_masks, i_iou_predictions, i_batch_point)
-          img_anns = {
-              "masks": data["masks"].detach().cpu().numpy(),
-              #"bbox": box_xyxy_to_xywh(data["boxes"]),
-              "predicted_iou": data["iou_preds"].detach().cpu().numpy(),
-              "point_coords": data["points"],
-              #"stability_score": data["stability_score"][idx].item(),
-              #"crop_box": box_xyxy_to_xywh(data["crop_boxes"][idx]).tolist(),
+        for i_masks, i_iou_predictions, i_batch_point in zip(
+            masks, iou_predictions, batch_point
+        ):
+            data = self.postprocess_masks(i_masks, i_iou_predictions, i_batch_point)
+            img_anns = {
+                "masks": data["masks"].detach().cpu().numpy(),
+                # "bbox": box_xyxy_to_xywh(data["boxes"]),
+                "predicted_iou": data["iou_preds"].detach().cpu().numpy(),
+                "point_coords": data["points"],
+                # "stability_score": data["stability_score"][idx].item(),
+                # "crop_box": box_xyxy_to_xywh(data["crop_boxes"][idx]).tolist(),
             }
-          batch_anns.append(img_anns)
+            batch_anns.append(img_anns)
         return batch_anns
-        
-    def postprocess_masks(self, masks: torch.Tensor, iou_preds: torch.Tensor, points:np.ndarray) -> MaskData:
-    
+
+    def postprocess_masks(
+        self, masks: torch.Tensor, iou_preds: torch.Tensor, points: np.ndarray
+    ) -> MaskData:
+
         data = MaskData(
             masks=masks.flatten(0, 1),
             iou_preds=iou_preds.flatten(0, 1),
@@ -108,21 +120,21 @@ class SegAnyMaskGenerator:
 
         data = filters_masks(data)
         data["boxes"] = batched_mask_to_box(data["masks"])
-        
+
         keep_by_nms = nms_wrapper(data, self.box_nms_thresh)
         data.filter(keep_by_nms)
-        if self.min_mask_region_area > 0.:
+        if self.min_mask_region_area > 0.0:
             data["rles"] = mask_to_rle_pytorch(data["masks"])
-            data = postprocess_small_regions(data, 
-                                             self.min_mask_region_area, 
-                                             self.box_nms_thresh)
+            data = postprocess_small_regions(
+                data, self.min_mask_region_area, self.box_nms_thresh
+            )
             keep_by_nms = nms_wrapper(data, self.box_nms_thresh)
             data.filters(keep_by_nms)
 
         return data
-    
+
     def filters_masks(self, data: MaskData) -> MaskData:
-        
+
         # Filter by predicted IoU
         if self.pred_iou_thresh > 0.0:
             keep_mask = data["iou_preds"] > self.pred_iou_thresh
@@ -138,7 +150,7 @@ class SegAnyMaskGenerator:
         if self.stability_score_thresh > 0.0:
             keep_mask = data["stability_score"] >= self.stability_score_thresh
             data.filter(keep_mask)
-            
+
         print(f' filter stability_score : {data["masks"].shape[0]}')
 
         # Threshold masks and calculate boxes
@@ -146,6 +158,7 @@ class SegAnyMaskGenerator:
         print(f' filter mask_threshold : {data["masks"].shape[0]}')
 
         return data
+
 
 @deprecated
 class SegAnyMaskGenerator_(SamAutomaticMaskGenerator):
@@ -226,7 +239,7 @@ class SegAnyMaskGenerator_(SamAutomaticMaskGenerator):
             min_mask_region_area,
             output_mode,
         )
-        
+
     @timeit
     @torch.no_grad()
     def generate(self, image: np.ndarray) -> List[Dict[str, Any]]:
@@ -341,7 +354,7 @@ class SegAnyMaskGenerator_(SamAutomaticMaskGenerator):
         data = MaskData()
         for (points,) in batch_iterator(self.points_per_batch, points_for_image):
 
-            #print(f"== process batch for point : {len(points)} ==")
+            # print(f"== process batch for point : {len(points)} ==")
 
             batch_data = self._process_batch(
                 points, cropped_im_size, crop_box, orig_size
@@ -391,12 +404,11 @@ class SegAnyMaskGenerator_(SamAutomaticMaskGenerator):
             multimask_output=True,
             return_logits=True,
         )
-        #print("------")
-        #print(f"Output predict masks torch : {masks.shape}")
+        # print("------")
+        # print(f"Output predict masks torch : {masks.shape}")
         print("predict torch - mode auto output")
         print(f"out decoder masks raw shape : {masks.shape}")
         print(f"out decoder iou raw shape : {iou_preds.shape}")
-
 
         # Serialize predictions and store in MaskData
         data = MaskData(
@@ -406,14 +418,14 @@ class SegAnyMaskGenerator_(SamAutomaticMaskGenerator):
         )
         del masks
 
-        #print(f"""init  masks data: {len(data["masks"])}""")
+        # print(f"""init  masks data: {len(data["masks"])}""")
 
         # Filter by predicted IoU
         if self.pred_iou_thresh > 0.0:
             keep_mask = data["iou_preds"] > self.pred_iou_thresh
             data.filter(keep_mask)
 
-        #print(f"""Output filter IoU masks data: {len(data["masks"])}""")
+        # print(f"""Output filter IoU masks data: {len(data["masks"])}""")
 
         # Calculate stability score
         data["stability_score"] = calculate_stability_score(
@@ -425,13 +437,13 @@ class SegAnyMaskGenerator_(SamAutomaticMaskGenerator):
             keep_mask = data["stability_score"] >= self.stability_score_thresh
             data.filter(keep_mask)
 
-        #print(f"""Output filter stability masks data: {len(data["masks"])}""")
+        # print(f"""Output filter stability masks data: {len(data["masks"])}""")
 
         # Threshold masks and calculate boxes
         data["masks"] = data["masks"] > self.predictor.model.mask_threshold
         data["boxes"] = batched_mask_to_box(data["masks"])
 
-        #print(f"""Output filter mask_threshold: {len(data["masks"])}""")
+        # print(f"""Output filter mask_threshold: {len(data["masks"])}""")
 
         # Filter boxes that touch crop boundaries
         keep_mask = ~is_box_near_crop_edge(
@@ -439,7 +451,7 @@ class SegAnyMaskGenerator_(SamAutomaticMaskGenerator):
         )
         if not torch.all(keep_mask):
             data.filter(keep_mask)
-        #print(f"""Output filter boundary {len(data["masks"])}""")
+        # print(f"""Output filter boundary {len(data["masks"])}""")
 
         # Compress to RLE
         data["masks"] = uncrop_masks(data["masks"], crop_box, orig_h, orig_w)

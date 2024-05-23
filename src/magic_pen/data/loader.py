@@ -21,14 +21,16 @@ from segment_any_change.utils import load_img
 
 warnings.filterwarnings("ignore")
 
+
 def get_ds_path(ds_name: str) -> str:
     data_sources = {
-        "levir-cd":levirCD_path,
+        "levir-cd": levirCD_path,
     }
     if not (ds_name in data_sources):
         raise ValueError("Please provide valid dataset name")
 
     return data_sources[ds_name]
+
 
 def load_ds(ds_name: str, **kwargs) -> pd.DataFrame:
     data_sources_loader = {
@@ -38,29 +40,32 @@ def load_ds(ds_name: str, **kwargs) -> pd.DataFrame:
         raise ValueError("Please provide valid dataset name")
 
     return data_sources_loader[ds_name](**kwargs)
-        
+
+
 @dataclass
 class MetaItem:
     A_path: str
     B_path: str
     label_path: str
-        
+
 
 class BiTemporalDataset(Dataset):
-    def __init__(self,
-                 name: str=None,
-                 items: List[MetaItem]=None,
-                 dtype: str = "train", 
-                 transform: Any=None,
-                 seed: int=SEED) -> None:
-        
+    def __init__(
+        self,
+        name: str = None,
+        items: List[MetaItem] = None,
+        dtype: str = "train",
+        transform: Any = None,
+        seed: int = SEED,
+    ) -> None:
+
         if not any([name, items]):
-            raise("Please provide at least items or dataset name")
-        
+            raise ("Please provide at least items or dataset name")
+
         self.items = load_ds(ds_name=name, data_type=dtype) if items is None else items
         self.transform = transform
         self.seed = seed
-    
+
     def __len__(self) -> int:
         return self.items.shape[0]
 
@@ -70,12 +75,7 @@ class BiTemporalDataset(Dataset):
         img_B = load_img(B_path)
         label = load_img(label_path)
 
-        sample = {
-            "img_A":img_A,
-            "img_B":img_B,
-            "label":label,
-            "index": index
-        }
+        sample = {"img_A": img_A, "img_B": img_B, "label": label, "index": index}
 
         # add generation prompts based on each label zone
 
@@ -86,23 +86,25 @@ class BiTemporalDataset(Dataset):
 
 
 class PromptDataset(Dataset):
-    def __init__(self, 
-                 path: str=None, 
-                 prompts :Any=None,
-                 length: int = None,
-                 n_points: int=32) -> None:
-        
+    def __init__(
+        self,
+        path: str = None,
+        prompts: Any = None,
+        length: int = None,
+        n_points: int = 32,
+    ) -> None:
+
         if not any([length, prompts]):
             raise RuntimeError("Length or prompts should be specified")
-        
+
         self.length = length
         self.prompts = self.generate_grid(n_points) if prompts is None else prompts
-    
+
     def generate_grid(self, n_points: int):
         return np.tile(generate_grid_prompt(n_points), (self.length, 1, 1))
-    
+
     def __len__(self) -> int:
         return self.prompts.shape[0]
-    
+
     def __getitem__(self, index) -> Any:
         return {"point_coord": self.prompts[index]}
