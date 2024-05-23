@@ -1,6 +1,6 @@
 from enum import Enum
 from functools import wraps
-from typing import Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 import numpy as np
 import skimage.io as io
 import matplotlib.pyplot as plt
@@ -60,16 +60,24 @@ def load_img_cv2(path: str):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     return image
 
+def batch_to_list(batch: Dict[str, Any]) -> List[Dict[str, Any]]:
+    batch_size = next(iter(batch.values())).size(0)
+    batch_list = []
+    for i in range(batch_size):
+        elem = {k: v[i].unsqueeze(0) for k, v in batch.items()}
+        batch_list.append(elem)
+    return batch_list
 
-def load_sam(model_type: str, version: str="dev", device: str=DEVICE):
+
+def load_sam(model_type: str, model_cls: Any, version: str="dev", device: str=DEVICE):
     
     sam = None
 
     match version:
         case "dev":
-            sam = sam_model_registry[model_type](checkpoint=sam_dict_checkpoint[model_type]).to(device=device)
+            sam = sam_model_registry[model_type](checkpoint=sam_dict_checkpoint[model_type], model=model_cls).to(device=device)
         case "raw":
-            sam = sam_model_registry_v0[model_type](checkpoint=sam_dict_checkpoint[model_type]).to(device=device)
+            sam = sam_model_registry_v0[model_type](checkpoint=sam_dict_checkpoint[model_type], model=model_cls).to(device=device)
         case _:
             raise ValueError("Please provide valid sam verison implementation : dev, raw")
     return sam
@@ -107,7 +115,33 @@ def show_anns(anns):
         img[m] = color_mask
     ax.imshow(img)
 
+def show_pair_img(img_A:  Union[str, np.ndarray], img_B: Union[str, np.ndarray]):
+    if isinstance(img_A, str):
+        img_A = load_img(img_A)
+    if isinstance(img_B, str):
+        img_B = load_img(img_B)
+    pair = np.hstack((img_A, img_B))
+    show_img(pair)
 
+def show_masks(masks, plt, alpha=0.7):
+    if len(masks) == 0: return
+    ax = plt.gca()
+    ax.set_autoscale_on(False)
+
+    img = np.ones((masks.shape[1], masks.shape[2], 4))
+    img[:,:,3] = 0
+    for ann in masks:
+        color_mask = np.concatenate([np.random.random(3), [alpha]])
+        img[ann] = color_mask
+    ax.imshow(img)
+    return img
+
+def show_points(coords, labels, ax, marker_size=25):
+    pos_points = coords[labels==1]
+    neg_points = coords[labels==0]
+    ax.scatter(pos_points[:, 0], pos_points[:, 1], color='green', marker='o', s=marker_size, edgecolor='white', linewidth=1.25)
+    ax.scatter(neg_points[:, 0], neg_points[:, 1], color='red', marker='o', s=marker_size, edgecolor='white', linewidth=1.25)   
+    
 def rad_to_degre(x):
     return x * 180 / np.pi
 

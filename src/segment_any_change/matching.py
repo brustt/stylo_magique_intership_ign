@@ -83,7 +83,6 @@ def to_numpy(tensor: torch.Tensor) -> np.ndarray:
 
 
 @timeit
-@deprecated
 def proposal_matching(
     items_A: List[ItemProposal], items_B: List[ItemProposal], th_union: float = 0.6
 ) -> ListProposal:

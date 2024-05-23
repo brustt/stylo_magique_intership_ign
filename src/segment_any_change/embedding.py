@@ -1,7 +1,8 @@
-from typing import Tuple
+from typing import Any, Tuple
 import cv2
 import numpy as np
 
+from segment_any_change.mask_items import ImgType
 from segment_any_change.sa_dev.predictor import SamPredictor
 
 def resize2d(arr: np.ndarray, target_size:Tuple, method: int):
@@ -31,17 +32,22 @@ def compute_mask_embedding(mask: np.ndarray, img_embedding: np.ndarray) -> np.nd
     return mask_embedding
 
 
-def get_img_embedding_normed(predictor: SamPredictor) -> np.ndarray:
+def get_img_embedding_normed(predictor: Any, img_type: ImgType) -> np.ndarray:
     """Invert affine transformation of the image encoder last LayerNorm Layer.
 
 
     Args:
-        predictor (SamPredictor): inference class for SAM
+        predictor (SamPredictor, BiSam): inference class for SAM
 
     Returns:
         np.ndarray: Scaled embedding
     """
-    embedding = predictor.get_image_embedding()
+    # workaround BiSam - not clean
+    if type(predictor.model).__name__ == "BiSam":
+        embedding = predictor.model.get_image_embedding(img_type.value)
+    else:
+        embedding = predictor.get_image_embedding()
+
     # get last layerNorm weights & biais to invert affine transformation
     w = predictor.model._modules["image_encoder"].neck[3].weight
     b = predictor.model._modules["image_encoder"].neck[3].bias

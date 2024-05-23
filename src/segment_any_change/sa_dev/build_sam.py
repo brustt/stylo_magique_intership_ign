@@ -22,33 +22,35 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def build_sam_vit_h(checkpoint=None):
+def build_sam_vit_h(checkpoint=None, model=Sam):
     return _build_sam(
         encoder_embed_dim=1280,
         encoder_depth=32,
         encoder_num_heads=16,
         encoder_global_attn_indexes=[7, 15, 23, 31],
         checkpoint=checkpoint,
+        model=model
     )
 
-def build_sam_vit_l(checkpoint=None):
+def build_sam_vit_l(checkpoint=None, model=Sam):
     return _build_sam(
         encoder_embed_dim=1024,
         encoder_depth=24,
         encoder_num_heads=16,
         encoder_global_attn_indexes=[5, 11, 17, 23],
         checkpoint=checkpoint,
+        model=model
     )
 
 
-def build_sam_vit_b(checkpoint=None):
-    logger.info("build SAM")
+def build_sam_vit_b(checkpoint=None, model=Sam):
     return _build_sam(
         encoder_embed_dim=768,
         encoder_depth=12,
         encoder_num_heads=12,
         encoder_global_attn_indexes=[2, 5, 8, 11],
         checkpoint=checkpoint,
+        model=model
     )
 
 build_sam = build_sam_vit_h
@@ -66,14 +68,17 @@ def _build_sam(
     encoder_depth,
     encoder_num_heads,
     encoder_global_attn_indexes,
+    model,
     checkpoint=None,
 ):
+    """Load sam variant model"""
+    logger.info(f"build {model.__name__}")
 
     prompt_embed_dim = 256
     image_size = 1024
     vit_patch_size = 16
     image_embedding_size = image_size // vit_patch_size
-    sam = Sam(
+    sam = model(
         image_encoder=ImageEncoderViT(
             depth=encoder_depth,
             embed_dim=encoder_embed_dim,

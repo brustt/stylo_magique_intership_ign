@@ -8,8 +8,8 @@ from segment_any_change.utils import flatten, to_degre
 
 
 class ImgType(Enum):
-    A = 1
-    B = 2
+    A = 0
+    B = 1
 
 
 class FilteringType(Enum):

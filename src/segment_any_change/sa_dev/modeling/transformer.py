@@ -215,13 +215,13 @@ class Attention(nn.Module):
         # EDIT MD
         b, np, n, c = x.shape
         x = x.reshape(b, np, n, num_heads, c // num_heads)
-        return x.transpose(2, 3)  # B x N_heads x N_tokens x C_per_head
+        return x.transpose(2, 3)  # B x np x N_heads x N_tokens x C_per_head
 
     def _recombine_heads(self, x: Tensor) -> Tensor:
         # EDIT MD
         b, np, n_heads, n_tokens, c_per_head = x.shape
         x = x.transpose(2, 3)
-        return x.reshape(b, np, n_tokens, n_heads * c_per_head)  # B x N_tokens x C
+        return x.reshape(b, np, n_tokens, n_heads * c_per_head)  # B x np x N_tokens x C
 
     def forward(self, q: Tensor, k: Tensor, v: Tensor) -> Tensor:
         # Input projections
@@ -237,7 +237,7 @@ class Attention(nn.Module):
         # Attention
         # EDIT MD
         _, _,_, _, c_per_head = q.shape
-        attn = q @ k.permute(0, 1, 2, 4, 3)  # B x N_heads x N_tokens x N_tokens
+        attn = q @ k.permute(0, 1, 2, 4, 3)  # B x np x N_heads x N_tokens x N_tokens
         attn = attn / math.sqrt(c_per_head)
         attn = torch.softmax(attn, dim=-1)
 

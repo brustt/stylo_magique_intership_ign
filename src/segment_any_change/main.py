@@ -6,31 +6,17 @@ from segment_any_change.embedding import (
 )
 from segment_any_change.mask_items import (
     FilteringType,
-    ImgType,
     ListProposal,
-    create_change_proposal_items,
-    thresholding_factory,
 )
 from segment_any_change.matching import (
     neg_cosine_sim,
-    proposal_matching,
-    semantic_change_mask,
-    temporal_matching,
 )
-from segment_any_change.sa_dev_v0.modeling.sam import Sam
 from segment_any_change.sa_dev_v0.predictor import SamPredictor
 
 from segment_any_change.utils import (
-    SegAnyChangeVersion,
-    flush_memory,
-    load_img,
-    load_levircd_sample,
-    load_sam,
     to_degre,
     timeit
 )
-
-from segment_any_change.mask_generator import SegAnyMaskGenerator
 import logging
 
 # TO DO : define globally
@@ -38,80 +24,7 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-
-
-class BitemporalMatching:
-    def __init__(self, model_type: str, version: SegAnyChangeVersion, **sam_kwargs) -> None:
-        model = load_sam(model_type, version="raw")
-        self.mask_generator = SegAnyMaskGenerator(model, **sam_kwargs)
-        self.items_A = None
-        self.items_B = None
-        self.seganyversion = version
-
-    @timeit
-    def run(
-        self, img_A: np.ndarray, img_B: np.ndarray, filter_method: str, **params
-    ) -> Any:
-        """Run Bitemporal matching
-
-        Args:
-            img_A (np.ndarray): Image . Generate masks last to keep image set on predictor (use in QueryPromptMecanism).
-            img_B (np.ndarray): Image t+1.
-            filter_method (str): _description_
-
-        Returns:
-            Any: _description_
-        """
-
-        # apply histogram matching
-
-        # Image B : embedding + masks
-        masks_B = self.mask_generator.generate(img_B)
-        #print(f"N masks B : {len(masks_B)}")
-        img_embedding_B = get_img_embedding_normed(self.mask_generator.predictor)
-
-        # Image A : embedding + masks
-        masks_A = self.mask_generator.generate(img_A)
-        #print(f"N masks A : {len(masks_A)}")
-        img_embedding_A = get_img_embedding_normed(self.mask_generator.predictor)
-
-        # t -> t+1
-        x_t_mA, _, ci = temporal_matching(img_embedding_A, img_embedding_B, masks_A)
-        # t+1 -> t
-        _, x_t1_mB, ci1 = temporal_matching(img_embedding_A, img_embedding_B, masks_B)
-
-        # TO DO : review nan values : object loss after resize
-        logger.info(f"nan values ci {np.sum(np.isnan(ci))}")
-        logger.info(f"nan values ci1 {np.sum(np.isnan(ci1))}")
-
-        self.items_A = create_change_proposal_items(
-            masks=masks_A, ci=ci, type_img=ImgType.A, embeddings=x_t_mA
-        )
-        self.items_B = create_change_proposal_items(
-            masks=masks_B, ci=ci1, type_img=ImgType.B, embeddings=x_t1_mB
-        )
-
-        match self.seganyversion: 
-            case SegAnyChangeVersion.RAW:
-                items_change = proposal_matching(self.items_A, self.items_B)
-                th = items_change.apply_change_filtering(filter_method, FilteringType.Sup)
-            case _:
-                raise RuntimeError('SegAnyChange version unkwown')
-
-        return items_change, th, 
-
-    def get_mask_proposal(self, temp_type: ImgType, idx=None) -> List[np.ndarray]:
-
-        dict_type = {
-            ImgType.A: self.items_A,
-            ImgType.B: self.items_B,
-        }
-        if temp_type not in dict_type:
-            raise KeyError("please provide valid data type : A, B")
-        if idx is None:
-            return [i.mask.astype(np.uint8) for i in dict_type[temp_type]]
-
-
+# To update with new batch version
 class PointQueryMecanism:
 
     S_MASK_EMB = (1024, 1024)
@@ -214,6 +127,7 @@ class PointQueryMecanism:
 
 
 if __name__ == "__main__":
+    """
 
     flush_memory()
 
@@ -264,3 +178,5 @@ if __name__ == "__main__":
     )
 
     print(f"Done : {len(sim_obj_change)}")
+
+    """
