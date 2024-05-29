@@ -2,7 +2,7 @@ from typing import Any, Tuple
 import cv2
 import numpy as np
 
-from segment_any_change.mask_items import ImgType
+from segment_any_change.masks.mask_items import ImgType
 from segment_any_change.sa_dev.predictor import SamPredictor
 
 
@@ -36,6 +36,7 @@ def compute_mask_embedding(mask: np.ndarray, img_embedding: np.ndarray) -> np.nd
 
 def get_img_embedding_normed(predictor: Any, img_type: ImgType) -> np.ndarray:
     """Invert affine transformation of the image encoder last LayerNorm Layer.
+    Run for a batch
 
 
     Args:
@@ -46,7 +47,7 @@ def get_img_embedding_normed(predictor: Any, img_type: ImgType) -> np.ndarray:
     """
     # workaround BiSam - not clean
     if type(predictor.model).__name__ == "BiSam":
-        embedding = predictor.model.get_image_embedding(img_type.value)
+        embedding = predictor.model.get_image_embedding(img_type)
     else:
         embedding = predictor.get_image_embedding()
 

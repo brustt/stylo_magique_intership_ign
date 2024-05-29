@@ -76,7 +76,7 @@ class DefaultTransform:
         return input_tensor
 
     def to_tensor(self, img: np.ndarray) -> torch.Tensor:
-        input_image_torch = torch.as_tensor(img, device=DEVICE)
+        input_image_torch = torch.as_tensor(img, device=DEVICE, dtype=torch.float)
         if input_image_torch.ndim > 2:
             input_image_torch = input_image_torch.permute(2, 0, 1).contiguous()
         return input_image_torch

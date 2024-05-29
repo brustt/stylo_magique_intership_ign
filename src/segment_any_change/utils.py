@@ -55,6 +55,9 @@ def to_tensor(
     return torch.as_tensor(arr, dtype=dtype, device=device)
 
 
+def to_numpy(tensor: torch.Tensor) -> np.ndarray:
+    return tensor.detach().cpu().numpy()
+
 def load_img_cv2(path: str):
     image = cv2.imread(path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)

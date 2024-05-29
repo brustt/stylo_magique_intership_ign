@@ -1,25 +1,17 @@
 from typing import Any, List, Optional, Tuple, Union
-import numpy as np
+import torch
+from segment_any_change.eval import MetricEngine
+from segment_any_change.tensorboard_callback import TensorBoardCallbackLogger
+from src.magic_pen.dummy import DummyModel
 from magic_pen.config import DEVICE
-from magic_pen.data.loader import BiTemporalDataset
-from magic_pen.data.process import DefaultTransform
-from segment_any_change.embedding import (
-    compute_mask_embedding,
-    get_img_embedding_normed,
-)
-from segment_any_change.mask_items import (
-    FilteringType,
-    ListProposal,
-)
-from segment_any_change.matching import (
-    BitemporalMatching,
-    neg_cosine_sim,
-)
+import pytorch_lightning as pl
+from pytorch_lightning.profilers import PyTorchProfiler
+from magic_pen.data.datamodule import CDDataModule
 from segment_any_change.model import BiSam
-from segment_any_change.sa_dev_v0.predictor import SamPredictor
-from torch.utils.data import DataLoader
-from segment_any_change.utils import flush_memory, load_sam, to_degre, timeit
+from segment_any_change.task import CDModule
+from segment_any_change.utils import flush_memory, load_sam
 import logging
+from pytorch_lightning.loggers import TensorBoardLogger
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
@@ -44,32 +36,43 @@ if __name__ == "__main__":
     # experiment parameters
     filter_change_proposals = "otsu"
     filter_query_sim = 70
-    batch_size=1
+    batch_size=16
     model_type="vit_b"
 
-    ds = BiTemporalDataset(
-        name="levir-cd", 
-        dtype="train", 
-        transform=DefaultTransform()
+    logger = TensorBoardLogger(save_dir="lightning_logs", name="pred_v0")
+
+    profiler = PyTorchProfiler(
+        on_trace_ready=torch.profiler.tensorboard_trace_handler("tb_logs/profiler0"),
+        schedule=torch.profiler.schedule(skip_first=10, wait=1, warmup=1, active=20)
     )
-    dataloader = DataLoader(ds, batch_size=batch_size)
 
-    model = load_sam(
-        model_type=model_type, 
-        model_cls=BiSam,
-        version="dev", 
-        device=DEVICE
-        )
+    eval_engine = MetricEngine(metric_key="px_classif")
 
-    matcher = BitemporalMatching(model, **sam_params)
-    logger.info("--- Bitemporal matching ---")
-    for i_batch, batch in enumerate(dataloader):
-        logger.info(f"Run batch {i_batch}")
+    model = DummyModel(3, 1).to(DEVICE)
 
-        items_change, th = matcher.run(
-            batch=batch,
-            filter_method=filter_change_proposals,
-        )
-        print(f"Done : {len(items_change)}")
-        break
+    # sam = load_sam(
+    #     model_type=model_type, 
+    #     model_cls=BiSam,
+    #     version="dev", 
+    #     device=DEVICE
+    #     )
+    #    matcher = BitemporalMatching(sam, **sam_params)
+
+
+    pl_module = CDModule(model=model, eval_engine=eval_engine)
+    
+    dm = CDDataModule(name="levir-cd", batch_size=batch_size)
+
+    trainer = pl.Trainer(
+        logger=logger,
+        profiler=profiler,
+        callbacks=[TensorBoardCallbackLogger()]
+    )
+
+    trainer.predict(pl_module, dm)
+
+
+
+
+
 

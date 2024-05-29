@@ -5,8 +5,8 @@ from segment_any_change.embedding import compute_mask_embedding, get_img_embeddi
 from magic_pen.config import DEVICE
 from magic_pen.data.loader import BiTemporalDataset
 from magic_pen.data.process import DefaultTransform
-from segment_any_change.mask_generator import SegAnyMaskGenerator
-from segment_any_change.mask_items import (
+from segment_any_change.masks.mask_generator import SegAnyMaskGenerator
+from segment_any_change.masks.mask_items import (
     FilteringType,
     ImgType,
     create_change_proposal_items,
@@ -14,7 +14,10 @@ from segment_any_change.mask_items import (
     ListProposal,
     create_union_object,
 )
+from torch.nn.utils.rnn import pad_sequence
+
 from segment_any_change.model import BiSam
+from segment_any_change.sa_dev.utils.amg import batched_mask_to_box
 from segment_any_change.utils import (
     SegAnyChangeVersion,
     flush_memory,
@@ -42,13 +45,12 @@ class BitemporalMatching:
                  batch: Dict[str, torch.Tensor], 
                  filter_method: str, 
                  **params) -> Any:
+        
+        preds = []
+
         device = params.get("device", None) if params.get("device", None) else DEVICE
         items_batch = self.run(batch, filter_method, **params)
-        print(f" Len batch : {len(items_batch)}")
-        masks_batch = np.stack([np.sum(item.masks, axis=0) for item in items_batch])
-        return torch.as_tensor(
-            masks_batch, dtype=torch.float, device=device
-            )
+        return items_batch
 
     @timeit
     def run(self, batch: Dict[str, torch.Tensor], filter_method: str, **params) -> Any:
@@ -60,28 +62,32 @@ class BitemporalMatching:
         print(f"return {len(img_anns)}")
 
         items_batch = []
-        for item in img_anns:
-            masks_A = self.extract_temporal_img(item["masks"], ImgType.A)
-            masks_B = self.extract_temporal_img(item["masks"], ImgType.B)
-            img_embedding_A = get_img_embedding_normed(self.mask_generator, ImgType.A)
-            # print(f"N masks A : {len(masks_A)}")
-            img_embedding_B = get_img_embedding_normed(self.mask_generator, ImgType.B)
+
+        masks_A = self.extract_temporal_img(img_anns, ImgType.A)
+        masks_B = self.extract_temporal_img(img_anns, ImgType.B)
+        img_embedding_A = get_img_embedding_normed(self.mask_generator, ImgType.A)
+        img_embedding_B = get_img_embedding_normed(self.mask_generator, ImgType.B)
+
+        assert len(masks_A) == len(masks_B) == len(img_embedding_A) == len(img_embedding_B)
+
+        for img_embA, mA, img_embB, mB in zip(img_embedding_A, masks_A, img_embedding_B, masks_B):
             # t -> t+1
-            x_t_mA, _, ci = temporal_matching(img_embedding_A, img_embedding_B, masks_A)
+            x_t_mA, _, ci = temporal_matching(img_embA, img_embB, mA)
             # t+1 -> t
             _, x_t1_mB, ci1 = temporal_matching(
-                img_embedding_A, img_embedding_B, masks_B
+                img_embA, img_embB, mB
             )
 
             # TO DO : review nan values : object loss after resize
             logger.info(f"nan values ci {np.sum(np.isnan(ci))}")
             logger.info(f"nan values ci1 {np.sum(np.isnan(ci1))}")
 
+
             self.items_A = create_change_proposal_items(
-                masks=masks_A, ci=ci, type_img=ImgType.A, embeddings=x_t_mA
+                masks=mA, ci=ci, type_img=ImgType.A, embeddings=x_t_mA
             )
             self.items_B = create_change_proposal_items(
-                masks=masks_B, ci=ci1, type_img=ImgType.B, embeddings=x_t1_mB
+                masks=mB, ci=ci1, type_img=ImgType.B, embeddings=x_t1_mB
             )
 
             match self.seganyversion:
@@ -93,17 +99,32 @@ class BitemporalMatching:
                     items_batch.append(items_change)
                 case _:
                     raise RuntimeError("SegAnyChange version unkwown")
+                
+        masks = pad_sequence([item_list.masks for item_list in items_batch]).permute(1, 0, 2, 3)
+        iou_preds = pad_sequence([item_list.iou_preds for item_list in items_batch]).permute(1, 0)
 
-        return items_batch
+        return dict(masks=masks, iou_preds=iou_preds)
 
 
-    def extract_temporal_img(self, masks: np.ndarray, name: ImgType):
-        """Compliant format with old code"""
+    def extract_temporal_img(self, items: List[Dict], name: ImgType) -> List[Dict]:
+        """Retrieve image temporality - keep old data format"""
         match name:
             case ImgType.A:
-                return [{"segmentation": masks[_]} for _ in range(0, len(masks), 2)]
+                return (
+                    [[
+                        {
+                            "segmentation" : m, 
+                            "iou_pred" : s
+                        } for m,s in zip(d["masks"], d["predicted_iou"])
+                        ] for d in items if d["img_type"] == ImgType.A])
             case ImgType.B:
-                return [{"segmentation": masks[_]} for _ in range(1, len(masks), 2)]
+                return (
+                    [[
+                        {
+                            "segmentation" : m, 
+                            "iou_pred" : s
+                        } for m,s in zip(d["masks"], d["predicted_iou"])
+                        ] for d in items if d["img_type"] == ImgType.B])
             case _:
                 raise ValueError("Uncorrect image type")
 
@@ -155,7 +176,7 @@ def cover_same_zone(mask_1, mask_2, th=0.6) -> bool:
     union_area = np.sum(np.logical_or(mask_1, mask_2))
     return inter_area > (union_area * th)
 
-
+@deprecated
 def semantic_change_mask(
     items: List[ItemProposal], agg_func: str = "sum"
 ) -> np.ndarray:
@@ -170,10 +191,6 @@ def semantic_change_mask(
     mask_ci = agg_factory[agg_func]((masks * ci[:, None, None]), axis=0)
 
     return mask_ci
-
-
-def to_numpy(tensor: torch.Tensor) -> np.ndarray:
-    return tensor.detach().cpu().numpy()
 
 
 @timeit

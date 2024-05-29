@@ -19,5 +19,5 @@ sam_dict_checkpoint = {"vit_h": sam_model_large, "vit_b": sam_model_small}
 ### constants
 
 SEED = 12
-DEVICE = "cpu"
+DEVICE = "cuda:0"
 IMG_SIZE = (1024, 1024)

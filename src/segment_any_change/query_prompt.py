@@ -4,7 +4,7 @@ from segment_any_change.embedding import (
     compute_mask_embedding,
     get_img_embedding_normed,
 )
-from segment_any_change.mask_items import (
+from segment_any_change.masks.mask_items import (
     FilteringType,
     ListProposal,
 )
