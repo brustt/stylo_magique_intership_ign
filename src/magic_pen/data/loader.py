@@ -16,7 +16,7 @@ from PIL import Image
 import warnings
 
 from magic_pen.data.process import generate_grid_prompt
-from magic_pen.io import load_levircd_sample
+from magic_pen.utils_io import load_levircd_sample
 from segment_any_change.utils import load_img
 
 warnings.filterwarnings("ignore")

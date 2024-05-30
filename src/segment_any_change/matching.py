@@ -35,10 +35,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 class BitemporalMatching:
-    def __init__(self, model, filter_method, **sam_kwargs) -> None:
+    def __init__(self, model, th_change_proposals, **sam_kwargs) -> None:
         self.mask_generator = SegAnyMaskGenerator(model, **sam_kwargs)
         self.seganyversion = SegAnyChangeVersion.RAW
-        self.filter_method = filter_method
+        self.filter_method = th_change_proposals
         self.items_A = None
         self.items_B = None
     

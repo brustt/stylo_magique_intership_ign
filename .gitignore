@@ -183,5 +183,5 @@ models/*
 .virtual_documents/
 
 
-# lighning logs
-lightning_logs/
+# sim link
+lightning_logs

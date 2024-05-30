@@ -1,4 +1,6 @@
+import numpy as np
 import pytorch_lightning as pl
+import torch
 from torch.utils import data
 from magic_pen.data.loader import BiTemporalDataset
 from magic_pen.data.process import DefaultTransform
@@ -33,4 +35,6 @@ class CDDataModule(pl.LightningDataModule):
         return data.DataLoader(self.test, batch_size=self.batch_size, shuffle=False)
     
     def predict_dataloader(self):
-        return data.DataLoader(self.test, batch_size=self.batch_size, shuffle=False)
+        # sample first 8 paires
+        subset = torch.utils.data.Subset(self.test, np.arange(8))
+        return data.DataLoader(subset, batch_size=self.batch_size, shuffle=False)

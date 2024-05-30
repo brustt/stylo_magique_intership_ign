@@ -24,8 +24,7 @@ class CDModule(pl.LightningModule):
     def predict_step(self, batch, batch_idx):
         preds = self.model(batch)
         pred_metrics = self.metrics_predict(preds, batch["label"])
-        #self.log_dict(pred_metrics)
-        return pred_metrics
+        return {"metrics": pred_metrics, "prediction": preds, "batch_idx": batch_idx}
     
     def on_predict_epoch_end(self) -> None:
         self.metrics_predict.reset()

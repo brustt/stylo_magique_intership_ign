@@ -5,7 +5,7 @@ import numpy as np
 import skimage.io as io
 import matplotlib.pyplot as plt
 import cv2
-from magic_pen.io import load_levircd_sample
+from magic_pen.utils_io import load_levircd_sample
 from segment_any_change.sa_dev import sam_model_registry
 from segment_any_change.sa_dev_v0 import sam_model_registry as sam_model_registry_v0
 
