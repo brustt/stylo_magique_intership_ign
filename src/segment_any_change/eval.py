@@ -16,7 +16,7 @@ from torch.utils.data import Dataset, DataLoader
 from magic_pen.config import DEVICE
 from magic_pen.data.loader import BiTemporalDataset
 from magic_pen.data.process import DefaultTransform
-from segment_any_change.masks.mask_process import bbox_processing_factory
+from segment_any_change.masks.mask_process import _bbox_processing_labels, _bbox_processing_preds
 from segment_any_change.matching import BitemporalMatching
 from segment_any_change.model import BiSam
 from segment_any_change.utils import flush_memory, load_sam
@@ -145,12 +145,12 @@ class ObjGroupMetric(MetricGroupGeneric):
         super().__init__(in_metrics, metric_key, default_init=get_obj_metrics) 
 
     def processing(self, preds: Dict[str, torch.Tensor], labels: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        preds = bbox_processing_factory(preds, "pred")
-        labels = bbox_processing_factory(labels, "label")
+        # preds = bbox_processing_factory(preds, "pred") # deactivate
+        # labels = bbox_processing_factory(labels, "label")
 
         return preds, labels
 
-class MetricEngine:
+class MetricEngine_:
     
     _builder = {
         "pixel": PxGroupMetric,
@@ -196,12 +196,10 @@ class MetricEngine:
     def compute(self) -> None:
         res = {}
         logger.info("let's compute metrics") # draft doesn't compute
-        # for group in self.engine:
-        #     logger.info(f"compute for {group}")
-        #     res[group] = self.engine[group]._metrics.compute()
-        # return res
-        res = self.engine["pixel"]._metrics.compute() # draft doesn't compute
-        logger.info(f"Return : {res}")
+        for group in self.engine:
+            logger.info(f"compute for {group}")
+            res[group] = self.engine[group]._metrics.compute()
+        return res
 
     def update(self, preds: torch.Tensor, labels: torch.Tensor) -> None:
         for group in self.engine:
@@ -213,7 +211,99 @@ class MetricEngine:
             self.engine[group]._metrics.reset()
 
 
+"""
+new engine
+"""
 
+_register_metric_group = {
+    "BinaryF1Score":"px_classif",
+    "BinaryPrecision":"px_classif",
+    "BinaryRecall":"px_classif",
+    "MeanIou":"px_classif_iou"}
+
+_register_metric_processing = {
+    "BinaryF1Score":"flat",
+    "BinaryPrecision":"flat",
+    "BinaryRecall":"flat",
+    "MeanIou":"iou",
+    "MeanAveragePrecision":"bbox",
+}
+
+PX_METRICS = [
+    BinaryF1Score(),
+    BinaryPrecision(),
+    BinaryRecall(),
+]
+
+def _factory_metric_processing(name: str, preds, labels):
+    match name:
+        case "flat": 
+            return ProcessingEval().flat(preds, labels)
+        case "bbox": 
+            preds = ProcessingEval().bbox_processing(preds, "pred")
+            labels = ProcessingEval().bbox_processing(labels, "label")
+            return preds, labels
+        case "iou": 
+            preds = ProcessingEval().iou_processing(preds, "pred")
+            return preds, labels
+
+class ProcessingEval:
+
+    def flat(self, preds, labels):
+        
+        masks, iou = preds.values()
+        # aggregates masks
+        if masks.ndim > 3:
+            masks = torch.sum(masks, axis=1)
+        # binarize
+        labels = (labels > 1)*1
+        masks = (masks > 1)*1
+        # flat
+        masks = masks.view(masks.shape[0], -1)
+        labels = labels.view(labels.shape[0], -1)
+
+        return masks, labels
+    
+    def bbox_processing(self, x: Union[Dict[str, torch.Tensor], torch.Tensor], data_type: str) -> List[Dict]:
+        if data_type == "pred":
+            return _bbox_processing_preds(x)
+        elif data_type == "label":
+            return _bbox_processing_labels(x)
+        else:
+            raise ValueError("data_type not valid. Valid data_type : pred, label")
+    
+    def iou_processing(self, x: Union[Dict[str, torch.Tensor], torch.Tensor], data_type: str) -> List[Dict]:
+        # check input format
+        raise RuntimeError("Not implemented yet")
+        
+
+
+class MetricEngine:
+    def __init__(self, in_metrics: List[Metric]=None, prefix="") -> None:
+        
+        self.name = self.check_homogeneity(in_metrics)
+        self.metrics = MetricCollection(in_metrics, prefix=prefix)
+    
+    def check_homogeneity(self, in_metrics):
+        names = set([_register_metric_processing[type(m).__name__] for m in in_metrics])
+        if len(names) > 1:
+            print(names)
+            raise RuntimeError("Cannot instantiate metrics with differents input format under same MetricCollection")
+        return names.pop()
+
+    def compute(self) -> None:
+        return self.metrics.compute() 
+
+    def update(self, preds: torch.Tensor, labels: torch.Tensor) -> None:
+        preds, labels = _factory_metric_processing(self.name, preds, labels)
+        self.metrics.update(preds.to(DEVICE), labels.to(DEVICE)) # to() will not work on list - convert in processing
+
+    def reset(self) -> None:
+        self.metrics.reset()
+
+    def __call__(self, preds, targets):
+        self.update(preds, targets)
+        return self.compute()
     
 @torch.no_grad()
 def evaluate(model: Any, 

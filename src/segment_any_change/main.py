@@ -1,7 +1,8 @@
 from typing import Any, List, Optional, Tuple, Union
 import torch
-from segment_any_change.eval import MetricEngine
-from segment_any_change.tensorboard_callback import TensorBoardCallbackLogger
+from segment_any_change.eval import PX_METRICS, MetricEngine
+from segment_any_change.matching import BitemporalMatching
+from segment_any_change.tensorboard_callback import CustomWriter, TensorBoardCallbackLogger
 from src.magic_pen.dummy import DummyModel
 from magic_pen.config import DEVICE
 import pytorch_lightning as pl
@@ -36,17 +37,16 @@ if __name__ == "__main__":
     # experiment parameters
     filter_change_proposals = "otsu"
     filter_query_sim = 70
-    batch_size=16
+    batch_size=2
     model_type="vit_b"
+    output_dir = "lightning_logs/predictions"
 
     logger = TensorBoardLogger(save_dir="lightning_logs", name="pred_v0")
 
     profiler = PyTorchProfiler(
         on_trace_ready=torch.profiler.tensorboard_trace_handler("tb_logs/profiler0"),
-        schedule=torch.profiler.schedule(skip_first=10, wait=1, warmup=1, active=20)
+        schedule=torch.profiler.schedule(skip_first=10, wait=1, warmup=1, active=20) # parameters meaning ?
     )
-
-    eval_engine = MetricEngine(metric_key="px_classif")
 
     model = DummyModel(3, 1).to(DEVICE)
 
@@ -56,17 +56,18 @@ if __name__ == "__main__":
     #     version="dev", 
     #     device=DEVICE
     #     )
-    #    matcher = BitemporalMatching(sam, **sam_params)
+    # model = BitemporalMatching(sam, filter_method=filter_change_proposals, **sam_params)
 
 
-    pl_module = CDModule(model=model, eval_engine=eval_engine)
+    pl_module = CDModule(model=model, metrics=PX_METRICS)
     
     dm = CDDataModule(name="levir-cd", batch_size=batch_size)
 
     trainer = pl.Trainer(
         logger=logger,
+        accelerator=DEVICE,
         profiler=profiler,
-        callbacks=[TensorBoardCallbackLogger()]
+        callbacks=[TensorBoardCallbackLogger(), CustomWriter(output_dir, write_interval="epoch")]
     )
 
     trainer.predict(pl_module, dm)

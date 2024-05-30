@@ -35,21 +35,20 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 class BitemporalMatching:
-    def __init__(self, model, **sam_kwargs) -> None:
+    def __init__(self, model, filter_method, **sam_kwargs) -> None:
         self.mask_generator = SegAnyMaskGenerator(model, **sam_kwargs)
         self.seganyversion = SegAnyChangeVersion.RAW
+        self.filter_method = filter_method
         self.items_A = None
         self.items_B = None
     
     def __call__(self, 
                  batch: Dict[str, torch.Tensor], 
-                 filter_method: str, 
                  **params) -> Any:
         
         preds = []
-
         device = params.get("device", None) if params.get("device", None) else DEVICE
-        items_batch = self.run(batch, filter_method, **params)
+        items_batch = self.run(batch, self.filter_method, **params)
         return items_batch
 
     @timeit
