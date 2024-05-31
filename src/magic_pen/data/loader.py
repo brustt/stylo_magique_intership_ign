@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Union
 from magic_pen.config import *
 from PIL import Image
 
@@ -43,7 +43,7 @@ def load_ds(ds_name: str, **kwargs) -> pd.DataFrame:
 
 
 @dataclass
-class MetaItem:
+class DataSample:
     A_path: str
     B_path: str
     label_path: str
@@ -53,16 +53,18 @@ class BiTemporalDataset(Dataset):
     def __init__(
         self,
         name: str = None,
-        items: List[MetaItem] = None,
-        dtype: str = "train",
+        items: List[Union[Dict, DataSample]] = None,
+        dtype: str= "train",
         transform: Any = None,
         seed: int = SEED,
     ) -> None:
 
         if not any([name, items]):
             raise ("Please provide at least items or dataset name")
-
-        self.items = load_ds(ds_name=name, data_type=dtype) if items is None else items
+        if items is None:
+            self.items = load_ds(ds_name=name, data_type=dtype)  
+        else:
+            self.items = pd.DataFrame(items.__dict__, index=[0], columns=["label_path", "A_path", "B_path"])
         self.transform = transform
         self.seed = seed
 

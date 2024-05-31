@@ -58,7 +58,6 @@ class BitemporalMatching:
         Keep implementation in numpy for simplicity
         """
         img_anns = self.mask_generator.generate(batch)
-        print(f"return {len(img_anns)}")
 
         items_batch = []
 
@@ -67,8 +66,15 @@ class BitemporalMatching:
         img_embedding_A = get_img_embedding_normed(self.mask_generator, ImgType.A)
         img_embedding_B = get_img_embedding_normed(self.mask_generator, ImgType.B)
 
-        assert len(masks_A) == len(masks_B) == len(img_embedding_A) == len(img_embedding_B)
-
+        assert len(masks_A) == len(masks_B) # same size_batch
+        assert len(img_embedding_A) == len(img_embedding_B)
+        
+        # To review :workaround for size_batch == 1 - check .squeeze(0) in get_img_embedding_normed
+        if img_embedding_A.ndim == 3:
+            img_embedding_A = np.expand_dims(img_embedding_A, axis=0)
+            img_embedding_B = np.expand_dims(img_embedding_B, axis=0)
+        
+        # iterate over batch
         for img_embA, mA, img_embB, mB in zip(img_embedding_A, masks_A, img_embedding_B, masks_B):
             # t -> t+1
             x_t_mA, _, ci = temporal_matching(img_embA, img_embB, mA)
@@ -76,6 +82,8 @@ class BitemporalMatching:
             _, x_t1_mB, ci1 = temporal_matching(
                 img_embA, img_embB, mB
             )
+            print(ci)
+            print(ci1)
 
             # TO DO : review nan values : object loss after resize
             logger.info(f"nan values ci {np.sum(np.isnan(ci))}")
@@ -85,6 +93,7 @@ class BitemporalMatching:
             self.items_A = create_change_proposal_items(
                 masks=mA, ci=ci, type_img=ImgType.A, embeddings=x_t_mA
             )
+
             self.items_B = create_change_proposal_items(
                 masks=mB, ci=ci1, type_img=ImgType.B, embeddings=x_t1_mB
             )
@@ -92,6 +101,8 @@ class BitemporalMatching:
             match self.seganyversion:
                 case SegAnyChangeVersion.RAW:
                     items_change = proposal_matching(self.items_A, self.items_B)
+                    
+                    print([_.chgt_angle for _ in items_change])
                     th = items_change.apply_change_filtering(
                         filter_method, FilteringType.Sup
                     )
@@ -222,51 +233,3 @@ def proposal_matching(
             filter_items.add_item(insert_item)
 
     return filter_items
-
-
-
-if __name__ == "__main__":
-
-    flush_memory()
-
-    pair_img = load_levircd_sample(1, seed=42)
-    path_label, path_A, path_B = pair_img.iloc[0]
-    # default parameters for auto-generation
-    sam_params = {
-        "points_per_side": 10,  # lower for speed
-        "points_per_batch": 64,  # not used
-        "pred_iou_thresh": 0.88,
-        "stability_score_thresh": 0.95,
-        "stability_score_offset": 1.0,
-        "box_nms_thresh": 0.7,
-        "min_mask_region_area": 0,
-    }
-    logger.info("==== start ====")
-    filter_change_proposals = "otsu"
-    filter_query_sim = 70
-    batch_size = 1
-    model_type = "vit_b"
-
-    ds = BiTemporalDataset(name="levir-cd", dtype="train", transform=DefaultTransform())
-    dataloader = DataLoader(ds, batch_size=batch_size)
-    masks_loop = []
-
-    model = load_sam(
-        model_type=model_type, model_cls=BiSam, version="dev", device=DEVICE
-    )
-
-    matcher = BitemporalMatching(model, **sam_params)
-
-    logger.info("--- Bitemporal matching ---")
-
-    for i_batch, batch in enumerate(dataloader):
-        if i_batch == 1:
-            break
-
-        logger.info(f"Run batch {i_batch}")
-
-        items_change = matcher.run(
-            batch=batch,
-            filter_method=filter_change_proposals,
-        )
-        print(f"Done : {len(items_change)}")

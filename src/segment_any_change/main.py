@@ -1,18 +1,17 @@
 from dataclasses import dataclass
-import os
 from typing import Any, List, Optional, Tuple, Union
 import torch
-from segment_any_change.eval import PX_METRICS, MetricEngine
-from segment_any_change.matching import BitemporalMatching
+from segment_any_change.eval import PX_METRICS
+
+from segment_any_change.inference import ExperimentParams, choose_model
 from segment_any_change.tensorboard_callback import CustomWriter, TensorBoardCallbackLogger
-from src.magic_pen.dummy import DummyModel
-from magic_pen.config import DEVICE, SEED, project_path, logs_dir
+
+from magic_pen.config import DEVICE, SEED, logs_dir
 import pytorch_lightning as pl
 from pytorch_lightning.profilers import PyTorchProfiler
 from magic_pen.data.datamodule import CDDataModule
-from segment_any_change.model import BiSam
 from segment_any_change.task import CDModule
-from segment_any_change.utils import flush_memory, load_sam
+from segment_any_change.utils import flush_memory
 import logging
 from pytorch_lightning.loggers import TensorBoardLogger
 from pathlib import Path
@@ -21,47 +20,9 @@ from pathlib import Path
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 
 
-def choose_model(is_debug, params):
-
-    if is_debug:
-        return DummyModel(3, 1).to(DEVICE)
-    else:
-        sam = load_sam(
-            model_type=params.model_type, 
-            model_cls=BiSam,
-            version="dev", 
-            device=DEVICE
-            )
-        return BitemporalMatching(model=sam, 
-                                th_change_proposals=params.th_change_proposals,
-                                points_per_side=params.points_per_side,
-                                points_per_batch=params.points_per_batch,
-                                pred_iou_thresh=params.pred_iou_thresh,
-                                stability_score_thresh=params.stability_score_thresh,
-                                stability_score_offset=params.stability_score_offset,
-                                box_nms_thresh=params.box_nms_thresh,
-                                min_mask_region_area=params.min_mask_region_area)
-
-@dataclass
-class ExperimentParams:
-    # global
-    model_type: str
-    batch_size: int
-    output_dir: Union[str, Path]
-    logs_dir: Union[str, Path]
-    # seg any change
-    th_change_proposals: str
-    # sam mask generation
-    points_per_side: int
-    points_per_batch: int
-    pred_iou_thresh: float
-    stability_score_thresh: float
-    stability_score_offset: float 
-    box_nms_thresh: float
-    min_mask_region_area: float
  
         
-def main(params: ExperimentParams, is_debug: bool=False):
+def main(params, is_debug: bool=False):
 
     flush_memory()
     pl.seed_everything(seed=SEED)
@@ -100,7 +61,7 @@ if __name__ == "__main__":
 
     # experiment parameters
     exp_params = {
-        "batch_size": 4,
+        "batch_size": 2,
         "model_type": "vit_b",
     }
 

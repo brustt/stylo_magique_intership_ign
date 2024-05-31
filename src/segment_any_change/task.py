@@ -1,10 +1,8 @@
 import pytorch_lightning as pl
-import torchvision
-
-from magic_pen.config import DEVICE
-from torchmetrics.classification import BinaryF1Score
-
 from segment_any_change.eval import MetricEngine
+
+
+
 
 class CDModule(pl.LightningModule):
     def __init__(self, model, metrics):
@@ -24,7 +22,7 @@ class CDModule(pl.LightningModule):
     def predict_step(self, batch, batch_idx):
         preds = self.model(batch)
         pred_metrics = self.metrics_predict(preds, batch["label"])
-        return {"metrics": pred_metrics, "prediction": preds, "batch_idx": batch_idx}
+        return {"metrics": pred_metrics, "pred": preds, "batch_idx": batch_idx}
     
     def on_predict_epoch_end(self) -> None:
         self.metrics_predict.reset()

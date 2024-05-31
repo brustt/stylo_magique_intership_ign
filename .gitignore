@@ -185,3 +185,4 @@ models/*
 
 # sim link
 lightning_logs
+tmp/

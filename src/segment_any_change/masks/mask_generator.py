@@ -72,6 +72,8 @@ class SegAnyMaskGenerator:
 
         batch_anns = []
         self.batch_size = batched_input[next(iter(batched_input))].shape[0]
+        print(batched_input[next(iter(batched_input))].shape)
+        print(f"BATCH SIZE : {self.batch_size}")
         img_size = batched_input[next(iter(batched_input))].shape[-1:]
 
         # generate grid for batch - need to consider batch_size*2 cause of bi-temporal
@@ -94,11 +96,13 @@ class SegAnyMaskGenerator:
             batched_input=batched_input, multimask_output=True, return_logits=True
         )
         masks, iou_predictions, _ = outputs.values()
-
+        print("return : ")
+        print(masks.shape)
         for i, i_masks, i_iou_predictions, i_batch_point in zip(
             range(len(masks)), masks, iou_predictions, batch_point
         ):
             data = self.postprocess_masks(i_masks, i_iou_predictions, i_batch_point)
+            print(f"""ATTACH {data["masks"].shape[0]} masks""")
             img_anns = {
                 "masks": data["masks"].detach().cpu().numpy(),
                 # "bbox": box_xyxy_to_xywh(data["boxes"]),

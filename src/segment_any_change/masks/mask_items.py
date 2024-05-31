@@ -168,15 +168,15 @@ def create_change_proposal_items(
 ) -> List[ItemProposal]:
     return [
         ItemProposal(
-            mask=mA["segmentation"],
+            mask=m["segmentation"],
             confidence_score=c,
-            meta={k: v for k, v in mA.items() if k != "segmentation"},
+            meta={k: v for k, v in m.items() if k != "segmentation"},
             from_img=type_img,
             embedding=emb,
-            iou_pred=mA["iou_pred"], 
+            iou_pred=m["iou_pred"], 
 
         )
-        for mA, c, emb in zip(masks, ci, embeddings)
+        for m, c, emb in zip(masks, ci, embeddings)
         if not np.isnan(c)
     ]
 
