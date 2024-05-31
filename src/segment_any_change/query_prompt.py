@@ -16,6 +16,7 @@ from segment_any_change.sa_dev_v0.predictor import SamPredictor
 from segment_any_change.utils import to_degre, timeit
 import logging
 
+
 # To update with new batch version
 class PointQueryMecanism:
 

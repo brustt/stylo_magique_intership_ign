@@ -68,11 +68,15 @@ class ListProposal:
 
     @property
     def masks(self) -> torch.Tensor:
-        return torch.as_tensor(np.stack([m.mask for m in self.items]), dtype=torch.int8, device=DEVICE)
+        return torch.as_tensor(
+            np.stack([m.mask for m in self.items]), dtype=torch.int8, device=DEVICE
+        )
 
     @property
     def iou_preds(self) -> torch.Tensor:
-        return torch.as_tensor(np.stack([m.iou_pred for m in self.items]), dtype=torch.float, device=DEVICE)
+        return torch.as_tensor(
+            np.stack([m.iou_pred for m in self.items]), dtype=torch.float, device=DEVICE
+        )
 
     @property
     def confidence_scores(self) -> np.ndarray:
@@ -159,7 +163,7 @@ def create_union_object(item_A: ItemProposal, item_B: ItemProposal) -> ItemPropo
         chgt_angle=np.mean([item_A.chgt_angle, item_B.chgt_angle]),
         from_img=[item_A.from_img, item_B.from_img],
         embedding=np.mean([item_A.embedding, item_B.embedding], axis=0),
-        iou_pred=np.mean([item_A.iou_pred, item_B.iou_pred], axis=0), 
+        iou_pred=np.mean([item_A.iou_pred, item_B.iou_pred], axis=0),
     )
 
 
@@ -173,8 +177,7 @@ def create_change_proposal_items(
             meta={k: v for k, v in m.items() if k != "segmentation"},
             from_img=type_img,
             embedding=emb,
-            iou_pred=m["iou_pred"], 
-
+            iou_pred=m["iou_pred"],
         )
         for m, c, emb in zip(masks, ci, embeddings)
         if not np.isnan(c)

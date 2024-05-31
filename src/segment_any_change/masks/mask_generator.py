@@ -78,7 +78,9 @@ class SegAnyMaskGenerator:
 
         # generate grid for batch - need to consider batch_size*2 cause of bi-temporal
         batch_point = (
-            np.tile(generate_grid_prompt(self.points_per_side), (self.batch_size * 2, 1, 1))
+            np.tile(
+                generate_grid_prompt(self.points_per_side), (self.batch_size * 2, 1, 1)
+            )
             * img_size
         )
         batch_label = np.ones(
@@ -108,13 +110,13 @@ class SegAnyMaskGenerator:
                 # "bbox": box_xyxy_to_xywh(data["boxes"]),
                 "predicted_iou": data["iou_preds"].detach().cpu().numpy(),
                 "point_coords": data["points"],
-                "img_type": self.get_img_type(i)
+                "img_type": self.get_img_type(i),
                 # "stability_score": data["stability_score"][idx].item(),
                 # "crop_box": box_xyxy_to_xywh(data["crop_boxes"][idx]).tolist(),
             }
             batch_anns.append(img_anns)
         return batch_anns
-    
+
     def get_img_type(self, i):
         """Retrieve Img type A or B from concatenation"""
         if i < self.batch_size:

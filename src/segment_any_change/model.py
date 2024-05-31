@@ -97,7 +97,9 @@ class BiSam(nn.Module):
 
         masks = self.upscale_masks(low_res_masks, original_size)
 
-        masks, iou_predictions = self.select_masks(masks, iou_predictions, multimask_output)
+        masks, iou_predictions = self.select_masks(
+            masks, iou_predictions, multimask_output
+        )
 
         if not return_logits:
             masks = masks > self.mask_threshold
@@ -108,9 +110,14 @@ class BiSam(nn.Module):
             "low_res_logits": low_res_masks,
         }
 
-    def select_masks(self, masks: torch.Tensor, iou_predictions: torch.Tensor, multimask_output: bool) -> torch.Tensor:
+    def select_masks(
+        self, masks: torch.Tensor, iou_predictions: torch.Tensor, multimask_output: bool
+    ) -> torch.Tensor:
         mask_slice = slice(1, None) if multimask_output else slice(0, 1)
-        masks, iou_predictions = masks[:, :, mask_slice, :, :], iou_predictions[:, :, mask_slice]
+        masks, iou_predictions = (
+            masks[:, :, mask_slice, :, :],
+            iou_predictions[:, :, mask_slice],
+        )
         return masks, iou_predictions
 
     def upscale_masks(
@@ -131,14 +138,21 @@ class BiSam(nn.Module):
         x = (x - self.pixel_mean) / self.pixel_std
         return x
 
-    def get_image_embedding(self, img_type: ImgType=None) -> torch.Tensor:
+    def get_image_embedding(self, img_type: ImgType = None) -> torch.Tensor:
         if self.image_embeddings is None:
             raise RuntimeError("Please compute batch images embedding first")
-        
+
         if img_type == ImgType.A:
-            return self.image_embeddings.view(self.image_embeddings.shape[0] // 2, -1, *self.image_embeddings.shape[-3:])[:, 0,...]
+            return self.image_embeddings.view(
+                self.image_embeddings.shape[0] // 2,
+                -1,
+                *self.image_embeddings.shape[-3:],
+            )[:, 0, ...]
         elif img_type == ImgType.B:
-            return self.image_embeddings.view(self.image_embeddings.shape[0] // 2, -1, *self.image_embeddings.shape[-3:])[:, 1,...]
+            return self.image_embeddings.view(
+                self.image_embeddings.shape[0] // 2,
+                -1,
+                *self.image_embeddings.shape[-3:],
+            )[:, 1, ...]
         else:
             raise ValueError("Uncorrect img Type")
-

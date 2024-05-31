@@ -124,6 +124,7 @@ class ImageEncoderViT(nn.Module):
             ),
             LayerNorm2d(out_chans),
         )
+
     @timeit
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.patch_embed(x)

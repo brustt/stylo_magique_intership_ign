@@ -126,11 +126,12 @@ def filters_masks(data):
     return data
 
 
-
 def extract_individual_object_from_mask(masks: torch.Tensor) -> torch.Tensor:
-    assert masks.ndim == 3 # assert batch
+    assert masks.ndim == 3  # assert batch
     # extract normalization somewhere else
-    labels_masks = K.contrib.connected_components(masks.unsqueeze(1).to(torch.float) / 255.)
+    labels_masks = K.contrib.connected_components(
+        masks.unsqueeze(1).to(torch.float) / 255.0
+    )
     # B x H x W
     labels_masks = labels_masks.view(masks.shape[0], *labels_masks.shape[-2:])
     batch_masks = []
@@ -140,40 +141,42 @@ def extract_individual_object_from_mask(masks: torch.Tensor) -> torch.Tensor:
     batch_masks = pad_sequence(batch_masks).permute(1, 0, 2, 3)
     return batch_masks
 
+
 def _bbox_processing_preds(preds: Dict[str, torch.Tensor]) -> List[Dict]:
 
-    assert (isinstance(preds, dict)), "Invalid data type"
+    assert isinstance(preds, dict), "Invalid data type"
 
     masks_boxes = batched_mask_to_box(preds["masks"].to(torch.bool))
     # TO DO : check if padding doesn't inlfuence bbox generation
     preds = [
-         {
+        {
             "boxes": im_bbox,
             "labels": torch.zeros(len(im_bbox), dtype=torch.int8),
-            "scores": iou
-            } for im_bbox, iou in zip(masks_boxes, preds["iou_preds"])]
-    
+            "scores": iou,
+        }
+        for im_bbox, iou in zip(masks_boxes, preds["iou_preds"])
+    ]
+
     return preds
 
-def _bbox_processing_labels(labels:  torch.Tensor) -> List[Dict]:
 
-    assert (isinstance(labels, torch.Tensor)), "Invalid data type"
+def _bbox_processing_labels(labels: torch.Tensor) -> List[Dict]:
+
+    assert isinstance(labels, torch.Tensor), "Invalid data type"
 
     labels = extract_individual_object_from_mask(labels)
     labels_boxes = batched_mask_to_box(labels.to(torch.bool))
     gt = [
-            {
-                "boxes": il_bbox,
-                "labels": torch.zeros(len(il_bbox), dtype=torch.int8)
-                } for il_bbox in labels_boxes]
+        {"boxes": il_bbox, "labels": torch.zeros(len(il_bbox), dtype=torch.int8)}
+        for il_bbox in labels_boxes
+    ]
     return gt
-
 
 
 def _extract_obj(tensor: torch.Tensor) -> torch.Tensor:
     """
     Create individual binary mask from one array with annotated shapes
-    """        
+    """
     all_masks = []
     id_shapes = torch.unique(tensor)[1:]
     for shape in id_shapes:

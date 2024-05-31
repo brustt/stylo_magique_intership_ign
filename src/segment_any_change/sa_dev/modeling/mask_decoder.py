@@ -134,7 +134,7 @@ class MaskDecoder(nn.Module):
 
         # Prepare output
         return masks, iou_pred
-    
+
     @timeit
     def predict_masks_batch(
         self,

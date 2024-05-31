@@ -54,7 +54,7 @@ class BiTemporalDataset(Dataset):
         self,
         name: str = None,
         items: List[Union[Dict, DataSample]] = None,
-        dtype: str= "train",
+        dtype: str = "train",
         transform: Any = None,
         seed: int = SEED,
     ) -> None:
@@ -62,9 +62,11 @@ class BiTemporalDataset(Dataset):
         if not any([name, items]):
             raise ("Please provide at least items or dataset name")
         if items is None:
-            self.items = load_ds(ds_name=name, data_type=dtype)  
+            self.items = load_ds(ds_name=name, data_type=dtype)
         else:
-            self.items = pd.DataFrame(items.__dict__, index=[0], columns=["label_path", "A_path", "B_path"])
+            self.items = pd.DataFrame(
+                items.__dict__, index=[0], columns=["label_path", "A_path", "B_path"]
+            )
         self.transform = transform
         self.seed = seed
 

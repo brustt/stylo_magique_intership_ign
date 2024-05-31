@@ -55,23 +55,26 @@ def to_tensor(
     return torch.as_tensor(arr, dtype=dtype, device=device)
 
 
-def to_numpy(tensor: torch.Tensor, transpose: bool= True) -> np.ndarray:
+def to_numpy(tensor: torch.Tensor, transpose: bool = True) -> np.ndarray:
     if transpose:
         tensor = tensor.permute(1, 2, 0)
     return tensor.detach().cpu().numpy()
+
 
 def load_img_cv2(path: str):
     image = cv2.imread(path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     return image
 
-def show_pair_img(img_A:  Union[str, np.ndarray], img_B: Union[str, np.ndarray]):
+
+def show_pair_img(img_A: Union[str, np.ndarray], img_B: Union[str, np.ndarray]):
     if isinstance(img_A, str):
         img_A = load_img(img_A)
     if isinstance(img_B, str):
         img_B = load_img(img_B)
     pair = np.hstack((img_A, img_B))
     show_img(pair)
+
 
 def batch_to_list(batch: Dict[str, Any]) -> List[Dict[str, Any]]:
     batch_size = next(iter(batch.values())).size(0)
