@@ -98,15 +98,15 @@ class SegAnyMaskGenerator:
             batched_input=batched_input, multimask_output=True, return_logits=True
         )
         masks, iou_predictions, _ = outputs.values()
-        print("return : ")
-        print(masks.shape)
+
         for i, i_masks, i_iou_predictions, i_batch_point in zip(
             range(len(masks)), masks, iou_predictions, batch_point
         ):
             data = self.postprocess_masks(i_masks, i_iou_predictions, i_batch_point)
             print(f"""ATTACH {data["masks"].shape[0]} masks""")
             img_anns = {
-                "masks": data["masks"].detach().cpu().numpy(),
+                "masks": data["masks_binary"].detach().cpu().numpy(),
+                "masks_logits": data["masks"].detach().cpu().numpy(),
                 # "bbox": box_xyxy_to_xywh(data["boxes"]),
                 "predicted_iou": data["iou_preds"].detach().cpu().numpy(),
                 "point_coords": data["points"],
@@ -127,15 +127,21 @@ class SegAnyMaskGenerator:
     def postprocess_masks(
         self, masks: torch.Tensor, iou_preds: torch.Tensor, points: np.ndarray
     ) -> MaskData:
+        """Check processing on binary masks vs logits masks"""
 
         data = MaskData(
             masks=masks.flatten(0, 1),
+            masks_binary=masks.flatten(0, 1),
             iou_preds=iou_preds.flatten(0, 1),
             points=torch.as_tensor(points.repeat(masks.shape[1], axis=0)),
         )
 
-        data = filters_masks(data)
-        data["boxes"] = batched_mask_to_box(data["masks"])
+        data = self.filters_masks(data,
+                             pred_iou_thresh=self.pred_iou_thresh,
+                             stability_score_thresh=self.stability_score_thresh,
+                             stability_score_offset=self.stability_score_offset)
+        
+        data["boxes"] = batched_mask_to_box(data["masks_binary"])
 
         keep_by_nms = nms_wrapper(data, self.box_nms_thresh)
         data.filter(keep_by_nms)
@@ -149,32 +155,36 @@ class SegAnyMaskGenerator:
 
         return data
 
-    def filters_masks(self, data: MaskData) -> MaskData:
+    def filters_masks(self, data, 
+                mask_threshold = 0.0,
+                pred_iou_thresh: float = 0.88,  # could be lower
+                stability_score_thresh: float = 0.95, # could be lower
+                stability_score_offset: float = 1.0) -> MaskData:
 
         # Filter by predicted IoU
-        if self.pred_iou_thresh > 0.0:
-            keep_mask = data["iou_preds"] > self.pred_iou_thresh
+        if pred_iou_thresh > 0.0:
+            keep_mask = data["iou_preds"] > pred_iou_thresh
             data.filter(keep_mask)
-        print(f' filter iou_th : {data["masks"].shape[0]}')
+
+        print(f'filter iou_th : {data["masks"].shape[0]}')
 
         # Calculate stability score
         data["stability_score"] = calculate_stability_score(
             data["masks"],
-            self.model.mask_threshold,
-            self.stability_score_offset,
+            mask_threshold,
+            stability_score_offset,
         )
-        if self.stability_score_thresh > 0.0:
-            keep_mask = data["stability_score"] >= self.stability_score_thresh
+        if stability_score_thresh > 0.0:
+            keep_mask = data["stability_score"] >= stability_score_thresh
             data.filter(keep_mask)
 
         print(f' filter stability_score : {data["masks"].shape[0]}')
 
         # Threshold masks and calculate boxes
-        data["masks"] = data["masks"] > self.model.mask_threshold
+        data["masks_binary"] = data["masks"] > mask_threshold
         print(f' filter mask_threshold : {data["masks"].shape[0]}')
 
         return data
-
 
 @deprecated
 class SegAnyMaskGenerator_(SamAutomaticMaskGenerator):

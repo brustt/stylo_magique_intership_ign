@@ -4,6 +4,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Any
 import torch
 
 from functools import partial
@@ -70,7 +71,7 @@ def _build_sam(
     encoder_depth,
     encoder_num_heads,
     encoder_global_attn_indexes,
-    model,
+    model: Any = Sam,
     checkpoint=None,
 ):
     """Load sam variant model"""

@@ -1,5 +1,6 @@
 from enum import Enum
 from functools import wraps
+import re
 from typing import Any, Dict, List, Tuple, Union
 import numpy as np
 import skimage.io as io
@@ -55,10 +56,11 @@ def to_tensor(
     return torch.as_tensor(arr, dtype=dtype, device=device)
 
 
-def to_numpy(tensor: torch.Tensor, transpose: bool = True) -> np.ndarray:
+def to_numpy(tensor: torch.Tensor, transpose: bool = True, dtype=None) -> np.ndarray:
     if transpose:
         tensor = tensor.permute(1, 2, 0)
-    return tensor.detach().cpu().numpy()
+    dtype = dtype if dtype else torch.float
+    return tensor.to(dtype).detach().cpu().numpy()
 
 
 def load_img_cv2(path: str):
@@ -86,7 +88,7 @@ def batch_to_list(batch: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 
 def load_sam(
-    model_type: str, model_cls: Any, version: str = "dev", device: str = DEVICE
+    model_type: str, model_cls: Any=None, version: str = "dev", device: str = DEVICE
 ):
 
     sam = None
@@ -98,7 +100,7 @@ def load_sam(
             ).to(device=device)
         case "raw":
             sam = sam_model_registry_v0[model_type](
-                checkpoint=sam_dict_checkpoint[model_type], model=model_cls
+                checkpoint=sam_dict_checkpoint[model_type]
             ).to(device=device)
         case _:
             raise ValueError(
@@ -215,6 +217,10 @@ def flatten(xs):
         else:
             yield x
 
+def substring_present(substring, string):
+    pattern = re.compile(re.escape(substring))
+    match = pattern.search(string)
+    return match is not None
 
 def apply_histogram(
     img: np.ndarray, reference_image: np.ndarray, blend_ratio: float = 0.5
@@ -252,6 +258,25 @@ def apply_histogram(
     )
     return img
 
+
+def create_overlay_outcome_cls(tp: torch.Tensor, fp: torch.Tensor, fn: torch.Tensor) -> np.ndarray:
+    # cannot assign list to tensor => convert to np
+    overlay = np.zeros((*tp.shape, 3), dtype=np.uint8)
+    
+    tp = to_numpy(tp, transpose=False)
+    fp = to_numpy(fp, transpose=False)
+    fn = to_numpy(fn, transpose=False)
+
+    # tps in green - we keep masks summed
+    overlay[tp >= 1] = [0, 255, 0]
+    
+    # fn in red
+    overlay[fn >= 1] = [255, 0, 0]
+    
+    # fp orange
+    overlay[fp >= 1] = [255, 165, 0]
+
+    return to_tensor(overlay, transpose=True)
 
 if __name__ == "__main__":
     df = load_levircd_sample(size=10, data_type="train")

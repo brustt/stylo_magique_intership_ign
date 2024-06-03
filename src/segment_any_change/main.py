@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple, Union
 import torch
-from segment_any_change.eval import PX_METRICS
+from torchmetrics import Metric
+from segment_any_change.eval import METRICS
 
 from segment_any_change.inference import ExperimentParams, choose_model
 from segment_any_change.tensorboard_callback import (
@@ -23,7 +24,7 @@ from pathlib import Path
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 
 
-def main(params, is_debug: bool = False):
+def main(params, metrics: List[Metric] = METRICS, is_debug: bool = False, ):
 
     flush_memory()
     pl.seed_everything(seed=SEED)
@@ -39,7 +40,7 @@ def main(params, is_debug: bool = False):
 
     model = choose_model(is_debug, params)
 
-    pl_module = CDModule(model=model, metrics=PX_METRICS)
+    pl_module = CDModule(model=model, metrics=metrics)
 
     dm = CDDataModule(name="levir-cd", batch_size=params.batch_size)
 
@@ -67,7 +68,7 @@ if __name__ == "__main__":
     }
 
     seganychange_params = {
-        "th_change_proposals": "otsu",
+        "th_change_proposals": 0.,
     }
 
     # sam mask generation
@@ -90,4 +91,5 @@ if __name__ == "__main__":
         **(exp_params | seganychange_params | sam_params | dir_params)
     )
 
-    main(params, is_debug=False)
+    metrics = METRICS.copy()
+    main(params, metrics=metrics, is_debug=False)

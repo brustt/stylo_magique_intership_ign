@@ -37,17 +37,17 @@ def postprocess_masks(masks, iou_preds, points):
     print(data["masks"].shape[0])
 
     data = filters_masks(data)
-    data["boxes"] = batched_mask_to_box(data["masks"])
+    data["boxes"] = batched_mask_to_box(data["masks_binary"])
 
     keep_by_nms = nms_wrapper(data, box_nms_thresh)
     data.filter(keep_by_nms)
     print(data["masks"].shape[0])
 
     if min_area > 0.0:
-        data["rles"] = mask_to_rle_pytorch(data["masks"])
+        data["rles"] = mask_to_rle_pytorch(data["masks_binary"])
         data = postprocess_small_regions(data, min_area, box_nms_thresh)
 
-    return data["masks"], data["iou_preds"]
+    return data["masks"], data["masks_binary"], data["iou_preds"]
 
 
 def postprocess_small_regions(
@@ -93,19 +93,19 @@ def postprocess_small_regions(
     return mask_data
 
 
-def filters_masks(data):
-
-    mask_threshold = 0.0
-    pred_iou_thresh: float = 0.88  # could be lower
-    stability_score_thresh: float = 0.95  # could be lower
-    stability_score_offset: float = 1.0
+def filters_masks(data, 
+                mask_threshold = 0.0,
+                pred_iou_thresh: float = 0.88,  # could be lower
+                stability_score_thresh: float = 0.95, # could be lower
+                stability_score_offset: float = 1.0,
+                return_logits: bool = True) -> MaskData:
 
     # Filter by predicted IoU
     if pred_iou_thresh > 0.0:
         keep_mask = data["iou_preds"] > pred_iou_thresh
         data.filter(keep_mask)
 
-    print(f' filter iou_th : {data["masks"].shape[0]}')
+    print(f'filter iou_th : {data["masks"].shape[0]}')
 
     # Calculate stability score
     data["stability_score"] = calculate_stability_score(
@@ -119,9 +119,10 @@ def filters_masks(data):
 
     print(f' filter stability_score : {data["masks"].shape[0]}')
 
-    # Threshold masks and calculate boxes
-    data["masks"] = data["masks"] > mask_threshold
-    print(f' filter mask_threshold : {data["masks"].shape[0]}')
+    if not return_logits:
+        # Threshold masks and calculate boxes
+        data["masks_binary"] = data["masks"] > mask_threshold
+        print(f' filter mask_threshold : {data["masks"].shape[0]}')
 
     return data
 

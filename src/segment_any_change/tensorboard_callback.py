@@ -8,7 +8,7 @@ import torchvision
 import os
 import logging
 
-from segment_any_change.utils import to_numpy
+from segment_any_change.utils import create_overlay_outcome_cls, substring_present, to_numpy
 
 
 # TO DO : define globally
@@ -21,6 +21,7 @@ class TensorBoardCallbackLogger(Callback):
     """
     doc summaryWriter Tensorboard : https://tensorboardx.readthedocs.io/en/stable/tensorboard.html#tensorboardX.SummaryWriter
     """
+    _units_key_name = "UnitsMetricCounts"
 
     def __init__(self, log_n_steps=5):
         super().__init__()
@@ -36,9 +37,16 @@ class TensorBoardCallbackLogger(Callback):
         sample = []
 
         images_A = batch["img_A"].cpu()
-        images_B = batch["img_A"].cpu()
+        images_B = batch["img_B"].cpu()
         labels = batch["label"].cpu()
         preds = outputs["pred"]["masks"].cpu()
+        
+        def shift_range_values(arr, new_bounds=[0, 1]): 
+            old_range = (torch.max(arr) - torch.min(arr))  
+            new_range = (new_bounds[1] - new_bounds[0])  
+            shit_arr = (((arr - torch.min(arr)) * new_range) / old_range) + new_bounds[0]
+            return shit_arr
+    
 
         for i in range(images_A.size(0)):
 
@@ -46,12 +54,35 @@ class TensorBoardCallbackLogger(Callback):
             img_B = images_B[i]
             # Align to 3 channels
             label = labels[i].unsqueeze(0).repeat(3, 1, 1)
-            # Stack uniques masks and align to 3 channels
-            pred = torch.sum(preds[i], axis=0).unsqueeze(0).repeat(3, 1, 1)
+            img_outcome_cls = torch.zeros_like(img_A)
+            
+            # pass key pred_UnitsMetricCounts to params
+            if any([substring_present(self._units_key_name, key) for key in list(outputs["metrics"])]):
+                tp = outputs["metrics"]["pred_UnitsMetricCounts"]["tp_indices"].squeeze(0)[i,...]
+                fp = outputs["metrics"]["pred_UnitsMetricCounts"]["fp_indices"].squeeze(0)[i,...]
+                fn = outputs["metrics"]["pred_UnitsMetricCounts"]["fn_indices"].squeeze(0)[i,...]
+                
+                img_outcome_cls = create_overlay_outcome_cls(tp, fp, fn)
 
-            img_mask_pred = torch.stack((img_A, img_B, label, pred), dim=0)
+            # Stack individual masks and align to 3 channels
+            print(f"pred : {preds[i, ...].shape}")
+            print(f"pred type : {preds[i, ...].dtype}")
+            print(f"label type : {preds[i, ...].dtype}")
+            pred = torch.sum(preds[i, ...], axis=0).unsqueeze(0).repeat(3, 1, 1).to(torch.uint8)
+            print(f"pred nonzeros: {torch.nonzero(pred).shape}")
+            print(f"pred type: {pred.shape}")
+            print(f"pred non zeros cnt: {torch.sum(pred)}")
+            print(f"pred non zeros unique: {torch.unique(pred)}")
+
+            pred = shift_range_values(pred, new_bounds=[0, 255]).to(torch.uint8)
+
+
+            print("-----")
+            row = torch.stack((img_A, img_B, label, pred, img_outcome_cls), dim=0)
+            
+            # combined stack as row
             row = torchvision.utils.make_grid(
-                img_mask_pred, nrow=4, padding=20, pad_value=1, normalize=True
+                row, nrow=row.shape[0], padding=20, pad_value=1, normalize=True
             )
             sample.append(row)
 
@@ -70,44 +101,25 @@ class TensorBoardCallbackLogger(Callback):
         batch_idx: int,
         dataloader_idx: int = 0,
     ) -> None:
+        if batch_idx % self.log_n_steps == 0:
+            for key, metric in outputs["metrics"].items():
+                if not substring_present(self._units_key_name, key):
+                    self.add_metric(key, metric, pl_module, trainer)
+
         if batch_idx == 0:
             img_sample = self.create_grid_batch(outputs, batch)
             pl_module.logger.experiment.add_image(
                 "first_batch", img_sample, pl_module.global_step, dataformats="CHW"
             )
-            pl_module.logger.experiment.add_text(
-                "first_batch", "imgA, imgB, label, prediction"
-            )
+            # pl_module.logger.experiment.add_text(
+            #     "first_batch", "imgA, imgB, label, prediction"
+            # )
 
-        if batch_idx % self.log_n_steps == 0:
-            for key, metric in outputs["metrics"].items():
-                self.add_metric(key, metric, pl_module, trainer)
-
+      
     def on_predict_epoch_end(
         self, trainer: Trainer, pl_module: LightningModule
     ) -> None:
         pass
-
-    def create_image_grid(self, images, masks, predictions):
-        batch_size = images.size(0)
-        images_with_predictions = []
-
-        for i in range(batch_size):
-            img = images[i].cpu()
-            mask = (
-                masks[i].cpu().unsqueeze(0).repeat(3, 1, 1)
-            )  # Convert binary mask to 3 channels
-            pred = (
-                predictions[i].cpu().unsqueeze(0).repeat(3, 1, 1)
-            )  # Convert binary prediction to 3 channels
-            img_mask_pred = torch.cat(
-                (img, mask, pred), dim=2
-            )  # Concatenate along width
-            images_with_predictions.append(img_mask_pred)
-
-        grid = torchvision.utils.make_grid(images_with_predictions, nrow=1, padding=5)
-        return grid
-
 
 class CustomWriter(BasePredictionWriter):
     """see imp for distributed computing"""
@@ -131,6 +143,6 @@ class CustomWriter(BasePredictionWriter):
 
     def write_on_epoch_end(self, trainer, pl_module, predictions, batch_indices):
         to_write = ["predictions", "batch_idx"]
-        output = [{k: v for k, v in p.items()} for p in predictions]
-        torch.save(output, os.path.join(self.output_dir, "predictions.pt"))
-        logger.info(os.path.join(self.output_dir, "predictions.pt"))
+        #output = [{k: v for k, v in p.items()} for p in predictions]
+        #torch.save(output, os.path.join(self.output_dir, "predictions.pt"))
+        #logger.info(os.path.join(self.output_dir, "predictions.pt"))

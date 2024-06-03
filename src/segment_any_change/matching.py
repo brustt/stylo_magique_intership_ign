@@ -48,8 +48,7 @@ class BitemporalMatching:
 
     def __call__(self, batch: Dict[str, torch.Tensor], **params) -> Any:
 
-        preds = []
-        device = params.get("device", None) if params.get("device", None) else DEVICE
+        # device = params.get("device", None) if params.get("device", None) else DEVICE
         items_batch = self.run(batch, self.filter_method, **params)
         return items_batch
 
@@ -111,6 +110,7 @@ class BitemporalMatching:
                 case _:
                     raise RuntimeError("SegAnyChange version unkwown")
 
+        # add logits == masks_logits
         masks = pad_sequence([item_list.masks for item_list in items_batch]).permute(
             1, 0, 2, 3
         )

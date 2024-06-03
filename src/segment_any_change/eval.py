@@ -25,6 +25,7 @@ from segment_any_change.matching import BitemporalMatching
 from segment_any_change.model import BiSam
 from segment_any_change.utils import flush_memory, load_sam
 from torch.utils.data import DataLoader
+import re
 import logging
 
 # TO DO : define globally
@@ -50,31 +51,82 @@ _register_metric_processing = {
     "BinaryRecall": "flat",
     "MeanIou": "iou",
     "MeanAveragePrecision": "bbox",
+    "UnitsMetricCounts": "identity"
 }
 
-PX_METRICS = [
+class UnitsMetricCounts(Metric):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.add_state("tp_indices", default=[], dist_reduce_fx="cat")
+        self.add_state("fp_indices", default=[], dist_reduce_fx="cat")
+        self.add_state("fn_indices", default=[], dist_reduce_fx="cat")
+
+    def update(self, preds: torch.Tensor, label: torch.Tensor) -> None:
+
+        if preds.ndim > 2:
+            preds = torch.sum(preds, axis=1).to(torch.int8)
+        
+        if preds.shape != label.shape:
+            raise ValueError("preds and target must have the same shape")
+        
+        # ensure [0, 1] values
+        MAX = torch.max(label)
+        label = label / MAX
+
+        tp_indices = preds * label  # TP
+        fp_indices = preds * (1 - label) # FP
+        fn_indices = (1 - preds) * label  # FN
+
+        self.tp_indices.append(tp_indices)
+        self.fp_indices.append(fp_indices)
+        self.fn_indices.append(fn_indices)
+
+    def compute(self) -> Dict[str, torch.Tensor]:
+        # stack 
+        tp_indices = torch.stack(self.tp_indices, dim=0)
+        fp_indices = torch.stack(self.fp_indices, dim=0)
+        fn_indices = torch.stack(self.fn_indices, dim=0)
+
+        return dict(tp_indices=tp_indices, 
+                    fp_indices=fp_indices, 
+                    fn_indices=fn_indices)
+    
+    def __call__(self, preds: torch.Tensor, target: torch.Tensor) -> Tuple[torch.Tensor]:
+        self.update(preds, target)
+        return self.compute(self) 
+
+METRICS = [
     BinaryF1Score(),
     BinaryPrecision(),
     BinaryRecall(),
+    UnitsMetricCounts()
 ]
-
 
 def _factory_metric_processing(name: str, preds, labels):
     match name:
+        case "identity":
+            return ProcessingEval().identity_processing(preds, labels)
         case "flat":
             return ProcessingEval().flat(preds, labels)
         case "bbox":
-            preds = ProcessingEval().bbox_processing(preds, "pred")
-            labels = ProcessingEval().bbox_processing(labels, "label")
+            preds = ProcessingEval().bbox_processing(preds, data_type="pred")
+            labels = ProcessingEval().bbox_processing(labels, data_type="label")
             return preds, labels
         case "iou":
-            preds = ProcessingEval().iou_processing(preds, "pred")
+            preds = ProcessingEval().iou_processing(preds, None)
             return preds, labels
+        case _:
+            raise ValueError("Processing name not found")
 
 
 class ProcessingEval:
 
-    def flat(self, preds, labels):
+    def identity_processing(self, preds, labels) -> Tuple[torch.Tensor]:
+        masks, iou = preds.values()
+
+        return masks, labels
+
+    def flat(self, preds, labels) -> Tuple[torch.Tensor]:
 
         masks, iou = preds.values()
         # aggregates masks
@@ -108,32 +160,38 @@ class ProcessingEval:
 
 class MetricEngine:
     def __init__(self, in_metrics: List[Metric] = None, prefix="") -> None:
-
-        self.name = self.check_homogeneity(in_metrics)
+        self.prefix = prefix
         self.metrics = MetricCollection(in_metrics, prefix=prefix)
 
-    def check_homogeneity(self, in_metrics):
-        names = set([_register_metric_processing[type(m).__name__] for m in in_metrics])
-        if len(names) > 1:
-            print(names)
-            raise RuntimeError(
-                "Cannot instantiate metrics with differents input format under same MetricCollection"
-            )
-        return names.pop()
+    def check_processing(self, name: str) -> str:
+        """Extract processing function key name from _register_metric_processing based on metric name"""
+        raw_name = re.sub(self.prefix, '', name)
+        if not _register_metric_processing.get(raw_name, None):
+            raise KeyError(f"Please register metric : {name} to use it")
+        return _register_metric_processing[raw_name]
 
-    def compute(self) -> None:
-        return self.metrics.compute()
+    def compute(self) -> Dict[str, torch.Tensor]:
+        res_metric = {}
+        # maybe not the most efficient for metrics sharing group feature
+        for name, metric in self.metrics.items():
+                print(f"compute : {name}")
+                res_metric[name] = metric.compute() 
+        return res_metric
 
     def update(self, preds: torch.Tensor, labels: torch.Tensor) -> None:
-        preds, labels = _factory_metric_processing(self.name, preds, labels)
-        self.metrics.update(
-            preds.to(DEVICE), labels.to(DEVICE)
-        )  # to() will not work on list - convert in processing
+            # maybe not the most efficient for metrics sharing group feature
+            for name, metric in self.metrics.items():
+                print(f"update : {name}")
+                proc_method = self.check_processing(name)
+                preds_, labels_ = _factory_metric_processing(proc_method, preds, labels)
+                metric.update(
+                    preds_.to(DEVICE), labels_.to(DEVICE)
+                )  # to() will not work on list for bbox- convert in processing
 
     def reset(self) -> None:
         self.metrics.reset()
 
-    def __call__(self, preds, targets):
+    def __call__(self, preds, targets) -> Dict[str, torch.Tensor]:
         self.update(preds, targets)
         return self.compute()
 
@@ -184,7 +242,7 @@ _metrics_registry = {
     },
 }
 
-
+@deprecated
 def get_px_metrics(mtype: str = "px_classif") -> List[Metric]:
     """Return px default metrics"""
     if mtype not in _metrics_registry["pixel"]:
@@ -193,7 +251,7 @@ def get_px_metrics(mtype: str = "px_classif") -> List[Metric]:
         )
     return [m().to(DEVICE) for m in _metrics_registry["pixel"][mtype].values()]
 
-
+@deprecated
 def get_obj_metrics(mtype: str = "obj_segmentation") -> List[Metric]:
     """Return obj default metrics"""
     if mtype not in _metrics_registry["object"]:
@@ -202,7 +260,7 @@ def get_obj_metrics(mtype: str = "obj_segmentation") -> List[Metric]:
         )
     return [m().to(DEVICE) for m in _metrics_registry["object"][mtype].values()]
 
-
+@deprecated
 def find_register_group(d: Dict, key: str) -> Dict:
     """Extract metrics from key name"""
     if key in d:
@@ -214,7 +272,7 @@ def find_register_group(d: Dict, key: str) -> Dict:
                 return result
     return {}
 
-
+@deprecated
 def get_root_group_registry(key: str, registry: Dict = _metrics_registry) -> str:
     """Extract group name from metric registry from nested key"""
 
