@@ -2,9 +2,13 @@ from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple, Union
 import torch
 from torchmetrics import Metric
-from segment_any_change.eval import METRICS
 
-from segment_any_change.inference import ExperimentParams, choose_model
+from segment_any_change.inference import (
+    ExperimentParams,
+    choose_model,
+    load_default_metrics,
+    load_default_exp_params,
+)
 from segment_any_change.tensorboard_callback import (
     CustomWriter,
     TensorBoardCallbackLogger,
@@ -24,7 +28,11 @@ from pathlib import Path
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 
 
-def main(params, metrics: List[Metric] = METRICS, is_debug: bool = False, ):
+def main(
+    params: ExperimentParams,
+    metrics: List[Metric],
+    is_debug: bool = False,
+):
 
     flush_memory()
     pl.seed_everything(seed=SEED)
@@ -40,9 +48,9 @@ def main(params, metrics: List[Metric] = METRICS, is_debug: bool = False, ):
 
     model = choose_model(is_debug, params)
 
-    pl_module = CDModule(model=model, metrics=metrics)
+    pl_module = CDModule(model=model, metrics=metrics, **params.engine_metric)
 
-    dm = CDDataModule(name="levir-cd", batch_size=params.batch_size)
+    dm = CDDataModule(name=params.ds_name, batch_size=params.batch_size)
 
     callbacks = [
         TensorBoardCallbackLogger(),
@@ -61,35 +69,6 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
-    # experiment parameters
-    exp_params = {
-        "batch_size": 2,
-        "model_type": "vit_b",
-    }
-
-    seganychange_params = {
-        "th_change_proposals": 0.,
-    }
-
-    # sam mask generation
-    sam_params = {
-        "points_per_side": 10,  # lower for speed
-        "points_per_batch": 64,  # not used
-        "pred_iou_thresh": 0.88,  # configure lower for exhaustivity
-        "stability_score_thresh": 0.95,  # configure lower for exhaustivity
-        "stability_score_offset": 1.0,
-        "box_nms_thresh": 0.7,
-        "min_mask_region_area": 0,
-    }
-
-    dir_params = {
-        "output_dir": f"lightning_logs/predictions-{exp_params['model_type']}",
-        "logs_dir": logs_dir,
-    }
-
-    params = ExperimentParams(
-        **(exp_params | seganychange_params | sam_params | dir_params)
-    )
-
-    metrics = METRICS.copy()
+    params = load_default_exp_params()
+    metrics = load_default_metrics(**params.engine_metric)
     main(params, metrics=metrics, is_debug=False)

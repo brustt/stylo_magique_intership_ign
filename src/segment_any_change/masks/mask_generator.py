@@ -136,11 +136,13 @@ class SegAnyMaskGenerator:
             points=torch.as_tensor(points.repeat(masks.shape[1], axis=0)),
         )
 
-        data = self.filters_masks(data,
-                             pred_iou_thresh=self.pred_iou_thresh,
-                             stability_score_thresh=self.stability_score_thresh,
-                             stability_score_offset=self.stability_score_offset)
-        
+        data = self.filters_masks(
+            data,
+            pred_iou_thresh=self.pred_iou_thresh,
+            stability_score_thresh=self.stability_score_thresh,
+            stability_score_offset=self.stability_score_offset,
+        )
+
         data["boxes"] = batched_mask_to_box(data["masks_binary"])
 
         keep_by_nms = nms_wrapper(data, self.box_nms_thresh)
@@ -155,11 +157,14 @@ class SegAnyMaskGenerator:
 
         return data
 
-    def filters_masks(self, data, 
-                mask_threshold = 0.0,
-                pred_iou_thresh: float = 0.88,  # could be lower
-                stability_score_thresh: float = 0.95, # could be lower
-                stability_score_offset: float = 1.0) -> MaskData:
+    def filters_masks(
+        self,
+        data,
+        mask_threshold=0.0,
+        pred_iou_thresh: float = 0.88,  # could be lower
+        stability_score_thresh: float = 0.95,  # could be lower
+        stability_score_offset: float = 1.0,
+    ) -> MaskData:
 
         # Filter by predicted IoU
         if pred_iou_thresh > 0.0:
@@ -185,6 +190,7 @@ class SegAnyMaskGenerator:
         print(f' filter mask_threshold : {data["masks"].shape[0]}')
 
         return data
+
 
 @deprecated
 class SegAnyMaskGenerator_(SamAutomaticMaskGenerator):

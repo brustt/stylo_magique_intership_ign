@@ -4,11 +4,10 @@ from segment_any_change.eval import MetricEngine
 
 
 class CDModule(pl.LightningModule):
-    def __init__(self, model, metrics: List):
+    def __init__(self, model, metrics: List, **params_engine):
         super().__init__()
         self.model = model
-        self.metrics_predict = MetricEngine(metrics, prefix="pred_")
-
+        self.metrics_predict = MetricEngine(metrics, prefix="pred_", **params_engine)
 
     def training_step(self, batch, batch_idx):
         pass

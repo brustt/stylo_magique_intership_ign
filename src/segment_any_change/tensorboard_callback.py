@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Tuple
 import numpy as np
 import torch
 from pytorch_lightning import LightningModule, Trainer
@@ -8,78 +8,81 @@ import torchvision
 import os
 import logging
 
-from segment_any_change.utils import create_overlay_outcome_cls, substring_present, to_numpy
-
+from segment_any_change.utils import (
+    create_overlay_outcome_cls,
+    get_units_cnt_obj,
+    get_units_cnt_px,
+    plot_confusion_matrix,
+    rm_substring,
+    shift_range_values,
+    substring_present,
+    to_numpy,
+)
+from segment_any_change.eval import (
+    _register_metric_classif_px,
+    _register_metric_classif_obj,
+)
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+# TO DO : rewrite each return (units counts, metric, confusion matrix) as different Callbacks ?
+
 
 class TensorBoardCallbackLogger(Callback):
     """
     doc summaryWriter Tensorboard : https://tensorboardx.readthedocs.io/en/stable/tensorboard.html#tensorboardX.SummaryWriter
+
+    TO DO :
+    - ADD Confusion Matrix done
+    - ADD PR CURVE
+
+    Split in different callbacks
     """
+
     _units_key_name = "UnitsMetricCounts"
 
     def __init__(self, log_n_steps=5):
         super().__init__()
         self.log_n_steps = log_n_steps
+        self.tp_tracking = []
+        self.fp_tracking = []
+        self.fn_tracking = []
+        self.tn_tracking = []
 
     def add_metric(self, key, value, pl_module, trainer):
         pl_module.logger.experiment.add_scalar(
             key, value, global_step=pl_module.global_step
         )
 
-    def create_grid_batch(self, outputs, batch) -> np.ndarray:
+    def create_grid_batch(self, preds, batch, tp, fp, fn) -> np.ndarray:
         """create image grid from sample (imgA, imgB), label and masks predictions"""
         sample = []
-
         images_A = batch["img_A"].cpu()
         images_B = batch["img_B"].cpu()
         labels = batch["label"].cpu()
-        preds = outputs["pred"]["masks"].cpu()
-        
-        def shift_range_values(arr, new_bounds=[0, 1]): 
-            old_range = (torch.max(arr) - torch.min(arr))  
-            new_range = (new_bounds[1] - new_bounds[0])  
-            shit_arr = (((arr - torch.min(arr)) * new_range) / old_range) + new_bounds[0]
-            return shit_arr
-    
+        img_outcome_cls = torch.zeros(images_A.shape[-2:])
 
+        # to batchify ?
         for i in range(images_A.size(0)):
 
             img_A = images_A[i]
             img_B = images_B[i]
             # Align to 3 channels
             label = labels[i].unsqueeze(0).repeat(3, 1, 1)
-            img_outcome_cls = torch.zeros_like(img_A)
-            
-            # pass key pred_UnitsMetricCounts to params
-            if any([substring_present(self._units_key_name, key) for key in list(outputs["metrics"])]):
-                tp = outputs["metrics"]["pred_UnitsMetricCounts"]["tp_indices"].squeeze(0)[i,...]
-                fp = outputs["metrics"]["pred_UnitsMetricCounts"]["fp_indices"].squeeze(0)[i,...]
-                fn = outputs["metrics"]["pred_UnitsMetricCounts"]["fn_indices"].squeeze(0)[i,...]
-                
-                img_outcome_cls = create_overlay_outcome_cls(tp, fp, fn)
+            img_outcome_cls = create_overlay_outcome_cls(tp[i], fp[i], fn[i])
 
             # Stack individual masks and align to 3 channels
-            print(f"pred : {preds[i, ...].shape}")
-            print(f"pred type : {preds[i, ...].dtype}")
-            print(f"label type : {preds[i, ...].dtype}")
-            pred = torch.sum(preds[i, ...], axis=0).unsqueeze(0).repeat(3, 1, 1).to(torch.uint8)
-            print(f"pred nonzeros: {torch.nonzero(pred).shape}")
-            print(f"pred type: {pred.shape}")
-            print(f"pred non zeros cnt: {torch.sum(pred)}")
-            print(f"pred non zeros unique: {torch.unique(pred)}")
-
+            pred = (
+                torch.sum(preds[i, ...], axis=0)
+                .unsqueeze(0)
+                .repeat(3, 1, 1)
+                .to(torch.uint8)
+            )
             pred = shift_range_values(pred, new_bounds=[0, 255]).to(torch.uint8)
-
-
-            print("-----")
             row = torch.stack((img_A, img_B, label, pred, img_outcome_cls), dim=0)
-            
             # combined stack as row
             row = torchvision.utils.make_grid(
                 row, nrow=row.shape[0], padding=20, pad_value=1, normalize=True
@@ -92,6 +95,27 @@ class TensorBoardCallbackLogger(Callback):
 
         return grid
 
+    def extract_preds_cls(
+        self, outputs
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+
+        preds = outputs["pred"]["masks"].cpu()
+        tp, fp, fn, tn = [], [], [], []
+        # pass key pred_UnitsMetricCounts to params
+        # maybe keep track of count instead
+        if any(
+            [
+                substring_present(self._units_key_name, key)
+                for key in list(outputs["metrics"])
+            ]
+        ):
+            tp = outputs["metrics"]["pred_UnitsMetricCounts"]["tp_indices"]
+            fp = outputs["metrics"]["pred_UnitsMetricCounts"]["fp_indices"]
+            fn = outputs["metrics"]["pred_UnitsMetricCounts"]["fn_indices"]
+            tn = outputs["metrics"]["pred_UnitsMetricCounts"]["tn_indices"]
+
+        return preds, tp, fp, fn, tn
+
     def on_predict_batch_end(
         self,
         trainer: Trainer,
@@ -101,13 +125,32 @@ class TensorBoardCallbackLogger(Callback):
         batch_idx: int,
         dataloader_idx: int = 0,
     ) -> None:
-        if batch_idx % self.log_n_steps == 0:
-            for key, metric in outputs["metrics"].items():
-                if not substring_present(self._units_key_name, key):
-                    self.add_metric(key, metric, pl_module, trainer)
+
+        preds, tp, fp, fn, tn = self.extract_preds_cls(outputs)
+        self.tp_tracking.append(tp)
+        self.fp_tracking.append(tp)
+        self.fn_tracking.append(fn)
+        self.tn_tracking.append(tn)
+
+        for key, metric in outputs["metrics"].items():
+            if any(
+                [
+                    rm_substring(key, substring="pred_") == ref_metric
+                    for ref_metric in _register_metric_classif_px
+                ]
+            ):
+                self.add_metric(key, metric, pl_module, trainer)
+            if any(
+                [
+                    rm_substring(key, substring="pred_") == ref_metric
+                    for ref_metric in _register_metric_classif_obj
+                ]
+            ):
+                for skey, smetric in metric.items():
+                    self.add_metric(skey, smetric, pl_module, trainer)
 
         if batch_idx == 0:
-            img_sample = self.create_grid_batch(outputs, batch)
+            img_sample = self.create_grid_batch(preds, batch, tp, fp, fn)
             pl_module.logger.experiment.add_image(
                 "first_batch", img_sample, pl_module.global_step, dataformats="CHW"
             )
@@ -115,11 +158,35 @@ class TensorBoardCallbackLogger(Callback):
             #     "first_batch", "imgA, imgB, label, prediction"
             # )
 
-      
     def on_predict_epoch_end(
         self, trainer: Trainer, pl_module: LightningModule
     ) -> None:
-        pass
+        # need to change for multiclass
+        self.tp_tracking = torch.cat(self.tp_tracking, dim=0)
+        self.fp_tracking = torch.cat(self.fp_tracking, dim=0)
+        self.fn_tracking = torch.cat(self.fn_tracking, dim=0)
+        self.tn_tracking = torch.cat(self.tn_tracking, dim=0)
+
+        # we could count before units on  batch
+        # confusion matrix
+        tp_px_cnt, fp_px_cnt, fn_px_cnt, tn_px_cnt = get_units_cnt_px(
+            self.tp_tracking, self.fp_tracking, self.fn_tracking, self.tn_tracking
+        )
+        # tp_obj_cnt, fp_obj_cnt, fn_obj_cnt, tn_obj_cnt = get_units_cnt_obj(self.tp_tracking , self.fp_tracking , self.fn_tracking, self.tn_tracking)
+
+        conf_mat_fig_px = plot_confusion_matrix(
+            tp_px_cnt, fp_px_cnt, fn_px_cnt, tn_px_cnt, fig_return=True
+        )
+        # conf_mat_fig_obj = plot_confusion_matrix(tp_obj_cnt, fp_obj_cnt, fn_obj_cnt, tn_obj_cnt, fig_return=True)
+
+        pl_module.logger.experiment.add_figure(
+            "binary_confusion_matrix_pixel", conf_mat_fig_px, pl_module.global_step
+        )
+
+        # pl_module.logger.experiment.add_figure(
+        #         "binary_confusion_matrix_object", conf_mat_fig_obj, pl_module.global_step
+        #     )
+
 
 class CustomWriter(BasePredictionWriter):
     """see imp for distributed computing"""
@@ -143,6 +210,6 @@ class CustomWriter(BasePredictionWriter):
 
     def write_on_epoch_end(self, trainer, pl_module, predictions, batch_indices):
         to_write = ["predictions", "batch_idx"]
-        #output = [{k: v for k, v in p.items()} for p in predictions]
-        #torch.save(output, os.path.join(self.output_dir, "predictions.pt"))
-        #logger.info(os.path.join(self.output_dir, "predictions.pt"))
+        # output = [{k: v for k, v in p.items()} for p in predictions]
+        # torch.save(output, os.path.join(self.output_dir, "predictions.pt"))
+        # logger.info(os.path.join(self.output_dir, "predictions.pt"))

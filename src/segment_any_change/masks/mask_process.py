@@ -1,3 +1,4 @@
+import enum
 from typing import Dict, List, Union
 import torch
 from segment_any_change.masks.mask_items import ListProposal
@@ -93,12 +94,14 @@ def postprocess_small_regions(
     return mask_data
 
 
-def filters_masks(data, 
-                mask_threshold = 0.0,
-                pred_iou_thresh: float = 0.88,  # could be lower
-                stability_score_thresh: float = 0.95, # could be lower
-                stability_score_offset: float = 1.0,
-                return_logits: bool = True) -> MaskData:
+def filters_masks(
+    data,
+    mask_threshold=0.0,
+    pred_iou_thresh: float = 0.88,  # could be lower
+    stability_score_thresh: float = 0.95,  # could be lower
+    stability_score_offset: float = 1.0,
+    return_logits: bool = True,
+) -> MaskData:
 
     # Filter by predicted IoU
     if pred_iou_thresh > 0.0:
@@ -130,8 +133,9 @@ def filters_masks(data,
 def extract_individual_object_from_mask(masks: torch.Tensor) -> torch.Tensor:
     assert masks.ndim == 3  # assert batch
     # extract normalization somewhere else
+    norm_factor = torch.max(masks)
     labels_masks = K.contrib.connected_components(
-        masks.unsqueeze(1).to(torch.float) / 255.0
+        masks.unsqueeze(1).to(torch.float) / norm_factor
     )
     # B x H x W
     labels_masks = labels_masks.view(masks.shape[0], *labels_masks.shape[-2:])
@@ -143,35 +147,143 @@ def extract_individual_object_from_mask(masks: torch.Tensor) -> torch.Tensor:
     return batch_masks
 
 
-def _bbox_processing_preds(preds: Dict[str, torch.Tensor]) -> List[Dict]:
-
-    assert isinstance(preds, dict), "Invalid data type"
-
-    masks_boxes = batched_mask_to_box(preds["masks"].to(torch.bool))
-    # TO DO : check if padding doesn't inlfuence bbox generation
-    preds = [
-        {
-            "boxes": im_bbox,
-            "labels": torch.zeros(len(im_bbox), dtype=torch.int8),
-            "scores": iou,
-        }
-        for im_bbox, iou in zip(masks_boxes, preds["iou_preds"])
-    ]
-
-    return preds
+def select_type_scores_decision_mAP(type_decision_mAP) -> str:
+    match type_decision_mAP:
+        case "ci":
+            return "confidence_scores"
+        case "iou":
+            return "iou_preds"
+        case _:
+            raise ValueError("Type decision not valid")
 
 
-def _bbox_processing_labels(labels: torch.Tensor) -> List[Dict]:
+def _mask_processing(
+    data_type: str,
+    preds: Dict[str, torch.Tensor] = None,
+    labels: torch.Tensor = None,
+    type_decision_mAP: str = "ci",
+) -> List[Dict]:
+    """Format input data for Torchmetrics mAP - iou_segm mode
+    - compute indivudals masks
+    - associate scores to compute classification threshold
 
-    assert isinstance(labels, torch.Tensor), "Invalid data type"
+    Args:
+        data_type (str): Union["pred", "label"]
+        preds (Dict[str, torch.Tensor], optional): masks predictions and scores. Defaults to None.
+        labels (torch.Tensor, optional): binary masks labels. Defaults to None.
+        type_decision_mAP (str, optional): type of score to choose for decision. Defaults to "ci".
 
-    labels = extract_individual_object_from_mask(labels)
-    labels_boxes = batched_mask_to_box(labels.to(torch.bool))
-    gt = [
-        {"boxes": il_bbox, "labels": torch.zeros(len(il_bbox), dtype=torch.int8)}
-        for il_bbox in labels_boxes
-    ]
-    return gt
+    Returns:
+        List[Dict]: pred or labels formatted with associated individuals masks
+    """
+
+    def _mask_processing_preds(
+        preds: Dict[str, torch.Tensor], type_decision_mAP: str = "ci"
+    ) -> List[Dict]:
+        # TO DO : check if padding doesn't inlfuence bbox generation
+        assert isinstance(preds, dict), "Invalid data type"
+
+        key = select_type_scores_decision_mAP(type_decision_mAP)
+
+        preds = [
+            {
+                "masks": mask,
+                "labels": torch.zeros(len(mask), dtype=torch.uint8),
+                "scores": s,
+            }
+            for mask, s in zip(preds["masks"].to(torch.bool), preds[key])
+        ]
+        return preds
+
+    def _mask_processing_labels(labels: torch.Tensor) -> List[Dict]:
+        # TO DO : check if padding doesn't inlfuence bbox generation
+        assert isinstance(labels, torch.Tensor), "Invalid data type"
+
+        labels = extract_individual_object_from_mask(labels)
+
+        gt = [
+            {
+                "masks": mask,
+                "labels": torch.zeros(len(mask), dtype=torch.uint8),
+            }
+            for mask in labels.to(torch.uint8)
+        ]
+        return gt
+
+    if not any([preds is not None, labels is not None]):
+        raise RuntimeError("Please provide at least one of the labels or preds")
+
+    match data_type:
+        case "pred":
+            return _mask_processing_preds(
+                preds=preds, type_decision_mAP=type_decision_mAP
+            )
+        case "label":
+            return _mask_processing_labels(labels=labels)
+
+
+def _bbox_processing(
+    data_type: str,
+    preds: Dict[str, torch.Tensor] = None,
+    labels: torch.Tensor = None,
+    type_decision_mAP: str = "ci",
+) -> List[Dict]:
+    """Format input data for Torchmetrics mAP - bbox mode
+    - compute indivudals bbox from masks
+    - associate scores to compute classification threshold
+
+    Args:
+        data_type (str): Union["pred", "label"]
+        preds (Dict[str, torch.Tensor], optional): masks predictions and scores. Defaults to None.
+        labels (torch.Tensor, optional): binary masks labels. Defaults to None.
+        type_decision_mAP (str, optional): type of score to choose for decision. Defaults to "ci".
+
+    Returns:
+        List[Dict]: pred or labels formatted with associated individuals bbox
+    """
+
+    def _bbox_processing_preds(
+        preds: Dict[str, torch.Tensor], type_decision_mAP: str = "ci"
+    ) -> List[Dict]:
+
+        assert isinstance(preds, dict), "Invalid data type"
+
+        key = select_type_scores_decision_mAP(type_decision_mAP)
+
+        masks_boxes = batched_mask_to_box(preds["masks"].to(torch.bool))
+        # TO DO : check if padding doesn't inlfuence bbox generation
+        preds = [
+            {
+                "boxes": im_bbox,
+                "labels": torch.zeros(len(im_bbox), dtype=torch.int8),
+                "scores": iou,
+            }
+            for im_bbox, iou in zip(masks_boxes, preds[key])
+        ]
+        return preds
+
+    def _bbox_processing_labels(labels: torch.Tensor) -> List[Dict]:
+
+        assert isinstance(labels, torch.Tensor), "Invalid data type"
+
+        labels = extract_individual_object_from_mask(labels)
+        labels_boxes = batched_mask_to_box(labels.to(torch.bool))
+        gt = [
+            {"boxes": il_bbox, "labels": torch.zeros(len(il_bbox), dtype=torch.int8)}
+            for il_bbox in labels_boxes
+        ]
+        return gt
+
+    if not any([preds is not None, labels is not None]):
+        raise RuntimeError("Please provide at least one of the labels or preds")
+
+    match data_type:
+        case "pred":
+            return _bbox_processing_preds(
+                preds=preds, type_decision_mAP=type_decision_mAP
+            )
+        case "label":
+            return _bbox_processing_labels(labels=labels)
 
 
 def _extract_obj(tensor: torch.Tensor) -> torch.Tensor:

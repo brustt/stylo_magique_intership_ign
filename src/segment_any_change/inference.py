@@ -7,10 +7,18 @@ from magic_pen.data.loader import BiTemporalDataset, DataSample
 from magic_pen.data.process import DefaultTransform
 from magic_pen.config import DEVICE, logs_dir
 from magic_pen.dummy import DummyModel
+from segment_any_change.eval import UnitsMetricCounts
 from segment_any_change.matching import BitemporalMatching
 from segment_any_change.model import BiSam
 from segment_any_change.utils import load_sam
 from magic_pen.utils_io import load_levircd_sample
+from torchmetrics.segmentation import MeanIoU
+from torchmetrics.detection import MeanAveragePrecision
+from torchmetrics.classification import (
+    BinaryF1Score,
+    BinaryPrecision,
+    BinaryRecall,
+)
 
 
 @dataclass
@@ -20,6 +28,7 @@ class ExperimentParams:
     batch_size: int
     output_dir: Union[str, Path]
     logs_dir: Union[str, Path]
+    ds_name: str  # check for existance - Enum type
     # seg any change
     th_change_proposals: str
     # sam mask generation
@@ -30,6 +39,7 @@ class ExperimentParams:
     stability_score_offset: float
     box_nms_thresh: float
     min_mask_region_area: float
+    engine_metric: Dict
 
 
 def choose_model(is_debug, params):
@@ -53,11 +63,22 @@ def choose_model(is_debug, params):
         )
 
 
-def load_default_sam_params():
+def load_default_metrics(**kwargs):
+    return [
+        BinaryF1Score(),
+        BinaryPrecision(),
+        BinaryRecall(),
+        UnitsMetricCounts(),
+        MeanAveragePrecision(iou_type=kwargs.get("iou_type_mAP", "segm")),
+    ]
+
+
+def load_default_exp_params():
     # experiment parameters
     exp_params = {
-        "batch_size": 4,
+        "batch_size": 2,
         "model_type": "vit_h",
+        "ds_name": "levir-cd",
     }
 
     seganychange_params = {
@@ -80,8 +101,18 @@ def load_default_sam_params():
         "logs_dir": logs_dir,
     }
 
+    engine_metric_params = {
+        "engine_metric": {"iou_type_mAP": "segm", "type_decision_mAP": "ci"}
+    }
+
     return ExperimentParams(
-        **(exp_params | seganychange_params | sam_params | dir_params)
+        **(
+            exp_params
+            | seganychange_params
+            | sam_params
+            | dir_params
+            | engine_metric_params
+        )
     )
 
 
@@ -99,7 +130,7 @@ def infer_on_sample(
 ) -> Dict[str, Any]:
 
     if model is None:
-        model = choose_model(is_debug=False, params=load_default_sam_params())
+        model = choose_model(is_debug=False, params=load_default_exp_params())
 
     item = DataSample(A_path=A_path, B_path=B_path, label_path=label_path)
 
@@ -123,7 +154,7 @@ def partial_inference(
 ) -> List[Dict]:
 
     if model is None:
-        model = choose_model(is_debug=False, params=load_default_sam_params())
+        model = choose_model(is_debug=False, params=load_default_exp_params())
     if batch_size is None:
         batch_size = 2
 

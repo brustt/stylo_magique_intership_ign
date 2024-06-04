@@ -42,5 +42,5 @@ class CDDataModule(pl.LightningDataModule):
 
     def predict_dataloader(self):
         # sample first 2 paires
-        subset = torch.utils.data.Subset(self.test, np.arange(2))
+        subset = torch.utils.data.Subset(self.test, np.arange(10))
         return data.DataLoader(subset, batch_size=self.batch_size, shuffle=False)

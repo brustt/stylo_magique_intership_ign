@@ -16,6 +16,7 @@ from collections.abc import Iterable
 import logging
 import torch
 from skimage.exposure import match_histograms
+import seaborn as sns  # type: ignore
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
@@ -88,7 +89,7 @@ def batch_to_list(batch: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 
 def load_sam(
-    model_type: str, model_cls: Any=None, version: str = "dev", device: str = DEVICE
+    model_type: str, model_cls: Any = None, version: str = "dev", device: str = DEVICE
 ):
 
     sam = None
@@ -217,10 +218,16 @@ def flatten(xs):
         else:
             yield x
 
+
+def rm_substring(string, substring):
+    return string.replace(substring, "")
+
+
 def substring_present(substring, string):
     pattern = re.compile(re.escape(substring))
     match = pattern.search(string)
     return match is not None
+
 
 def apply_histogram(
     img: np.ndarray, reference_image: np.ndarray, blend_ratio: float = 0.5
@@ -259,24 +266,82 @@ def apply_histogram(
     return img
 
 
-def create_overlay_outcome_cls(tp: torch.Tensor, fp: torch.Tensor, fn: torch.Tensor) -> np.ndarray:
+def shift_range_values(arr, new_bounds=[0, 1]):
+    old_range = torch.max(arr) - torch.min(arr)
+    new_range = new_bounds[1] - new_bounds[0]
+    shit_arr = (((arr - torch.min(arr)) * new_range) / old_range) + new_bounds[0]
+    return shit_arr
+
+
+def create_overlay_outcome_cls(
+    tp: torch.Tensor, fp: torch.Tensor, fn: torch.Tensor
+) -> np.ndarray:
     # cannot assign list to tensor => convert to np
     overlay = np.zeros((*tp.shape, 3), dtype=np.uint8)
-    
+
     tp = to_numpy(tp, transpose=False)
     fp = to_numpy(fp, transpose=False)
     fn = to_numpy(fn, transpose=False)
 
     # tps in green - we keep masks summed
     overlay[tp >= 1] = [0, 255, 0]
-    
+
     # fn in red
     overlay[fn >= 1] = [255, 0, 0]
-    
+
     # fp orange
     overlay[fp >= 1] = [255, 165, 0]
+    print(f"overlay shape : {overlay.shape}")
 
     return to_tensor(overlay, transpose=True)
+
+
+def get_units_cnt_px(tp, fp, tn, fn):
+    """Pixel level counts"""
+
+    cnt_tp = torch.count_nonzero(tp)
+    cnt_fp = torch.count_nonzero(fp)
+    cnt_fn = torch.count_nonzero(fn)
+    cnt_tn = torch.count_nonzero(tn)
+
+    return cnt_tp, cnt_fp, cnt_fn, cnt_tn
+
+
+def get_units_cnt_obj(tp, fp, tn, fn):
+    return tp, fp, tn, fn
+
+
+def plot_confusion_matrix(tp, fp, tn, fn, fig_return: bool = True):
+    """Tested for binary classification"""
+    # create the confusion matrix as a numpy array
+    confusion_matrix = np.array([[tp, fp], [fn, tn]])
+    confusion_matrix = confusion_matrix / np.sum(confusion_matrix)
+    # create a heatmap of the confusion matrix using seaborn
+    ax = sns.heatmap(
+        confusion_matrix,
+        annot=True,
+        cmap="YlGnBu",
+        fmt=".2f",
+        xticklabels=["change", "no change"],
+        yticklabels=["change", "no change"],
+        cbar_kws={"shrink": 0.5},
+        vmin=0,
+        vmax=1,
+    )
+
+    # add labels and title to the plot
+    plt.xlabel("Predicted")
+    plt.ylabel("True")
+    plt.title("Confusion Matrix")
+
+    if not fig_return:
+        # show the plot
+        plt.show()
+    else:
+        fig = ax.get_figure()
+        plt.close()
+        return fig
+
 
 if __name__ == "__main__":
     df = load_levircd_sample(size=10, data_type="train")

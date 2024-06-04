@@ -79,8 +79,8 @@ class ListProposal:
         )
 
     @property
-    def confidence_scores(self) -> np.ndarray:
-        return np.stack([m.confidence_score for m in self.items])
+    def confidence_scores(self) -> torch.Tensor:
+        return torch.as_tensor(np.stack([m.confidence_score for m in self.items]))
 
     def set_mask_ci(self, mask: np.ndarray) -> None:
         self.mask_ci = mask

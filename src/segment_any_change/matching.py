@@ -5,9 +5,6 @@ from segment_any_change.embedding import (
     compute_mask_embedding,
     get_img_embedding_normed,
 )
-from magic_pen.config import DEVICE
-from magic_pen.data.loader import BiTemporalDataset
-from magic_pen.data.process import DefaultTransform
 from segment_any_change.masks.mask_generator import SegAnyMaskGenerator
 from segment_any_change.masks.mask_items import (
     FilteringType,
@@ -19,17 +16,12 @@ from segment_any_change.masks.mask_items import (
 )
 from torch.nn.utils.rnn import pad_sequence
 
-from segment_any_change.model import BiSam
 from segment_any_change.sa_dev.utils.amg import batched_mask_to_box
 from segment_any_change.utils import (
     SegAnyChangeVersion,
-    flush_memory,
-    load_levircd_sample,
-    load_sam,
     timeit,
 )
 import torch
-from torch.utils.data import DataLoader
 import logging
 
 # TO DO : define globally
@@ -70,7 +62,7 @@ class BitemporalMatching:
         assert len(masks_A) == len(masks_B)  # same size_batch
         assert len(img_embedding_A) == len(img_embedding_B)
 
-        # To review :workaround for size_batch == 1 - check .squeeze(0) in get_img_embedding_normed
+        # To review : workaround for size_batch == 1 - check .squeeze(0) in get_img_embedding_normed
         if img_embedding_A.ndim == 3:
             img_embedding_A = np.expand_dims(img_embedding_A, axis=0)
             img_embedding_B = np.expand_dims(img_embedding_B, axis=0)
@@ -111,14 +103,22 @@ class BitemporalMatching:
                     raise RuntimeError("SegAnyChange version unkwown")
 
         # add logits == masks_logits
+        # N : number of masks (max) for img in the batch
+
+        # B x N x H x W
         masks = pad_sequence([item_list.masks for item_list in items_batch]).permute(
             1, 0, 2, 3
         )
+        # B x N
         iou_preds = pad_sequence(
             [item_list.iou_preds for item_list in items_batch]
         ).permute(1, 0)
+        # B x N
+        ci = pad_sequence(
+            [item_list.confidence_scores for item_list in items_batch]
+        ).permute(1, 0)
 
-        return dict(masks=masks, iou_preds=iou_preds)
+        return dict(masks=masks, iou_preds=iou_preds, confidence_scores=ci)
 
     def extract_temporal_img(self, items: List[Dict], name: ImgType) -> List[Dict]:
         """Retrieve image temporality - keep old data format"""
