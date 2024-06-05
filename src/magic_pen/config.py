@@ -2,9 +2,10 @@ from dotenv import find_dotenv
 import os
 from pathlib import Path
 
+# add sim link to lightnings logs and root_data_path
 project_path = os.path.dirname(find_dotenv())
 
-root_data_path = Path(os.path.expanduser("~"), "data")
+root_data_path = Path(os.path.expanduser("~"), "data/dl")
 data_path = Path(project_path, "data")
 sam_data_path = Path(data_path, "demo", "sam")
 levirCD_path = Path(root_data_path, "levir-cd")
