@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 from typing import List, Tuple, Dict, Any, Union
-from magic_pen.config import *
+from magic_pen.config import levirCD_path, SEED
 from PIL import Image
 
 # Ignore warnings
