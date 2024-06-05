@@ -77,7 +77,7 @@ def load_default_exp_params():
     # experiment parameters
     exp_params = {
         "batch_size": 2,
-        "model_type": "vit_h",
+        "model_type": "vit_b",
         "ds_name": "levir-cd",
     }
 
@@ -87,7 +87,7 @@ def load_default_exp_params():
 
     # sam mask generation
     sam_params = {
-        "points_per_side": 32,  # lower for speed
+        "points_per_side": 10,  # lower for speed
         "points_per_batch": 64,  # not used
         "pred_iou_thresh": 0.88,  # configure lower for exhaustivity
         "stability_score_thresh": 0.95,  # configure lower for exhaustivity
