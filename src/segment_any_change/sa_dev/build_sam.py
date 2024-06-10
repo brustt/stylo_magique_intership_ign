@@ -24,6 +24,9 @@ logger.setLevel(logging.INFO)
 
 
 def build_sam_vit_h(checkpoint=None, model=Sam):
+
+    logger.info(f"build vit_h {model.__name__}")
+
     return _build_sam(
         encoder_embed_dim=1280,
         encoder_depth=32,
@@ -35,6 +38,9 @@ def build_sam_vit_h(checkpoint=None, model=Sam):
 
 
 def build_sam_vit_l(checkpoint=None, model=Sam):
+
+    logger.info(f"build vit_l {model.__name__}")
+
     return _build_sam(
         encoder_embed_dim=1024,
         encoder_depth=24,
@@ -46,6 +52,9 @@ def build_sam_vit_l(checkpoint=None, model=Sam):
 
 
 def build_sam_vit_b(checkpoint=None, model=Sam):
+
+    logger.info(f"build vit_b {model.__name__}")
+
     return _build_sam(
         encoder_embed_dim=768,
         encoder_depth=12,
@@ -75,7 +84,6 @@ def _build_sam(
     checkpoint=None,
 ):
     """Load sam variant model"""
-    logger.info(f"build {model.__name__}")
 
     prompt_embed_dim = 256
     image_size = 1024

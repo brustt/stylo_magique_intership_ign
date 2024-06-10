@@ -8,7 +8,11 @@ project_path = os.path.dirname(find_dotenv())
 root_data_path = Path(os.path.expanduser("~"), "data/dl")
 data_path = Path(project_path, "data")
 sam_data_path = Path(data_path, "demo", "sam")
+
+# TODO : change constants name to uppercase
+# ds paths
 levirCD_path = Path(root_data_path, "levir-cd")
+SECOND_PATH = Path(root_data_path, "SECOND")
 
 model_path = Path(project_path, "models")
 sam_model_path = Path(model_path, "sam")

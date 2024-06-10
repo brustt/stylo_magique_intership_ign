@@ -147,7 +147,6 @@ class MaskDecoder(nn.Module):
         See 'forward' for more details.
         MD edit
         """
-        print()
         if image_embeddings.ndim < 5:
             image_embeddings = image_embeddings[:, None, ...]
         # Concatenate output tokens
@@ -155,7 +154,7 @@ class MaskDecoder(nn.Module):
         output_tokens = torch.cat(
             [self.iou_token.weight, self.mask_tokens.weight], dim=0
         )
-        print(f"init tokens shape : {output_tokens.shape}")
+        # print(f"init tokens shape : {output_tokens.shape}")
         # extend to prompt embedding : [B, N, (num_mask+1)+1, 256]
         output_tokens = output_tokens.unsqueeze(0).expand(
             sparse_prompt_embeddings.size(1), -1, -1
@@ -164,16 +163,16 @@ class MaskDecoder(nn.Module):
             sparse_prompt_embeddings.size(0), -1, -1, -1
         )
 
-        print(f"inter tokens shape : {output_tokens.shape}")
+        # print(f"inter tokens shape : {output_tokens.shape}")
         # concat new token to sparse = need to be at each start of image embedding
         # [B, N, C, 256]) - C = (num_mask+1)+1+2=7
         tokens = torch.cat((output_tokens, sparse_prompt_embeddings), dim=2)
-        print(f"tokens shape : {tokens.shape}")
+        # print(f"tokens shape : {tokens.shape}")
 
         # extent image embedding in points dimensions
         src = torch.repeat_interleave(image_embeddings, tokens.shape[1], dim=1)
 
-        print(f"img_embedding (src) : {src.shape}")
+        # print(f"img_embedding (src) : {src.shape}")
 
         src = src + dense_prompt_embeddings
         pos_src = torch.repeat_interleave(image_pe, tokens.shape[1], dim=0)
@@ -189,20 +188,20 @@ class MaskDecoder(nn.Module):
         # Run the transformer
         hs, src = self.transformer(src, pos_src, tokens)
 
-        print("out transformer")
-        print(f"hs shape : {hs.shape}")
-        print(f"src shape : {src.shape}")
+        # print("out transformer")
+        # print(f"hs shape : {hs.shape}")
+        # print(f"src shape : {src.shape}")
         iou_token_out = hs[:, :, 0, :]
         mask_tokens_out = hs[:, :, 1 : (1 + self.num_mask_tokens), :]
-        print(f"iou out shape : {iou_token_out.shape}")
-        print(f"masks tokens out shape : {mask_tokens_out.shape}")
+        # print(f"iou out shape : {iou_token_out.shape}")
+        # print(f"masks tokens out shape : {mask_tokens_out.shape}")
 
         # Upscale mask embeddings and predict masks using the mask tokens
         src = src.transpose(2, 3).view(b, n, c, h, w)
         upscaled_embedding = torch.stack(
             [self.output_upscaling(im) for im in src], dim=0
         )
-        print(f"upscaled src tokens out shape : {upscaled_embedding.shape}")
+        # print(f"upscaled src tokens out shape : {upscaled_embedding.shape}")
 
         hyper_in_list: List[torch.Tensor] = []
         for i in range(self.num_mask_tokens):
@@ -211,13 +210,13 @@ class MaskDecoder(nn.Module):
             )
         # stack over mask dimension
         hyper_in = torch.stack(hyper_in_list, dim=2)
-        print(f"hyper in shape : {hyper_in.shape}")
+        # print(f"hyper in shape : {hyper_in.shape}")
 
         b, n, c, h, w = upscaled_embedding.shape
         masks = (hyper_in @ upscaled_embedding.view(b, n, c, h * w)).view(
             b, n, -1, h, w
         )
-        print(f" mask_low : {masks.shape}")
+        # print(f" mask_low : {masks.shape}")
 
         # Generate mask quality predictions
         iou_pred = self.iou_prediction_head(iou_token_out)

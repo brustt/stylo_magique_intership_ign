@@ -190,6 +190,32 @@ def show_points(coords, labels, ax, marker_size=25):
     )
 
 
+def show_prediction_sample(output: Dict):
+    masks = output["pred"]["masks"].cpu().squeeze(0)
+    img_A = output["batch"]["img_A"].cpu().squeeze(0)
+    img_B = output["batch"]["img_B"].cpu().squeeze(0)
+    label = output["batch"]["label"].cpu().squeeze(0)
+
+    if masks.ndim == 3:
+        masks = torch.sum(masks, dim=0)
+    fig, axs = plt.subplots(ncols=4, squeeze=False, figsize=(10, 10))
+
+    for i, sample in enumerate(
+        zip([img_A, img_B, label, masks], ["img_A", "img_B", "label", "masks_agg"])
+    ):
+        img, name = sample
+        if name.startswith("im"):
+            img = to_numpy(img, transpose=True) / 255
+            axs[0, i].imshow(img)
+
+        else:
+            img = to_numpy(img, transpose=False)
+            axs[0, i].imshow(img, cmap="grey")
+
+        axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+        axs[0, i].set_title(name)
+
+
 def rad_to_degre(x):
     return x * 180 / np.pi
 
@@ -291,7 +317,6 @@ def create_overlay_outcome_cls(
 
     # fp orange
     overlay[fp >= 1] = [255, 165, 0]
-    print(f"overlay shape : {overlay.shape}")
 
     return to_tensor(overlay, transpose=True)
 

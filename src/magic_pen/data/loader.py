@@ -1,30 +1,28 @@
 from dataclasses import dataclass
-from enum import Enum
-import os
-import torch
-import pandas as pd
-from skimage import io, transform
+from typing import Any
 import numpy as np
-import matplotlib.pyplot as plt
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
-from typing import List, Tuple, Dict, Any, Union
-from magic_pen.config import levirCD_path, SEED
+import pandas as pd
+from src.commons.constants import SECOND_NO_CHANGE_RGB, SECOND_RGB_TO_CAT, NamedDataset
+from magic_pen.config import SECOND_PATH, levirCD_path, SEED
 from PIL import Image
+from torch.utils.data import Dataset
 
 # Ignore warnings
 import warnings
 
 from magic_pen.data.process import generate_grid_prompt
-from magic_pen.utils_io import load_levircd_sample
+from magic_pen.utils_io import load_levircd_sample, load_second_sample
 from segment_any_change.utils import load_img
+import rasterio as rio
+from rasterio.plot import reshape_as_image
 
 warnings.filterwarnings("ignore")
 
 
 def get_ds_path(ds_name: str) -> str:
     data_sources = {
-        "levir-cd": levirCD_path,
+        NamedDataset.LEVIR_CD.value: levirCD_path,
+        NamedDataset.SECOND.value: SECOND_PATH,
     }
     if not (ds_name in data_sources):
         raise ValueError("Please provide valid dataset name")
@@ -34,7 +32,8 @@ def get_ds_path(ds_name: str) -> str:
 
 def load_ds(ds_name: str, **kwargs) -> pd.DataFrame:
     data_sources_loader = {
-        "levir-cd": load_levircd_sample,
+        NamedDataset.LEVIR_CD.value: load_levircd_sample,
+        NamedDataset.SECOND.value: load_second_sample,
     }
     if not (ds_name in data_sources_loader):
         raise ValueError("Please provide valid dataset name")
@@ -42,42 +41,42 @@ def load_ds(ds_name: str, **kwargs) -> pd.DataFrame:
     return data_sources_loader[ds_name](**kwargs)
 
 
-@dataclass
-class DataSample:
-    A_path: str
-    B_path: str
-    label_path: str
-
-
 class BiTemporalDataset(Dataset):
     def __init__(
         self,
         name: str = None,
-        items: List[Union[Dict, DataSample]] = None,
         dtype: str = "train",
         transform: Any = None,
         seed: int = SEED,
     ) -> None:
 
-        if not any([name, items]):
+        if name is None:
             raise ("Please provide at least items or dataset name")
-        if items is None:
-            self.items = load_ds(ds_name=name, data_type=dtype)
-        else:
-            self.items = pd.DataFrame(
-                items.__dict__, index=[0], columns=["label_path", "A_path", "B_path"]
-            )
+        self.items = load_ds(ds_name=name, data_type=dtype)
+
         self.transform = transform
         self.seed = seed
+        self.name = name
 
     def __len__(self) -> int:
         return self.items.shape[0]
 
     def __getitem__(self, index) -> Any:
-        label_path, A_path, B_path = self.items.iloc[index].values
-        img_A = load_img(A_path)
-        img_B = load_img(B_path)
-        label = load_img(label_path)
+        row = self.items.iloc[index]
+
+        if self.name == NamedDataset.LEVIR_CD.value:
+            img_A = load_img(row["A"])
+            img_B = load_img(row["B"])
+            label = load_img(row["label"])
+
+        elif self.name == NamedDataset.SECOND.value:
+            img_A = load_img(row["A"])
+            img_B = load_img(row["B"])
+            label_A = load_img(row["label_A"])
+            # label_B = load_img(row["label_B"])
+            label = (
+                np.any(label_A != SECOND_NO_CHANGE_RGB, axis=-1).astype(np.uint8) * 255
+            )
 
         sample = {"img_A": img_A, "img_B": img_B, "label": label, "index": index}
 

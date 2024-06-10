@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 from skimage.filters import threshold_otsu
 import torch
-from magic_pen.config import DEVICE
+from magic_pen.config import DEVICE, IMG_SIZE
 from segment_any_change.utils import flatten, to_degre
 
 
@@ -56,7 +56,6 @@ class ListProposal:
     """
 
     items: Optional[List[ItemProposal]] = None
-    mask_ci: np.ndarray = None
 
     def __post_init__(self) -> None:
         if self.items is None:
@@ -68,22 +67,24 @@ class ListProposal:
 
     @property
     def masks(self) -> torch.Tensor:
-        return torch.as_tensor(
-            np.stack([m.mask for m in self.items]), dtype=torch.int8, device=DEVICE
-        )
+        masks = [m.mask for m in self.items]
+        if not masks:
+            masks = [create_empty_item().mask]
+        return torch.as_tensor(np.stack(masks), dtype=torch.int8, device=DEVICE)
 
     @property
     def iou_preds(self) -> torch.Tensor:
-        return torch.as_tensor(
-            np.stack([m.iou_pred for m in self.items]), dtype=torch.float, device=DEVICE
-        )
+        ious = [m.iou_pred for m in self.items]
+        if not ious:
+            ious = [create_empty_item().iou_pred]
+        return torch.as_tensor(np.stack(ious), dtype=torch.float, device=DEVICE)
 
     @property
     def confidence_scores(self) -> torch.Tensor:
-        return torch.as_tensor(np.stack([m.confidence_score for m in self.items]))
-
-    def set_mask_ci(self, mask: np.ndarray) -> None:
-        self.mask_ci = mask
+        confidence_scores = [m.confidence_score for m in self.items]
+        if not confidence_scores:
+            confidence_scores = [create_empty_item().confidence_score]
+        return torch.as_tensor(np.stack(confidence_scores))
 
     def set_items(self, items: List[ItemProposal]) -> None:
         self.items = items
@@ -97,9 +98,7 @@ class ListProposal:
     def __len__(self) -> int:
         return len(self.items)
 
-    def apply_change_filtering(
-        self, method: str, mode: FilteringType, **kwargs
-    ) -> float:
+    def apply_change_filtering(self, method: str, mode: FilteringType, **kwargs) -> Any:
         method_factory = {
             "otsu": apply_otsu_items,
             "th": apply_th_items,
@@ -114,8 +113,9 @@ class ListProposal:
             kwargs["th"] = method
             method = "th"
 
-        self.items, th = method_factory[method](self.items, mode, **kwargs)
-        return th
+        items, th = method_factory[method](self.items, mode, **kwargs)
+
+        self.set_items(items)
 
     def update_field(self, field, values: List[Any]) -> None:
         if len(values) != len(self.items):
@@ -164,6 +164,18 @@ def create_union_object(item_A: ItemProposal, item_B: ItemProposal) -> ItemPropo
         from_img=[item_A.from_img, item_B.from_img],
         embedding=np.mean([item_A.embedding, item_B.embedding], axis=0),
         iou_pred=np.mean([item_A.iou_pred, item_B.iou_pred], axis=0),
+    )
+
+
+def create_empty_item():
+    return ItemProposal(
+        mask=np.zeros(IMG_SIZE).astype(np.uint8),
+        confidence_score=-1.0,
+        meta=(),
+        chgt_angle=0.0,
+        from_img=None,
+        embedding=np.zeros((256)),
+        iou_pred=0.0,
     )
 
 

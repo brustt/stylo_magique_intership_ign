@@ -11,10 +11,15 @@ class DummyModel(nn.Module):
         self.dec = self.build_block_decoder(in_dim * 4, out_dim)
 
     def forward(self, x):
-        x = x["img_A"]
+        x = x["img_A"][:2]  # simulate paire
         x1 = self.enc(x)
         x2 = self.dec(x1)
-        return dict(masks=x2, iou_preds=[])
+        print(x2.shape)
+        return dict(
+            masks=x2,
+            iou_preds=torch.as_tensor(np.ones((x.shape[0], 1))),
+            confidence_scores=torch.as_tensor(np.ones((x.shape[0], 1))),
+        )
 
     def build_block_encoder(self, in_dim, out_dim):
         return nn.Sequential(

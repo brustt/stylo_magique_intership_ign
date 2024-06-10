@@ -8,6 +8,7 @@ from magic_pen.config import DEVICE, IMG_SIZE
 from segment_any_change.sa_dev.utils.transforms import ResizeLongestSide
 
 from segment_any_change.sa_dev.utils.amg import build_point_grid
+from segment_any_change.utils import apply_histogram
 
 PX_MEAN = torch.Tensor([123.675, 116.28, 103.53]).view(-1, 1, 1).to(DEVICE)
 PX_STD = torch.Tensor([58.395, 57.12, 57.375]).view(-1, 1, 1).to(DEVICE)
@@ -61,7 +62,11 @@ class DefaultTransform:
 
         img_A, img_B, label, index = sample.values()
 
-        # ResizeLongestSide can be apply on a batch
+        img_A = self.transform.apply_image(img_A)
+        img_B = self.transform.apply_image(img_B)
+
+        img_A = apply_histogram(img_A, img_B, blend_ratio=0.5)
+
         img_A = self.process(img_A)
         img_B = self.process(img_B)
         label = self.process(label)
@@ -70,7 +75,6 @@ class DefaultTransform:
 
     def process(self, input: np.ndarray) -> torch.Tensor:
 
-        input = self.transform.apply_image(input)
         input_tensor = self.to_tensor(input)
         input_tensor = self.pad_tensor(input_tensor)
         return input_tensor

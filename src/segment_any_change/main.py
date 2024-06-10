@@ -1,14 +1,15 @@
 from dataclasses import dataclass
+import os
 from typing import Any, List, Optional, Tuple, Union
-import torch
-from torchmetrics import Metric
-
-from segment_any_change.inference import (
+from segment_any_change.config_run import (
     ExperimentParams,
     choose_model,
+    load_debug_cli_params,
+    load_exp_params,
     load_default_metrics,
-    load_default_exp_params,
 )
+import torch
+from torchmetrics import Metric
 from segment_any_change.tensorboard_callback import (
     CustomWriter,
     TensorBoardCallbackLogger,
@@ -23,6 +24,10 @@ from segment_any_change.utils import flush_memory
 import logging
 from pytorch_lightning.loggers import TensorBoardLogger
 from pathlib import Path
+import argparse
+import sys
+from dataclasses import asdict
+from pprint import pprint
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
@@ -37,7 +42,9 @@ def main(
     flush_memory()
     pl.seed_everything(seed=SEED)
 
-    logger = TensorBoardLogger(save_dir=params.logs_dir, name="debug")
+    logger = TensorBoardLogger(
+        save_dir=params.logs_dir, name=None, version=params.exp_id
+    )
 
     profiler = PyTorchProfiler(
         on_trace_ready=torch.profiler.tensorboard_trace_handler(params.logs_dir),
@@ -48,9 +55,11 @@ def main(
 
     model = choose_model(is_debug, params)
 
-    pl_module = CDModule(model=model, metrics=metrics, **params.engine_metric)
+    pl_module = CDModule(model=model, metrics=metrics, params=params)
 
-    dm = CDDataModule(name=params.ds_name, batch_size=params.batch_size)
+    dm = CDDataModule(
+        name=params.ds_name, batch_size=params.batch_size, num_worker=params.num_worker
+    )
 
     callbacks = [
         TensorBoardCallbackLogger(),
@@ -60,8 +69,7 @@ def main(
         logger=logger, accelerator=DEVICE, profiler=profiler, callbacks=callbacks
     )
 
-    output = trainer.predict(pl_module, dm, return_predictions=True)
-    return output
+    trainer.test(model=pl_module, datamodule=dm)
 
 
 if __name__ == "__main__":
@@ -69,6 +77,31 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
-    params = load_default_exp_params()
+    # track run mode (debug)
+    gettrace = getattr(sys, "gettrace", None)
+
+    if not gettrace():
+        # CLI
+        parser = argparse.ArgumentParser(description="A simple CLI parser")
+        parser.add_argument("--ds_name", type=str, help="The name of the dataset")
+        parser.add_argument(
+            "--n_job_by_node", type=int, help="Number of job by node", default=1
+        )
+        parser.add_argument("--batch_size", type=int, help="Batch size", default=2)
+        parser.add_argument(
+            "--dev",
+            help="Fast inference - light model and prompts",
+            default=False,
+            action=argparse.BooleanOptionalAction,
+        )
+
+        params = vars(parser.parse_args())
+    else:
+        # debug mode
+        logger.info("DEBUG MODE")
+        params = load_debug_cli_params()
+
+    params = load_exp_params(**params)
     metrics = load_default_metrics(**params.engine_metric)
+    pprint(asdict(params), sort_dicts=False)
     main(params, metrics=metrics, is_debug=False)

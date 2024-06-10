@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from typing import Any, Tuple
 import numpy as np
 import torch
@@ -51,6 +52,9 @@ class TensorBoardCallbackLogger(Callback):
         self.fp_tracking = []
         self.fn_tracking = []
         self.tn_tracking = []
+        self.metrics_px_tracking = {
+            f"pred_{k}": [] for k in _register_metric_classif_px
+        }
 
     def add_metric(self, key, value, pl_module, trainer):
         pl_module.logger.experiment.add_scalar(
@@ -116,7 +120,7 @@ class TensorBoardCallbackLogger(Callback):
 
         return preds, tp, fp, fn, tn
 
-    def on_predict_batch_end(
+    def on_test_batch_end(
         self,
         trainer: Trainer,
         pl_module: LightningModule,
@@ -139,7 +143,10 @@ class TensorBoardCallbackLogger(Callback):
                     for ref_metric in _register_metric_classif_px
                 ]
             ):
-                self.add_metric(key, metric, pl_module, trainer)
+                # self.add_metric(key, metric, pl_module, trainer)
+                self.metrics_px_tracking[key].append(metric)
+
+                pl_module.log(key, metric, prog_bar=True, on_step=True)
             if any(
                 [
                     rm_substring(key, substring="pred_") == ref_metric
@@ -147,20 +154,41 @@ class TensorBoardCallbackLogger(Callback):
                 ]
             ):
                 for skey, smetric in metric.items():
-                    self.add_metric(skey, smetric, pl_module, trainer)
+                    pl_module.log(skey, smetric, prog_bar=True, on_step=True)
 
-        if batch_idx == 0:
+        if batch_idx == 2000000:
+            for key, metric in outputs["metrics"].items():
+                if any(
+                    [
+                        rm_substring(key, substring="pred_") == ref_metric
+                        for ref_metric in _register_metric_classif_px
+                    ]
+                ):
+                    self.add_metric(key, metric, pl_module, trainer)
+                    self.metrics_px_tracking[key].append(metric)
+
+                if any(
+                    [
+                        rm_substring(key, substring="pred_") == ref_metric
+                        for ref_metric in _register_metric_classif_obj
+                    ]
+                ):
+                    for skey, smetric in metric.items():
+                        self.add_metric(skey, smetric, pl_module, trainer)
+
+        if batch_idx % 20 == 0:
             img_sample = self.create_grid_batch(preds, batch, tp, fp, fn)
             pl_module.logger.experiment.add_image(
-                "first_batch", img_sample, pl_module.global_step, dataformats="CHW"
+                f"batch_{batch_idx}",
+                img_sample,
+                pl_module.global_step,
+                dataformats="CHW",
             )
-            # pl_module.logger.experiment.add_text(
-            #     "first_batch", "imgA, imgB, label, prediction"
-            # )
 
-    def on_predict_epoch_end(
-        self, trainer: Trainer, pl_module: LightningModule
-    ) -> None:
+    def on_test_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
+
+        # TODO : put compute() metrics here
+
         # need to change for multiclass
         self.tp_tracking = torch.cat(self.tp_tracking, dim=0)
         self.fp_tracking = torch.cat(self.fp_tracking, dim=0)
@@ -181,6 +209,19 @@ class TensorBoardCallbackLogger(Callback):
 
         pl_module.logger.experiment.add_figure(
             "binary_confusion_matrix_pixel", conf_mat_fig_px, pl_module.global_step
+        )
+
+        print(self.metrics_px_tracking)
+        pl_module.logger.experiment.add_hparams(
+            hparam_dict={
+                "model_type": pl_module.params.model_type,
+                "batch_size": pl_module.params.batch_size,
+                "th_change_proposals": pl_module.params.th_change_proposals,
+            },
+            metric_dict={
+                k: torch.mean(torch.stack(v))
+                for k, v in self.metrics_px_tracking.items()
+            },
         )
 
         # pl_module.logger.experiment.add_figure(
@@ -205,11 +246,12 @@ class CustomWriter(BasePredictionWriter):
         batch_idx,
         dataloader_idx,
     ):
-        torch.save(prediction, os.path.join(self.output_dir, "predictions.pt"))
-        logger.info(os.path.join(self.output_dir, "predictions.pt"))
+        pass
 
     def write_on_epoch_end(self, trainer, pl_module, predictions, batch_indices):
         to_write = ["predictions", "batch_idx"]
+        torch.save(predictions, os.path.join(self.output_dir, "predictions.pt"))
+        logger.info(os.path.join(self.output_dir, "predictions.pt"))
         # output = [{k: v for k, v in p.items()} for p in predictions]
         # torch.save(output, os.path.join(self.output_dir, "predictions.pt"))
         # logger.info(os.path.join(self.output_dir, "predictions.pt"))

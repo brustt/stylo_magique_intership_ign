@@ -14,6 +14,8 @@ from torch.utils.data import DataLoader
 import re
 import logging
 
+from segment_any_change.utils import timeit
+
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
@@ -24,7 +26,7 @@ _register_metric_processing = {
     "BinaryF1Score": "flat",
     "BinaryPrecision": "flat",
     "BinaryRecall": "flat",
-    "MeanIou": "iou",
+    "BinaryJaccardIndex": "iou",
     "MeanAveragePrecision": "mAP",
     "UnitsMetricCounts": "identity",
 }
@@ -124,6 +126,7 @@ class ProcessingEval:
 
         return masks, labels
 
+    @timeit
     def mAP_processing(
         self, preds: Dict[str, torch.Tensor], labels: torch.Tensor, **kwargs
     ) -> Tuple[List[Dict], List[Dict]]:
@@ -194,6 +197,8 @@ class MetricEngine:
             preds_, labels_ = _factory_metric_processing(
                 proc_method, preds, labels, **self.params
             )
+            print(f"-")
+
             metric.update(
                 preds_, labels_
             )  # to() will not work on list for bbox- convert in processing

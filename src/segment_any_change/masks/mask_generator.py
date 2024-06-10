@@ -72,8 +72,7 @@ class SegAnyMaskGenerator:
 
         batch_anns = []
         self.batch_size = batched_input[next(iter(batched_input))].shape[0]
-        print(batched_input[next(iter(batched_input))].shape)
-        print(f"BATCH SIZE : {self.batch_size}")
+        print(f"BATCH SIZE : {self.batch_size} * 2")
         img_size = batched_input[next(iter(batched_input))].shape[-1:]
 
         # generate grid for batch - need to consider batch_size*2 cause of bi-temporal
@@ -187,7 +186,7 @@ class SegAnyMaskGenerator:
 
         # Threshold masks and calculate boxes
         data["masks_binary"] = data["masks"] > mask_threshold
-        print(f' filter mask_threshold : {data["masks"].shape[0]}')
+        print(f' filter mask_threshold : {data["masks_binary"].shape[0]}')
 
         return data
 

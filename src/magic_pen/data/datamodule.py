@@ -7,11 +7,11 @@ from magic_pen.data.process import DefaultTransform
 
 
 class CDDataModule(pl.LightningDataModule):
-    def __init__(self, name, batch_size: int, num_workers: int = 0) -> None:
+    def __init__(self, name, batch_size: int, num_worker: int = 0) -> None:
         super().__init__()
         self.name = name
         self.batch_size = batch_size
-        self.num_workers = num_workers
+        self.num_worker = num_worker
 
     def prepare_data(self):
         # download, IO, etc. Useful with shared filesystems
@@ -24,23 +24,46 @@ class CDDataModule(pl.LightningDataModule):
         self.train = BiTemporalDataset(
             name=self.name, dtype="train", transform=DefaultTransform()
         )
-        self.val = BiTemporalDataset(
-            name=self.name, dtype="val", transform=DefaultTransform()
-        )
+        # self.val = BiTemporalDataset(
+        #     name=self.name, dtype="val", transform=DefaultTransform()
+        # ) # not implement for SECOND
         self.test = BiTemporalDataset(
             name=self.name, dtype="test", transform=DefaultTransform()
         )
 
     def train_dataloader(self):
-        return data.DataLoader(self.train, batch_size=self.batch_size, shuffle=False)
+        return data.DataLoader(
+            self.train,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_worker,
+        )
 
     def val_dataloader(self):
-        return data.DataLoader(self.val, batch_size=self.batch_size, shuffle=False)
+        return data.DataLoader(
+            self.val,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_worker,
+        )
 
     def test_dataloader(self):
-        return data.DataLoader(self.test, batch_size=self.batch_size, shuffle=False)
+        # subset = torch.utils.data.Subset(self.test, np.arange(2))
+        return data.DataLoader(
+            self.test,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_worker,
+        )
+
+        # return data.DataLoader(self.test, batch_size=self.batch_size, shuffle=False)
 
     def predict_dataloader(self):
         # sample first n paires
         subset = torch.utils.data.Subset(self.test, np.arange(2))
-        return data.DataLoader(subset, batch_size=self.batch_size, shuffle=False)
+        return data.DataLoader(
+            subset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_worker,
+        )

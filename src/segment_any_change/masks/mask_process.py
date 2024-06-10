@@ -1,6 +1,7 @@
 import enum
 from typing import Dict, List, Union
 import torch
+import torch.nn.functional as F
 from segment_any_change.masks.mask_items import ListProposal
 from segment_any_change.sa_dev.utils.amg import (
     MaskData,
@@ -13,6 +14,12 @@ from segment_any_change.sa_dev.utils.amg import (
 from torchvision.ops.boxes import batched_nms
 import kornia as K
 from torch.nn.utils.rnn import pad_sequence
+import logging
+
+# TO DO : define globally
+logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def nms_wrapper(data, box_nms_thresh):
@@ -130,21 +137,80 @@ def filters_masks(
     return data
 
 
+def extract_object_from_batch(masks: torch.Tensor) -> torch.Tensor:
+    """Extract individual mask objects from a batch of masks B x H x W
+
+    Args:
+        masks (torch.Tensor): (B x H x W) batch masks
+
+    Returns:
+        torch.Tensor: (B x N x H x W) with N total objects of batch
+    """
+
+    def remap_values(remapping, x):
+        index = torch.bucketize(x.ravel(), remapping[0])
+        return remapping[1][index].reshape(x.shape)
+
+    # B x 1 x H x W -> B x H x W. Normalize to [0, 1]
+    labels_masks = K.contrib.connected_components(
+        masks.unsqueeze(1).to(torch.float) / torch.max(masks), num_iterations=500
+    ).squeeze(1)
+    uniques = torch.unique(labels_masks)
+    # Labels from K.connected_component are not 0-index based and sequential integers
+    # Need a mapping for one-hot
+    remapping = uniques, torch.arange(end=len(uniques))
+    remapped_batch = remap_values(remapping, labels_masks)
+    # B x H x W => B x N x H x W
+    masks = F.one_hot(remapped_batch.long(), len(uniques)).permute(0, 3, 1, 2)
+    # remove background mask, i.e no-change
+    masks = masks[
+        :,
+        1:,
+        :,
+    ]
+
+    if masks.shape[1] == 0:
+        # no object found in batch : masks => B x 0 x H x W
+        # return B x 1 x H x W zeros masks
+        return torch.zeros_like(masks).unsqueeze(1)
+    return masks
+
+
 def extract_individual_object_from_mask(masks: torch.Tensor) -> torch.Tensor:
     assert masks.ndim == 3  # assert batch
     # extract normalization somewhere else
     norm_factor = torch.max(masks)
     labels_masks = K.contrib.connected_components(
-        masks.unsqueeze(1).to(torch.float) / norm_factor
+        masks.unsqueeze(1).to(torch.float) / norm_factor, num_iterations=500
     )
-    # B x H x W
+    # B x 1 x H x W => B x H x W
     labels_masks = labels_masks.view(masks.shape[0], *labels_masks.shape[-2:])
     batch_masks = []
+    # loop over img batch
     for m in labels_masks:
         batch_masks.append(_extract_obj(m))
     # N x B x H x W => B x N x H x W
     batch_masks = pad_sequence(batch_masks).permute(1, 0, 2, 3)
     return batch_masks
+
+
+def _extract_obj(tensor: torch.Tensor) -> torch.Tensor:
+    """
+    Create individual binary mask from one array with annotated shapes
+    TODO: vectorized
+    """
+    all_masks = []
+    # check unique give sorted values
+    id_shapes = torch.unique(tensor)[1:]
+    for shape in id_shapes:
+        all_masks.append(torch.where(tensor == shape, 1, 0))
+    if all_masks:
+        return torch.stack(
+            all_masks
+        )  # RuntimeError: stack expects a non-empty TensorList
+    else:
+        # we don't have object extracted => create empty masks for every
+        return torch.zeros((1, *tensor.shape))
 
 
 def select_type_scores_decision_mAP(type_decision_mAP) -> str:
@@ -199,7 +265,7 @@ def _mask_processing(
         # TO DO : check if padding doesn't inlfuence bbox generation
         assert isinstance(labels, torch.Tensor), "Invalid data type"
 
-        labels = extract_individual_object_from_mask(labels)
+        labels = extract_object_from_batch(labels)
 
         gt = [
             {
@@ -266,7 +332,7 @@ def _bbox_processing(
 
         assert isinstance(labels, torch.Tensor), "Invalid data type"
 
-        labels = extract_individual_object_from_mask(labels)
+        labels = extract_object_from_batch(labels)
         labels_boxes = batched_mask_to_box(labels.to(torch.bool))
         gt = [
             {"boxes": il_bbox, "labels": torch.zeros(len(il_bbox), dtype=torch.int8)}
@@ -284,15 +350,3 @@ def _bbox_processing(
             )
         case "label":
             return _bbox_processing_labels(labels=labels)
-
-
-def _extract_obj(tensor: torch.Tensor) -> torch.Tensor:
-    """
-    Create individual binary mask from one array with annotated shapes
-    """
-    all_masks = []
-    id_shapes = torch.unique(tensor)[1:]
-    for shape in id_shapes:
-        all_masks.append(torch.where(tensor == shape, 1, 0))
-    all_masks = torch.stack(all_masks)
-    return all_masks

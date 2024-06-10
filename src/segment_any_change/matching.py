@@ -12,6 +12,7 @@ from segment_any_change.masks.mask_items import (
     create_change_proposal_items,
     ItemProposal,
     ListProposal,
+    create_empty_item,
     create_union_object,
 )
 from torch.nn.utils.rnn import pad_sequence
@@ -23,6 +24,7 @@ from segment_any_change.utils import (
 )
 import torch
 import logging
+
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
@@ -75,8 +77,8 @@ class BitemporalMatching:
             x_t_mA, _, ci = temporal_matching(img_embA, img_embB, mA)
             # t+1 -> t
             _, x_t1_mB, ci1 = temporal_matching(img_embA, img_embB, mB)
-            print(ci)
-            print(ci1)
+            # print(ci)
+            # print(ci1)
 
             # TO DO : review nan values : object loss after resize
             logger.info(f"nan values ci {np.sum(np.isnan(ci))}")
@@ -92,19 +94,29 @@ class BitemporalMatching:
 
             match self.seganyversion:
                 case SegAnyChangeVersion.RAW:
-                    items_change = proposal_matching(self.items_A, self.items_B)
+                    print(
+                        f"n items before proposal matching : {len(self.items_A + self.items_B)}"
+                    )
+                    items_change = proposal_matching(
+                        self.items_A, self.items_B, skip_fusion=False
+                    )
+                    print(f"n items after proposal matching : {len(items_change)}")
 
-                    print([_.chgt_angle for _ in items_change])
-                    th = items_change.apply_change_filtering(
+                    # print([_.chgt_angle for _ in items_change])
+                    items_change.apply_change_filtering(
                         filter_method, FilteringType.Sup
                     )
-                    items_batch.append(items_change)
+                    print(f"n items after change filtering : {len(items_change)}")
+                    print(f"---")
+                    if len(items_change) > 0:
+                        items_batch.append(items_change)
+                    else:
+                        items_batch.append(ListProposal(items=[create_empty_item()]))
                 case _:
                     raise RuntimeError("SegAnyChange version unkwown")
 
         # add logits == masks_logits
         # N : number of masks (max) for img in the batch
-
         # B x N x H x W
         masks = pad_sequence([item_list.masks for item_list in items_batch]).permute(
             1, 0, 2, 3
@@ -146,6 +158,9 @@ class BitemporalMatching:
 
 
 def neg_cosine_sim(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
+    # print(np.linalg.norm(x1))
+    # print(np.linalg.norm(x2))
+    # print("---")
     return -(x1 @ x2) / (np.linalg.norm(x1) * np.linalg.norm(x2))
 
 
@@ -212,7 +227,10 @@ def semantic_change_mask(
 
 @timeit
 def proposal_matching(
-    items_A: List[ItemProposal], items_B: List[ItemProposal], th_union: float = 0.6
+    items_A: List[ItemProposal],
+    items_B: List[ItemProposal],
+    th_union: float = 0.6,
+    skip_fusion=False,
 ) -> ListProposal:
     """Iterative masks fusion based on IoU treshold.
 
@@ -229,14 +247,20 @@ def proposal_matching(
     filter_items = ListProposal()
     f_items = items_A + items_B
 
-    for insert_item in f_items:
-        inserted = False
-        for ref_item in filter_items:
-            if cover_same_zone(insert_item.mask, ref_item.mask, th=th_union):
-                filter_items.add_item(create_union_object(insert_item, ref_item))
-                filter_items.rm_item(ref_item.id)
-                inserted = True
-        if not inserted:
+    if skip_fusion:
+        for insert_item in f_items:
             filter_items.add_item(insert_item)
+        return filter_items
 
-    return filter_items
+    else:
+        for insert_item in f_items:
+            inserted = False
+            for ref_item in filter_items:
+                if cover_same_zone(insert_item.mask, ref_item.mask, th=th_union):
+                    filter_items.add_item(create_union_object(insert_item, ref_item))
+                    filter_items.rm_item(ref_item.id)
+                    inserted = True
+            if not inserted:
+                filter_items.add_item(insert_item)
+
+        return filter_items
