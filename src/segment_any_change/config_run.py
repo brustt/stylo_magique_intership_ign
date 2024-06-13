@@ -64,6 +64,7 @@ def choose_model(is_debug, params):
         sam = load_sam(
             model_type=params.model_type, model_cls=BiSam, version="dev", device=DEVICE
         )
+        # set to float16 - for cuda runtime
         return BitemporalMatching(
             model=sam,
             version=params.seganychange_version,
@@ -139,7 +140,7 @@ def load_default_exp_params(**params):
     # '_'.join([datetime.now().strftime('%Y%m%d'), exp_params["ds_name"], exp_params["model_type"]])
 
     seganychange_params = {
-        "th_change_proposals": 60.0,
+        "th_change_proposals": 0.0,
         "col_nms_threshold": "ci",  # ci | iou_preds
         "seganychange_version": SegAnyChangeVersion.AUTHOR,
     }

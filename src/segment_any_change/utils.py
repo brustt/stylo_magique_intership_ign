@@ -13,13 +13,14 @@ from segment_any_change.sa_dev_v0 import sam_model_registry as sam_model_registr
 from segment_any_change.sa_dev.utils.amg import MaskData
 
 from torch.nn.utils.rnn import pad_sequence
-from magic_pen.config import DEVICE, sam_dict_checkpoint
+from magic_pen.config import DEVICE, IMG_SIZE, sam_dict_checkpoint
 import time
 from collections.abc import Iterable
 import logging
 import torch
 from skimage.exposure import match_histograms
 import seaborn as sns  # type: ignore
+import torch.nn.functional as F
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
@@ -59,6 +60,24 @@ def to_tensor(
     if transpose:
         arr = arr.transpose(2, 0, 1)
     return torch.as_tensor(arr, dtype=dtype, device=device)
+
+
+def resize(
+    tensor: Union[torch.Tensor, np.ndarray], target_size: Tuple[int, int]
+) -> torch.Tensor:
+
+    if not isinstance(tensor, torch.Tensor):
+        tensor = torch.as_tensor(tensor, device=DEVICE)
+
+    if tensor.ndim < 4:
+        tensor = tensor.unsqueeze(0)
+
+    if tensor.dtype != torch.float32:
+        tensor = tensor.to(torch.float32)
+
+    tensor = F.interpolate(tensor, target_size, mode="bicubic", align_corners=False)
+
+    return tensor
 
 
 def to_numpy(tensor: torch.Tensor, transpose: bool = True, dtype=None) -> np.ndarray:
@@ -417,6 +436,9 @@ def reconstruct_batch(data: MaskData, batch_size: int) -> Dict[str, torch.Tensor
         reshaped_data["iou_preds"], batch_first=True
     )
 
+    # retrieve label shape
+    reshaped_data["masks"] = resize(reshaped_data["masks"], IMG_SIZE).to(torch.uint8)
+
     # now get back paire img format => batch_size // 2
 
     reshaped_data["masks"] = reshaped_data["masks"].view(
@@ -429,7 +451,7 @@ def reconstruct_batch(data: MaskData, batch_size: int) -> Dict[str, torch.Tensor
     reshaped_data["iou_preds"] = reshaped_data["iou_preds"].view(batch_size // 2, -1)
 
     print("====")
-
+    # check return vizu
     print("masks dim", reshaped_data["masks"].shape)
     print("bboxes dim", reshaped_data["bboxes"].shape)
     print("masks dim", reshaped_data["masks"].shape)

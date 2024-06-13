@@ -14,6 +14,7 @@ dependencies:
   - gh
   - pandas
   - rasterio
+  - opencv-python
   - matplotlib
   - scikit-image
   - black
@@ -21,12 +22,11 @@ dependencies:
   - kornia
   - tensorboard
   - seaborn
+  - pytorch-lightning
   - torchmetrics
+  - tqdm
   - pip:
-    - pytorch-lightning
     - deprecated
-    - opencv-python-headless
     - torch_tb_profiler
-    - tqdm
     - pycocotools
 prefix: /home/MDizier/miniforge3/envs/magic_pen

@@ -115,7 +115,6 @@ class BitemporalMatching:
         iou_preds = extract_ious(img_anns)
 
         print("NMS masks fusion")
-        print(masks.shape)
         # use data structure define in sa_dev
         # check for OutofBoundError
         data = MaskData(
@@ -134,6 +133,7 @@ class BitemporalMatching:
             nms_threshold=self.mask_generator.box_nms_thresh,
             col_threshold=self.col_nms_threshold,
         )
+
         # apply change threshold
         data["chgt_angle"] = to_degre_torch(data["ci"])
         data, th = change_thresholding(data, method=self.filter_method)
@@ -169,7 +169,6 @@ def neg_cosine_sim_torch(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
     dot_prod = torch.diagonal(torch.bmm(x1, x2.permute(0, 2, 1)), dim1=1, dim2=2)
     # vectors norms
     dm = torch.linalg.norm(x1, dim=2) * torch.linalg.norm(x2, dim=2)
-
     return -dot_prod / dm
 
 
@@ -187,52 +186,6 @@ def proposal_matching_nms(
     data.filter(keep_by_nms)
 
     return data
-
-
-@timeit
-@deprecated
-def proposal_matching_nms_(items: ListProposal, nms_threshold: float) -> ListProposal:
-
-    print(f"masks : {items.masks.shape}")
-    print(f"ci : {items.confidence_scores.shape}")
-    print(f"bboxes : {items.bboxes.shape}")
-
-    # use SAM data structure for simplifity
-    data = MaskData(
-        masks=items.masks,
-        bboxes=items.bboxes,
-        ci=items.confidence_scores,  # change ci shape to (B, N),
-        iou_preds=items.iou_preds,
-    )
-
-    keep_by_nms = batched_nms(
-        data["bboxes"].float(),
-        data["iou_preds"],
-        torch.zeros_like(data["bboxes"][:, 0]),  # categories
-        iou_threshold=nms_threshold,  # default SAM : 0.7
-    )
-    data.filter(keep_by_nms)
-    # Keep old data format
-    items_filtered = [
-        ItemProposal(
-            mask=m,
-            embedding=None,
-            confidence_score=ci,
-            bbox=bbox,
-            iou_pred=iou,
-        )
-        for m, ci, bbox, iou in zip(
-            data["masks"], data["ci"], data["bboxes"], data["iou_preds"]
-        )
-    ]
-
-    items_change = ListProposal(items_filtered)
-
-    del items
-    del items_filtered
-    del data
-
-    return items_change
 
 
 @timeit
@@ -283,6 +236,7 @@ def temporal_matching_torch(
     return x_t, x_t1, chg_ci
 
 
+@deprecated
 def cover_same_zone(mask_1, mask_2, th=0.6) -> bool:
     """Check if masks extents are compliant for union
 

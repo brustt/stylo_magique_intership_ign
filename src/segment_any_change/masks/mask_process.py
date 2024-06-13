@@ -105,20 +105,6 @@ def postprocess_small_regions(
     return mask_data
 
 
-def resize(
-    masks: Union[torch.Tensor, np.ndarray], target_size: Tuple[int, int]
-) -> torch.Tensor:
-
-    if not isinstance(masks, torch.Tensor):
-        masks = torch.as_tensor(masks, device=DEVICE)
-
-    if masks.ndim < 4:
-        masks = masks.unsqueeze(0)
-
-    masks = F.interpolate(masks, target_size, mode="bicubic", align_corners=False)
-    return masks
-
-
 def filters_masks(
     data,
     mask_threshold=0.0,

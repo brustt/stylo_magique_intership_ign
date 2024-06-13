@@ -55,8 +55,9 @@ def prepare_prompts(
 class DefaultTransform:
     """Scale Img to square IMG_SIZE preserving original ratio and pad"""
 
-    def __init__(self) -> None:
+    def __init__(self, half_precision: bool = True) -> None:
         self.transform = ResizeLongestSide(IMG_SIZE[0])
+        self.precision = half_precision
 
     def __call__(self, sample: Dict) -> Dict:
 
@@ -77,6 +78,9 @@ class DefaultTransform:
 
         input_tensor = self.to_tensor(input)
         input_tensor = self.pad_tensor(input_tensor)
+
+        if self.precision:
+            input_tensor = input_tensor.half()
         return input_tensor
 
     def to_tensor(self, img: np.ndarray) -> torch.Tensor:

@@ -74,6 +74,8 @@ class BiSam(nn.Module):
 
         input_images = torch.cat([batched_input["img_A"], batched_input["img_B"]])
         original_size = input_images.shape[-2:]
+        # print("DTYPE", input_images.dtype)
+
         input_images = self.preprocess(input_images)
         self.image_embeddings = self.image_encoder(input_images)
 
@@ -95,10 +97,10 @@ class BiSam(nn.Module):
             dense_prompt_embeddings=dense_embeddings,  # (B, N, 256, 64, 64)
         )
 
-        masks = self.upscale_masks(low_res_masks, original_size)
+        # masks = self.upscale_masks(low_res_masks, original_size)
 
         masks, iou_predictions = self.select_masks(
-            masks, iou_predictions, multimask_output
+            low_res_masks, iou_predictions, multimask_output
         )
 
         if not return_logits:

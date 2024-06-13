@@ -5,7 +5,7 @@ import torch
 
 from magic_pen.config import IMG_SIZE
 from segment_any_change.masks.mask_items import ImgType
-from segment_any_change.masks.mask_process import resize
+from segment_any_change.utils import resize
 from segment_any_change.sa_dev.predictor import SamPredictor
 
 
@@ -43,23 +43,30 @@ def compute_mask_embedding_torch(
     """_summary_
 
     Args:
-        mask (torch.Tensor): torch.uint8 - (B,N,Hm,Wm)
+        masks (torch.Tensor): torch.uint8 - (B,N,Hm,Wm)
         img_embedding (torch.Tensor): (B,C,Hm,Wm)
 
     Returns:
          torch.Tensor:  B x N x C
     """
 
-    # resize to mask dim 1024 x 1024
-    img_embedding = resize(img_embedding, IMG_SIZE)
+    # resize to mask dim
+    img_embedding = resize(img_embedding, masks.shape[-2:])
     # align dim B x C x N x Hm x Wm)
-    masks = masks.unsqueeze(1).repeat(1, img_embedding.shape[1], 1, 1, 1)
+
+    print(masks.shape)
+    # use view (expand) for memory efficiency
+    masks = masks.unsqueeze(1).expand(-1, img_embedding.shape[1], -1, -1, -1)
     # align dim B x C x N x Hm x Wm)
+    # need to copy() (repeat) for later assignation
     img_embedding = img_embedding.unsqueeze(2).repeat(1, 1, masks.shape[2], 1, 1)
     # mask no data
     img_embedding[(masks == 0)] = torch.nan
+    # print("img", img_embedding.sum(dim=(2, 3)))
     # mask embedding from spatial dim not nan
     masks_embedding = torch.nanmean(img_embedding, dim=(3, 4))
+    # print("masks_embedding", masks_embedding.sum(dim=(2)))
+
     # B x N x C
     return masks_embedding.permute(0, 2, 1)
 
@@ -85,4 +92,4 @@ def get_img_embedding_normed(predictor: Any, img_type: ImgType) -> np.ndarray:
     w = predictor.model._modules["image_encoder"].neck[3].weight
     b = predictor.model._modules["image_encoder"].neck[3].bias
     embedding = (embedding.squeeze(0) - b[:, None, None]) / w[:, None, None]
-    return embedding.detach()
+    return embedding.detach().half()
