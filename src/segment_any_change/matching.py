@@ -1,14 +1,17 @@
 import numpy as np
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 from deprecated import deprecated
+from tqdm import tqdm
 from segment_any_change.embedding import (
     compute_mask_embedding,
+    compute_mask_embedding_torch,
     get_img_embedding_normed,
 )
 from segment_any_change.masks.mask_generator import SegAnyMaskGenerator
 from segment_any_change.masks.mask_items import (
     FilteringType,
     ImgType,
+    change_thresholding,
     create_change_proposal_items,
     ItemProposal,
     ListProposal,
@@ -17,12 +20,17 @@ from segment_any_change.masks.mask_items import (
 )
 from torch.nn.utils.rnn import pad_sequence
 
-from segment_any_change.sa_dev.utils.amg import batched_mask_to_box
+from segment_any_change.sa_dev.utils.amg import MaskData
 from segment_any_change.utils import (
     SegAnyChangeVersion,
+    reconstruct_batch,
     timeit,
+    to_degre_torch,
+    to_numpy,
 )
 import torch
+from torchvision.ops.boxes import batched_nms
+
 import logging
 
 
@@ -31,132 +39,98 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+def extract_masks(img_anns: List[Dict]):
+    # B x N x H x W
+    return  pad_sequence([anns["masks"] for anns in img_anns]).permute(1, 0, 2, 3)
+
+def extract_bboxes(img_anns: List[Dict]):
+    # B x N x D
+    return  pad_sequence([anns["bbox"] for anns in img_anns]).permute(1, 0, 2)
+
+def extract_ious(img_anns: List[Dict]):
+    # B x N
+    return  pad_sequence([anns["predicted_iou"] for anns in img_anns]).permute(1, 0)
+
+
 
 class BitemporalMatching:
-    def __init__(self, model, th_change_proposals, **sam_kwargs) -> None:
+    def __init__(self, model, th_change_proposals: Union[float, str], col_nms_threshold: float, version: SegAnyChangeVersion, **sam_kwargs) -> None:
         self.mask_generator = SegAnyMaskGenerator(model, **sam_kwargs)
-        self.seganyversion = SegAnyChangeVersion.RAW
+        # useful for future experimentation
+        self.seganyversion = version.value
+        self.col_nms_threshold = col_nms_threshold
         self.filter_method = th_change_proposals
-        self.items_A = None
-        self.items_B = None
 
     def __call__(self, batch: Dict[str, torch.Tensor], **params) -> Any:
-
-        # device = params.get("device", None) if params.get("device", None) else DEVICE
+        logger.info(f"=== {self.seganyversion} ====")
         items_batch = self.run(batch, self.filter_method, **params)
         return items_batch
 
     @timeit
     def run(self, batch: Dict[str, torch.Tensor], filter_method: str, **params) -> Any:
         """
-        Run Bitemporal matching
-        Keep implementation in numpy for simplicity
+        Run Bitemporal matching - vectorized manner
         """
+
         img_anns = self.mask_generator.generate(batch)
+        batch_size = self.mask_generator.batch_size
 
-        items_batch = []
-
-        masks_A = self.extract_temporal_img(img_anns, ImgType.A)
-        masks_B = self.extract_temporal_img(img_anns, ImgType.B)
+        masks = extract_masks(img_anns)
+        masks_A, masks_B = masks[:batch_size], masks[batch_size:]
+        
         img_embedding_A = get_img_embedding_normed(self.mask_generator, ImgType.A)
         img_embedding_B = get_img_embedding_normed(self.mask_generator, ImgType.B)
 
-        assert len(masks_A) == len(masks_B)  # same size_batch
-        assert len(img_embedding_A) == len(img_embedding_B)
+        # t -> t+1
+        x_t_mA, _, ci = temporal_matching_torch(img_embedding_A, img_embedding_B, masks_A)
+        # t+1 -> t
+        _, x_t1_mB, ci1 = temporal_matching_torch(img_embedding_A, img_embedding_B, masks_B)
 
-        # To review : workaround for size_batch == 1 - check .squeeze(0) in get_img_embedding_normed
-        if img_embedding_A.ndim == 3:
-            img_embedding_A = np.expand_dims(img_embedding_A, axis=0)
-            img_embedding_B = np.expand_dims(img_embedding_B, axis=0)
 
-        # iterate over batch
-        for img_embA, mA, img_embB, mB in zip(
-            img_embedding_A, masks_A, img_embedding_B, masks_B
-        ):
-            # t -> t+1
-            x_t_mA, _, ci = temporal_matching(img_embA, img_embB, mA)
-            # t+1 -> t
-            _, x_t1_mB, ci1 = temporal_matching(img_embA, img_embB, mB)
-            # print(ci)
-            # print(ci1)
+        print(ci.shape)
+        print(ci1.shape)
+        print(x_t_mA.shape)
+        print(x_t1_mB.shape)
 
-            # TO DO : review nan values : object loss after resize
-            logger.info(f"nan values ci {np.sum(np.isnan(ci))}")
-            logger.info(f"nan values ci1 {np.sum(np.isnan(ci1))}")
+        # warning nan values : missing element in batch format (pad sequence) - normal behaviour
+        # logger.info(f"nan values ci {torch.sum(np.isnan(ci))}")
+        # logger.info(f"nan values ci1 {torch.sum(np.isnan(ci1))}")
 
-            self.items_A = create_change_proposal_items(
-                masks=mA, ci=ci, type_img=ImgType.A, embeddings=x_t_mA
+        masks = torch.cat([masks_A, masks_B], dim=0)
+        confidence_scores = torch.cat([ci, ci1], dim=0)
+        bboxes = extract_bboxes(img_anns)
+        iou_preds = extract_ious(img_anns)
+
+        print("NMS masks fusion")
+        print(masks.shape)
+        # use data structure define in sa_dev
+        # check for OutofBoundError
+        data = MaskData(
+            masks=masks.flatten(0, 1),
+            bboxes=bboxes.flatten(0, 1),
+            ci=confidence_scores.flatten(0, 1), 
+            iou_preds=iou_preds.flatten(0, 1),
+            # we don't need position of mask, only info about which batch it belongs
+            batch_indices=torch.arange(masks.shape[0]).repeat_interleave(masks.shape[1])
             )
-
-            self.items_B = create_change_proposal_items(
-                masks=mB, ci=ci1, type_img=ImgType.B, embeddings=x_t1_mB
+        # simple fusion based on NMS
+        data = proposal_matching_nms(data=data,
+                nms_threshold=self.mask_generator.box_nms_thresh,
+                col_threshold=self.col_nms_threshold,
             )
+        # apply change threshold
+        data["chgt_angle"] = to_degre_torch(data["ci"])
+        data, th = change_thresholding(data, method=self.filter_method)
 
-            match self.seganyversion:
-                case SegAnyChangeVersion.RAW:
-                    print(
-                        f"n items before proposal matching : {len(self.items_A + self.items_B)}"
-                    )
-                    items_change = proposal_matching(
-                        self.items_A, self.items_B, skip_fusion=False
-                    )
-                    print(f"n items after proposal matching : {len(items_change)}")
+        # we need to get back batch information for each prediction 
+        data = reconstruct_batch(data, masks.shape[0])
 
-                    # print([_.chgt_angle for _ in items_change])
-                    items_change.apply_change_filtering(
-                        filter_method, FilteringType.Sup
-                    )
-                    print(f"n items after change filtering : {len(items_change)}")
-                    print(f"---")
-                    if len(items_change) > 0:
-                        items_batch.append(items_change)
-                    else:
-                        items_batch.append(ListProposal(items=[create_empty_item()]))
-                case _:
-                    raise RuntimeError("SegAnyChange version unkwown")
-
-        # add logits == masks_logits
-        # N : number of masks (max) for img in the batch
-        # B x N x H x W
-        masks = pad_sequence([item_list.masks for item_list in items_batch]).permute(
-            1, 0, 2, 3
-        )
-        # B x N
-        iou_preds = pad_sequence(
-            [item_list.iou_preds for item_list in items_batch]
-        ).permute(1, 0)
-        # B x N
-        ci = pad_sequence(
-            [item_list.confidence_scores for item_list in items_batch]
-        ).permute(1, 0)
-
-        return dict(masks=masks, iou_preds=iou_preds, confidence_scores=ci)
-
-    def extract_temporal_img(self, items: List[Dict], name: ImgType) -> List[Dict]:
-        """Retrieve image temporality - keep old data format"""
-        match name:
-            case ImgType.A:
-                return [
-                    [
-                        {"segmentation": m, "iou_pred": s}
-                        for m, s in zip(d["masks"], d["predicted_iou"])
-                    ]
-                    for d in items
-                    if d["img_type"] == ImgType.A
-                ]
-            case ImgType.B:
-                return [
-                    [
-                        {"segmentation": m, "iou_pred": s}
-                        for m, s in zip(d["masks"], d["predicted_iou"])
-                    ]
-                    for d in items
-                    if d["img_type"] == ImgType.B
-                ]
-            case _:
-                raise ValueError("Uncorrect image type")
-
-
+        return dict(
+            masks=data["masks"], 
+            iou_preds=data["iou_preds"], 
+            confidence_scores=data["ci"]
+            )
+        
 def neg_cosine_sim(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
     # print(np.linalg.norm(x1))
     # print(np.linalg.norm(x2))
@@ -164,6 +138,83 @@ def neg_cosine_sim(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
     return -(x1 @ x2) / (np.linalg.norm(x1) * np.linalg.norm(x2))
 
 
+def neg_cosine_sim_torch(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
+    """Compute negative cosime similarities on a batch
+
+    Args:
+        x1 (torch.Tensor): embedding 1 : B x N x C
+        x2 (torch.Tensor): embedding 2 : B x N x C
+
+    Returns:
+        torch.Tensor: negative similarities B x N
+    """
+    # only interested by element wise dot product
+    dot_prod = torch.diagonal(torch.bmm(x1, x2.permute(0, 2, 1)), dim1=1, dim2=2)
+    # vectors norms
+    dm =  (torch.linalg.norm(x1, dim=2) * torch.linalg.norm(x2, dim=2))
+
+    return - dot_prod / dm
+
+
+
+
+@timeit
+def proposal_matching_nms(data: MaskData,
+                          nms_threshold: float,
+                          col_threshold :str = "ci")-> MaskData:
+
+    keep_by_nms = batched_nms(
+        data["bboxes"].float(),
+        data[col_threshold],
+        torch.zeros_like(data["bboxes"][:, 0]),  # categories
+        iou_threshold=nms_threshold, # default SAM : 0.7 for iou - for ci need to search
+    )
+    data.filter(keep_by_nms)
+    
+    return data
+
+@timeit
+@deprecated
+def proposal_matching_nms_(items: ListProposal, nms_threshold: float) -> ListProposal:
+    
+    print(f"masks : {items.masks.shape}")
+    print(f"ci : {items.confidence_scores.shape}")
+    print(f"bboxes : {items.bboxes.shape}")
+
+    # use SAM data structure for simplifity
+    data = MaskData(
+        masks=items.masks,
+        bboxes=items.bboxes,
+        ci=items.confidence_scores, # change ci shape to (B, N),
+        iou_preds=items.iou_preds,
+        )
+
+    keep_by_nms = batched_nms(
+        data["bboxes"].float(),
+        data["iou_preds"],
+        torch.zeros_like(data["bboxes"][:, 0]),  # categories
+        iou_threshold=nms_threshold, # default SAM : 0.7
+    )
+    data.filter(keep_by_nms)
+    # Keep old data format
+    items_filtered = [
+        ItemProposal(
+            mask=m,
+            embedding=None,
+            confidence_score=ci,
+            bbox=bbox,
+            iou_pred=iou,
+        ) for m,ci,bbox,iou in zip(data["masks"], data["ci"], data["bboxes"], data["iou_preds"])]
+    
+    items_change = ListProposal(items_filtered)
+
+    del items
+    del items_filtered
+    del data
+
+    return items_change
+
+@timeit
 def temporal_matching(
     img_embedding_A: np.ndarray, img_embedding_B: np.ndarray, masks: List[Dict]
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[float]]:
@@ -186,6 +237,27 @@ def temporal_matching(
         for m in masks
     ]
     chg_ci = [neg_cosine_sim(x, y) for x, y in zip(x_t, x_t1)]
+
+    return x_t, x_t1, chg_ci
+
+
+@timeit
+def temporal_matching_torch(
+    img_embedding_A: torch.Tensor, img_embedding_B: torch.Tensor, masks: List[Dict]
+) -> Tuple[List[torch.Tensor], List[torch.Tensor], List[torch.Tensor]]:
+    """Compute mask embedding and confidence score for both images for some masks (mt or mt+1)
+
+    Args:
+        img_embedding_A (np.ndarray): _description_
+        img_embedding_B (np.ndarray): _description_
+        masks (List[Dict]): _description_
+
+    Returns:
+        Tuple[List[np.ndarray], List[np.ndarray], List[float]]: bi-temporal mask embeddings and confidence score
+    """
+    x_t = compute_mask_embedding_torch(masks, img_embedding_A)
+    x_t1 = compute_mask_embedding_torch(masks, img_embedding_B)
+    chg_ci = neg_cosine_sim_torch(x_t, x_t1)
 
     return x_t, x_t1, chg_ci
 

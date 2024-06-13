@@ -54,6 +54,7 @@ class SegAnyMaskGenerator:
         stability_score_offset: float = 1.0,
         box_nms_thresh: float = 0.7,
         min_mask_region_area: int = 0,
+        **kwargs
     ) -> None:
 
         self.model = model
@@ -104,11 +105,11 @@ class SegAnyMaskGenerator:
             data = self.postprocess_masks(i_masks, i_iou_predictions, i_batch_point)
             print(f"""ATTACH {data["masks"].shape[0]} masks""")
             img_anns = {
-                "masks": data["masks_binary"].detach().cpu().numpy(),
-                "masks_logits": data["masks"].detach().cpu().numpy(),
-                # "bbox": box_xyxy_to_xywh(data["boxes"]),
-                "predicted_iou": data["iou_preds"].detach().cpu().numpy(),
-                "point_coords": data["points"],
+                "masks": data["masks_binary"].to(torch.uint8).detach(),
+                # "masks_logits": data["masks"],
+                "bbox": data["boxes"].detach(),
+                "predicted_iou": data["iou_preds"].detach(),
+                # "point_coords": data["points"],
                 "img_type": self.get_img_type(i),
                 # "stability_score": data["stability_score"][idx].item(),
                 # "crop_box": box_xyxy_to_xywh(data["crop_boxes"][idx]).tolist(),
@@ -147,12 +148,12 @@ class SegAnyMaskGenerator:
         keep_by_nms = nms_wrapper(data, self.box_nms_thresh)
         data.filter(keep_by_nms)
         if self.min_mask_region_area > 0.0:
-            data["rles"] = mask_to_rle_pytorch(data["masks"])
+            data["rles"] = mask_to_rle_pytorch(data["masks_binary"])
             data = postprocess_small_regions(
                 data, self.min_mask_region_area, self.box_nms_thresh
             )
             keep_by_nms = nms_wrapper(data, self.box_nms_thresh)
-            data.filters(keep_by_nms)
+            data.filter(keep_by_nms)
 
         return data
 

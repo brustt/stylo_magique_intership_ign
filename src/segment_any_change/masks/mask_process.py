@@ -1,7 +1,9 @@
 import enum
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
+import numpy as np
 import torch
 import torch.nn.functional as F
+from magic_pen.config import DEVICE
 from segment_any_change.masks.mask_items import ListProposal
 from segment_any_change.sa_dev.utils.amg import (
     MaskData,
@@ -15,6 +17,8 @@ from torchvision.ops.boxes import batched_nms
 import kornia as K
 from torch.nn.utils.rnn import pad_sequence
 import logging
+
+from segment_any_change.utils import to_numpy
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
@@ -100,6 +104,19 @@ def postprocess_small_regions(
     mask_data.filter(keep_by_nms)
     return mask_data
 
+
+def resize(masks: Union[torch.Tensor, np.ndarray], target_size: Tuple[int, int]) -> torch.Tensor:
+    
+    if not isinstance(masks, torch.Tensor):
+        masks = torch.as_tensor(masks, device=DEVICE)
+
+    if masks.ndim < 4:
+        masks = masks.unsqueeze(0)
+
+    masks = F.interpolate(
+        masks, target_size, mode="bicubic", align_corners=False
+    )
+    return masks
 
 def filters_masks(
     data,

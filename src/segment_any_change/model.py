@@ -155,4 +155,4 @@ class BiSam(nn.Module):
                 *self.image_embeddings.shape[-3:],
             )[:, 1, ...]
         else:
-            raise ValueError("Uncorrect img Type")
+            return self.image_embeddings

@@ -1,7 +1,8 @@
+from collections import defaultdict
 from enum import Enum
 from functools import wraps
 import re
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union, Sequence
 import numpy as np
 import skimage.io as io
 import matplotlib.pyplot as plt
@@ -9,7 +10,9 @@ import cv2
 from magic_pen.utils_io import load_levircd_sample
 from segment_any_change.sa_dev import sam_model_registry
 from segment_any_change.sa_dev_v0 import sam_model_registry as sam_model_registry_v0
+from segment_any_change.sa_dev.utils.amg import MaskData
 
+from torch.nn.utils.rnn import pad_sequence
 from magic_pen.config import DEVICE, sam_dict_checkpoint
 import time
 from collections.abc import Iterable
@@ -40,6 +43,7 @@ NPDTYPE_TO_OPENCV_DTYPE = {
 class SegAnyChangeVersion(Enum):
     RAW = "v0"
     MAP = "v1"
+    AUTHOR = "v2"
 
 
 def flush_memory():
@@ -224,6 +228,15 @@ def to_degre(x):
     return rad_to_degre(np.arccos(-x))
 
 
+def to_degre_torch(x):
+    return rad_to_degre(torch.arccos(-x))
+
+
+def rad_to_degre_torch(x):
+    return rad_to_degre(torch.arccos(-x))
+
+
+
 def timeit(func):
     @wraps(func)
     def timeit_wrapper(*args, **kwargs):
@@ -366,6 +379,47 @@ def plot_confusion_matrix(tp, fp, tn, fn, fig_return: bool = True):
         fig = ax.get_figure()
         plt.close()
         return fig
+
+
+def reconstruct_batch(data: MaskData, batch_size: int) -> Dict[str, torch.Tensor]:
+    """rebuild batch from filtered MaskData items with padded elements
+    
+    Suppose batch_indices attributes in MaskData
+    """
+    # TODO : check if batch_indices data attr before
+    
+    batch_data = defaultdict(list)
+    for idx, batch_idx in enumerate(data["batch_indices"]):
+        batch_data[batch_idx.item()].append(idx)
+    
+    reshaped_data = {
+        'masks': [],
+        'bboxes': [],
+        'ci': [],
+        'iou_preds': []
+    }
+    
+    for i in range(batch_size):
+        if i in batch_data:
+            indices = batch_data[i]
+            reshaped_data['masks'].append(data['masks'][indices])
+            reshaped_data['bboxes'].append(data['bboxes'][indices])
+            reshaped_data['ci'].append(data['ci'][indices])
+            reshaped_data['iou_preds'].append(data['iou_preds'][indices])
+        else:
+            # if any of the masks from an img is kept - extrem case
+            reshaped_data['masks'].append(torch.empty(0, *data['masks'].shape[1:]))
+            reshaped_data['bboxes'].append(torch.empty(0, *data['bboxes'].shape[1:]))
+            reshaped_data['ci'].append(torch.empty(0, *data['ci'].shape[1:]))
+            reshaped_data['iou_preds'].append(torch.empty(0, *data['iou_preds'].shape[1:]))
+    
+    reshaped_data['masks'] = pad_sequence(reshaped_data['masks'], batch_first=True)
+    reshaped_data['bboxes'] = pad_sequence(reshaped_data['bboxes'], batch_first=True)
+    reshaped_data['ci'] = pad_sequence(reshaped_data['ci'], batch_first=True)
+    reshaped_data['iou_preds'] = pad_sequence(reshaped_data['iou_preds'], batch_first=True)
+    
+    return reshaped_data
+
 
 
 if __name__ == "__main__":

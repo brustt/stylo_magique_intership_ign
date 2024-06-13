@@ -85,8 +85,8 @@ class TwoWayTransformer(nn.Module):
         image_embedding = image_embedding.flatten(3).permute(0, 1, 3, 2)
         image_pe = image_pe.flatten(3).permute(0, 1, 3, 2)
 
-        print(f"- In transf src : {image_embedding.shape}")
-        print(f"- In transf image_pe : {image_pe.shape}")
+        # print(f"- In transf src : {image_embedding.shape}")
+        # print(f"- In transf image_pe : {image_pe.shape}")
 
         # Prepare queries
         queries = point_embedding
