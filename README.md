@@ -17,6 +17,11 @@ Equipe :
 * créer `.env` à la racine du projet
 * install packages du repo : `pip install -e .`
 
+
+Checkpoints SAM : 
+* default or vit_h: [ViT-H SAM model](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth).
+* vit_b: [ViT-B SAM model](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth).
+
 ### Run
 #### Mode main (inference + eval) - lightning
 
