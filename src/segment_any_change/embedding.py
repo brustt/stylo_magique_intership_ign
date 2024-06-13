@@ -40,17 +40,24 @@ def compute_mask_embedding_torch(masks: torch.Tensor, img_embedding:  torch.Tens
     """_summary_
 
     Args:
-        mask (torch.Tensor): torch.uint8
-        img_embedding (torch.Tensor): _description_
+        mask (torch.Tensor): torch.uint8 - (B,N,Hm,Wm)
+        img_embedding (torch.Tensor): (B,C,Hm,Wm)
 
     Returns:
          torch.Tensor:  B x N x C
     """
-    # resize to mask dim
+   
+    # resize to mask dim 1024 x 1024
     img_embedding = resize(img_embedding, IMG_SIZE)
-    masks = torch.where(masks > 0., torch.tensor(1.0), torch.tensor(float('nan')))
-    # (B x C x 1 x Hm x Wm) * (B x 1 x N x Hm x Wm) -> B x C x M x Hm x Wm -> B x C x N
-    masks_embedding = torch.nanmean((img_embedding[:, :, None,...]  * masks[:, None, ...]), axis=(3, 4))
+    # align dim B x C x N x Hm x Wm) 
+    masks = masks.unsqueeze(1).repeat(1, img_embedding.shape[1], 1, 1, 1)
+    # align dim B x C x N x Hm x Wm) 
+    img_embedding = img_embedding.unsqueeze(2).repeat(1, 1, masks.shape[2], 1, 1)
+    # mask no data
+    img_embedding[(masks == 0)] = torch.nan
+    # mask embedding from spatial dim not nan
+    masks_embedding = torch.nanmean(img_embedding, dim=(3, 4))
+    # B x N x C
     return masks_embedding.permute(0, 2, 1)
 
 def get_img_embedding_normed(predictor: Any, img_type: ImgType) -> np.ndarray:

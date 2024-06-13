@@ -18,6 +18,7 @@ from segment_any_change.masks.mask_process import (
     nms_wrapper,
     postprocess_small_regions,
 )
+from torch.profiler import profile, record_function, ProfilerActivity
 from segment_any_change.model import BiSam
 from segment_any_change.sa_dev_v0.modeling import Sam
 from segment_any_change.sa_dev_v0 import SamAutomaticMaskGenerator
@@ -93,10 +94,11 @@ class SegAnyMaskGenerator:
         batched_input["point_labels"] = torch.as_tensor(
             batch_label, dtype=torch.int, device=DEVICE
         )
-
-        outputs = self.model(
-            batched_input=batched_input, multimask_output=True, return_logits=True
-        )
+        with profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:
+            with record_function("model_inference"):
+                outputs = self.model(
+                    batched_input=batched_input, multimask_output=True, return_logits=True
+                )
         masks, iou_predictions, _ = outputs.values()
 
         for i, i_masks, i_iou_predictions, i_batch_point in zip(
