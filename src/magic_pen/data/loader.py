@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 import numpy as np
 import pandas as pd
-from src.commons.constants import SECOND_NO_CHANGE_RGB, SECOND_RGB_TO_CAT, NamedDataset
+from commons.constants import SECOND_NO_CHANGE_RGB, SECOND_RGB_TO_CAT, NamedDataset
 from magic_pen.config import SECOND_PATH, levirCD_path, SEED
 from PIL import Image
 from torch.utils.data import Dataset
@@ -13,8 +13,6 @@ import warnings
 from magic_pen.data.process import generate_grid_prompt
 from magic_pen.utils_io import load_levircd_sample, load_second_sample
 from segment_any_change.utils import load_img
-import rasterio as rio
-from rasterio.plot import reshape_as_image
 
 warnings.filterwarnings("ignore")
 

@@ -30,13 +30,16 @@ def compute_mask_embedding(mask: np.ndarray, img_embedding: np.ndarray) -> np.nd
         np.ndarray: mask embedding dim 256
     """
     assert mask.shape[-2:] == img_embedding.shape[-2:]
-    #mask = cv2.resize(src=mask, dsize=(64, 64), interpolation=cv2.INTER_CUBIC)
+    # mask = cv2.resize(src=mask, dsize=(64, 64), interpolation=cv2.INTER_CUBIC)
     mask = np.where(mask != 0.0, 1, np.nan)
     mask_embedding = np.nanmean(img_embedding * mask[None, ...], axis=(1, 2))
     mask_embedding = np.where(np.isnan(mask_embedding), 0, mask_embedding)
     return mask_embedding
 
-def compute_mask_embedding_torch(masks: torch.Tensor, img_embedding:  torch.Tensor) -> torch.Tensor:
+
+def compute_mask_embedding_torch(
+    masks: torch.Tensor, img_embedding: torch.Tensor
+) -> torch.Tensor:
     """_summary_
 
     Args:
@@ -46,12 +49,12 @@ def compute_mask_embedding_torch(masks: torch.Tensor, img_embedding:  torch.Tens
     Returns:
          torch.Tensor:  B x N x C
     """
-   
+
     # resize to mask dim 1024 x 1024
     img_embedding = resize(img_embedding, IMG_SIZE)
-    # align dim B x C x N x Hm x Wm) 
+    # align dim B x C x N x Hm x Wm)
     masks = masks.unsqueeze(1).repeat(1, img_embedding.shape[1], 1, 1, 1)
-    # align dim B x C x N x Hm x Wm) 
+    # align dim B x C x N x Hm x Wm)
     img_embedding = img_embedding.unsqueeze(2).repeat(1, 1, masks.shape[2], 1, 1)
     # mask no data
     img_embedding[(masks == 0)] = torch.nan
@@ -59,6 +62,7 @@ def compute_mask_embedding_torch(masks: torch.Tensor, img_embedding:  torch.Tens
     masks_embedding = torch.nanmean(img_embedding, dim=(3, 4))
     # B x N x C
     return masks_embedding.permute(0, 2, 1)
+
 
 def get_img_embedding_normed(predictor: Any, img_type: ImgType) -> np.ndarray:
     """Invert affine transformation of the image encoder last LayerNorm Layer.

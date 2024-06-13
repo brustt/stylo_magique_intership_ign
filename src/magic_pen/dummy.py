@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch
 from magic_pen.config import DEVICE
 
+
 def generate_bboxes(size: Tuple[int, int]):
     bboxes = np.array([[1, 2, 5, 6], [10, 20, 50, 60]])
     bboxes = np.repeat(bboxes, size[1] // bboxes.shape[0], axis=0)
@@ -11,6 +12,7 @@ def generate_bboxes(size: Tuple[int, int]):
     noise = bboxes + np.repeat(arr, bboxes.shape[1], axis=1)
     # batch_noise = np.expand_dims(noise, axis=0).repeat(size[0], axis=0)
     return noise
+
 
 class DummyModel(nn.Module):
     def __init__(self, in_dim, out_dim):
@@ -26,8 +28,7 @@ class DummyModel(nn.Module):
             masks=x2,
             iou_preds=torch.as_tensor(np.ones((x.shape[0], 1))),
             confidence_scores=torch.as_tensor(np.ones((x.shape[0], 1))),
-            bboxes=torch.as_tensor(generate_bboxes(size=(x.shape[0], 10)))
-
+            bboxes=torch.as_tensor(generate_bboxes(size=(x.shape[0], 10))),
         )
 
     def build_block_encoder(self, in_dim, out_dim):

@@ -17,7 +17,6 @@ class ImgType(Enum):
     B = 1
 
 
-
 def change_thresholding(data: MaskData, method: Union[str, float]) -> Any:
     """Apply Thresholding based on change angle"""
 
@@ -27,7 +26,7 @@ def change_thresholding(data: MaskData, method: Union[str, float]) -> Any:
     }
     params = {}
     data_ = deepcopy(data)
-    
+
     if (method not in method_factory and isinstance(method, str)) or method is None:
         raise ValueError(
             f"Please provide valid filtering method : {list(method_factory)}"
@@ -39,6 +38,7 @@ def change_thresholding(data: MaskData, method: Union[str, float]) -> Any:
     data_, th = method_factory[method](data_, **params)
     return data_, th
 
+
 def apply_otsu(
     data: MaskData,
 ) -> Tuple[MaskData, float]:
@@ -49,27 +49,15 @@ def apply_otsu(
     return apply_th(data, th)
 
 
-def apply_th(
-    data: MaskData, th: float
-) -> Tuple[MaskData, float]:
+def apply_th(data: MaskData, th: float) -> Tuple[MaskData, float]:
     keep_indices = torch.where(data["chgt_angle"] > th)[0]
     data.filter(keep_indices)
     return data, th
 
 
-
-
-
-
-
-
-
-
-
 """
 Old - DEPRECATED
 """
-
 
 
 class FilteringType(Enum):
@@ -143,7 +131,7 @@ class ListProposal:
         if not confidence_scores:
             confidence_scores = [create_empty_item().confidence_score]
         return torch.as_tensor(np.stack(confidence_scores))
-    
+
     @property
     def bboxes(self) -> torch.Tensor:
         bboxes = [m.bbox for m in self.items]
@@ -205,6 +193,7 @@ def apply_th_items(
     mode_dict = {FilteringType.Inf: inf_filtering, FilteringType.Sup: sup_filtering}
     return (mode_dict[mode](items, th), th)
 
+
 @deprecated
 def create_union_object(item_A: ItemProposal, item_B: ItemProposal) -> ItemProposal:
     """Create union of two object
@@ -224,24 +213,26 @@ def create_union_object(item_A: ItemProposal, item_B: ItemProposal) -> ItemPropo
     return ItemProposal(
         mask=np.logical_or(item_A.mask, item_B.mask).astype(np.uint8),
         confidence_score=np.mean([item_A.confidence_score, item_B.confidence_score]),
-        bbox=(item_A.bbox + item_B.bbox) / 2, # expected xmin,ymin,xmax, ymax
+        bbox=(item_A.bbox + item_B.bbox) / 2,  # expected xmin,ymin,xmax, ymax
         chgt_angle=np.mean([item_A.chgt_angle, item_B.chgt_angle]),
         from_img=[item_A.from_img, item_B.from_img],
         embedding=np.mean([item_A.embedding, item_B.embedding], axis=0),
         iou_pred=np.mean([item_A.iou_pred, item_B.iou_pred], axis=0),
     )
 
+
 @deprecated
 def create_empty_item():
     return ItemProposal(
         mask=np.zeros(IMG_SIZE).astype(np.uint8),
         confidence_score=-1.0,
-        bbox=np.array([0, 0, *IMG_SIZE]), # check implication
+        bbox=np.array([0, 0, *IMG_SIZE]),  # check implication
         chgt_angle=0.0,
         from_img=None,
         embedding=np.zeros((256)),
         iou_pred=0.0,
     )
+
 
 @deprecated
 def create_change_proposal_items(
@@ -259,6 +250,7 @@ def create_change_proposal_items(
         for m, c, emb in zip(masks, ci, embeddings)
         if not np.isnan(c)
     ]
+
 
 @deprecated
 def thresholding_factory_(
@@ -281,10 +273,12 @@ def thresholding_factory_(
     arr, th = method_factory[method](arr, mode, **kwargs)
     return arr, th
 
+
 @deprecated
 def apply_otsu_(arr: np.ndarray, mode: FilteringType) -> Tuple[np.ndarray, float]:
     th = threshold_otsu(arr)
     return apply_th_(arr, mode, th)
+
 
 @deprecated
 def apply_th_(

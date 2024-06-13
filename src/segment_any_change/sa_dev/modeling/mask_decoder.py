@@ -202,10 +202,13 @@ class MaskDecoder(nn.Module):
             [self.output_upscaling(im) for im in src], dim=0
         )
         # print(f"upscaled src tokens out shape : {upscaled_embedding.shape}")
-        hyper_in = torch.stack([
-            model(mask_tokens_out[:, :, i, :]) 
-            for i, model in enumerate(self.output_hypernetworks_mlps)
-            ], dim=2)
+        hyper_in = torch.stack(
+            [
+                model(mask_tokens_out[:, :, i, :])
+                for i, model in enumerate(self.output_hypernetworks_mlps)
+            ],
+            dim=2,
+        )
         # print(f"hyper in shape : {hyper_in.shape}")
 
         b, n, c, h, w = upscaled_embedding.shape

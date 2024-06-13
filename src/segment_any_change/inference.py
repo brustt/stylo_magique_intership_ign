@@ -11,7 +11,7 @@ from segment_any_change.eval import MetricEngine
 from torchmetrics import Metric
 from tqdm import tqdm
 from segment_any_change.utils import SegAnyChangeVersion
-from src.segment_any_change.config_run import load_default_exp_params
+from segment_any_change.config_run import load_default_exp_params
 import torch
 from magic_pen.data.loader import BiTemporalDataset
 from magic_pen.data.process import DefaultTransform
@@ -93,52 +93,50 @@ def partial_inference(
     return outputs
 
 
-
 if __name__ == "__main__":
-    params=None
-    batch_size= 2
-    ds_name= "levir-cd"
-    dtype= "test"
-    dev=False # vit_h - full grid | vit_b - small grid points
-    dummy: bool=False
-    return_batch=True
-    in_metrics= None
-    seganychange_version=SegAnyChangeVersion.AUTHOR
+    params = None
+    batch_size = 2
+    ds_name = "levir-cd"
+    dtype = "test"
+    dev = True  # vit_h - full grid | vit_b - small grid points
+    dummy: bool = False
+    return_batch = True
+    # in_metrics= None
+    seganychange_version = SegAnyChangeVersion.AUTHOR
 
-    idx_batch_bug = 10 #45
-    indices = np.arange((idx_batch_bug * batch_size-2),(idx_batch_bug * batch_size))
+    idx_batch_bug = 10  # 45
+    indices = np.arange((idx_batch_bug * batch_size - 2), (idx_batch_bug * batch_size))
 
     init_params = dict(
         batch_size=batch_size,
         ds_name=ds_name,
         n_job_by_node=1,
         dev=dev,
-        seganychange_version=seganychange_version
+        seganychange_version=seganychange_version,
     )
     if params is None:
         params = load_exp_params(**init_params)
-        
+
     model = choose_model(is_debug=dummy, params=params)
 
     ds = load_partial_ds(params.ds_name, dtype, indices)
 
     print(f"len ds : {len(ds)}")
 
-    if in_metrics is None:
-        in_metrics = load_default_metrics(**params.engine_metric)
+    # if in_metrics is None:
+    #     in_metrics = load_default_metrics(**params.engine_metric)
 
-    engine_eval = MetricEngine(in_metrics=in_metrics)
+    # engine_eval = MetricEngine(in_metrics=in_metrics)
 
-    dloader = torch.utils.data.DataLoader(ds, batch_size=params.batch_size, shuffle=False)
+    dloader = torch.utils.data.DataLoader(
+        ds, batch_size=params.batch_size, shuffle=False
+    )
     batch_list = []
     pred_list = []
     for i, batch in tqdm(enumerate(dloader), total=len(dloader), desc="Processing"):
         with torch.no_grad():
             pred_list.append(model(batch))
             batch_list.append(batch)
-
-
-
 
     # outputs = partial_inference(
     #     ds_name="levir-cd",

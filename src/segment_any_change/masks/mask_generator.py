@@ -55,7 +55,7 @@ class SegAnyMaskGenerator:
         stability_score_offset: float = 1.0,
         box_nms_thresh: float = 0.7,
         min_mask_region_area: int = 0,
-        **kwargs
+        **kwargs,
     ) -> None:
 
         self.model = model
@@ -94,11 +94,13 @@ class SegAnyMaskGenerator:
         batched_input["point_labels"] = torch.as_tensor(
             batch_label, dtype=torch.int, device=DEVICE
         )
-        with profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:
-            with record_function("model_inference"):
-                outputs = self.model(
-                    batched_input=batched_input, multimask_output=True, return_logits=True
-                )
+        # with profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:
+        #     with record_function("model_inference"):
+        outputs = self.model(
+            batched_input=batched_input, multimask_output=True, return_logits=True
+        )
+        # print(prof.key_averages(group_by_stack_n=5).table(sort_by="self_cpu_time_total", row_limit=10))
+
         masks, iou_predictions, _ = outputs.values()
 
         for i, i_masks, i_iou_predictions, i_batch_point in zip(

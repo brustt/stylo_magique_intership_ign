@@ -1,4 +1,4 @@
-name: magic_pen
+name: mp
 channels:
   - conda-forge
 dependencies:
@@ -13,9 +13,20 @@ dependencies:
   - certifi
   - gh
   - pandas
-  - segment-geospatial
+  - rasterio
+  - matplotlib
   - scikit-image
-  - xarray
   - black
-  - lightning
+  - ipykernel
+  - kornia
+  - tensorboard
+  - seaborn
+  - torchmetrics
+  - pip:
+    - pytorch-lightning
+    - deprecated
+    - opencv-python-headless
+    - torch_tb_profiler
+    - tqdm
+    - pycocotools
 prefix: /home/MDizier/miniforge3/envs/magic_pen

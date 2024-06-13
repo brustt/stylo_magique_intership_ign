@@ -36,7 +36,7 @@ class ExperimentParams:
     ds_name: str  # check for existance - Enum type
     # seg any change
     th_change_proposals: str
-    seganychange_version : SegAnyChangeVersion
+    seganychange_version: SegAnyChangeVersion
     col_nms_threshold: str
     # sam mask generation
     points_per_side: int
@@ -54,6 +54,7 @@ class ExperimentParams:
     num_worker: int
     n_job_by_node: int
     dev: bool  # True : infer with smaller model and less points from grid
+
 
 def choose_model(is_debug, params):
 
@@ -74,8 +75,9 @@ def choose_model(is_debug, params):
             stability_score_offset=params.stability_score_offset,
             box_nms_thresh=params.box_nms_thresh,
             min_mask_region_area=params.min_mask_region_area,
-            col_nms_threshold=params.col_nms_threshold
+            col_nms_threshold=params.col_nms_threshold,
         )
+
 
 def load_debug_cli_params():
     args = argparse.Namespace()
@@ -118,7 +120,8 @@ def load_fast_exp_params(**params):
 
     return ExperimentParams(
         **(
-            asdict(params)  | new_params # merge other parameters - overwrite existing ones
+            asdict(params)
+            | new_params  # merge other parameters - overwrite existing ones
         )
     )
 
@@ -137,7 +140,8 @@ def load_default_exp_params(**params):
 
     seganychange_params = {
         "th_change_proposals": 60.0,
-        "col_nms_threshold": "ci" # ci | iou_preds
+        "col_nms_threshold": "ci",  # ci | iou_preds
+        "seganychange_version": SegAnyChangeVersion.AUTHOR,
     }
 
     # sam mask generation

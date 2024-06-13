@@ -33,7 +33,6 @@ from pprint import pprint
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 
 
-
 def main(
     params: ExperimentParams,
     metrics: List[Metric],

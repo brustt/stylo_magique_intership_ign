@@ -236,7 +236,6 @@ def rad_to_degre_torch(x):
     return rad_to_degre(torch.arccos(-x))
 
 
-
 def timeit(func):
     @wraps(func)
     def timeit_wrapper(*args, **kwargs):
@@ -383,43 +382,60 @@ def plot_confusion_matrix(tp, fp, tn, fn, fig_return: bool = True):
 
 def reconstruct_batch(data: MaskData, batch_size: int) -> Dict[str, torch.Tensor]:
     """rebuild batch from filtered MaskData items with padded elements
-    
+
     Suppose batch_indices attributes in MaskData
     """
     # TODO : check if batch_indices data attr before
-    
+
     batch_data = defaultdict(list)
     for idx, batch_idx in enumerate(data["batch_indices"]):
         batch_data[batch_idx.item()].append(idx)
-    
-    reshaped_data = {
-        'masks': [],
-        'bboxes': [],
-        'ci': [],
-        'iou_preds': []
-    }
-    
+
+    reshaped_data = {"masks": [], "bboxes": [], "ci": [], "iou_preds": []}
+
     for i in range(batch_size):
         if i in batch_data:
             indices = batch_data[i]
-            reshaped_data['masks'].append(data['masks'][indices])
-            reshaped_data['bboxes'].append(data['bboxes'][indices])
-            reshaped_data['ci'].append(data['ci'][indices])
-            reshaped_data['iou_preds'].append(data['iou_preds'][indices])
+            reshaped_data["masks"].append(data["masks"][indices])
+            reshaped_data["bboxes"].append(data["bboxes"][indices])
+            reshaped_data["ci"].append(data["ci"][indices])
+            reshaped_data["iou_preds"].append(data["iou_preds"][indices])
         else:
             # if any of the masks from an img is kept - extrem case
-            reshaped_data['masks'].append(torch.empty(0, *data['masks'].shape[1:]))
-            reshaped_data['bboxes'].append(torch.empty(0, *data['bboxes'].shape[1:]))
-            reshaped_data['ci'].append(torch.empty(0, *data['ci'].shape[1:]))
-            reshaped_data['iou_preds'].append(torch.empty(0, *data['iou_preds'].shape[1:]))
-    
-    reshaped_data['masks'] = pad_sequence(reshaped_data['masks'], batch_first=True)
-    reshaped_data['bboxes'] = pad_sequence(reshaped_data['bboxes'], batch_first=True)
-    reshaped_data['ci'] = pad_sequence(reshaped_data['ci'], batch_first=True)
-    reshaped_data['iou_preds'] = pad_sequence(reshaped_data['iou_preds'], batch_first=True)
-    
-    return reshaped_data
+            reshaped_data["masks"].append(torch.empty(0, *data["masks"].shape[1:]))
+            reshaped_data["bboxes"].append(torch.empty(0, *data["bboxes"].shape[1:]))
+            reshaped_data["ci"].append(torch.empty(0, *data["ci"].shape[1:]))
+            reshaped_data["iou_preds"].append(
+                torch.empty(0, *data["iou_preds"].shape[1:])
+            )
 
+    # concat and fill dimension
+    reshaped_data["masks"] = pad_sequence(reshaped_data["masks"], batch_first=True)
+    reshaped_data["bboxes"] = pad_sequence(reshaped_data["bboxes"], batch_first=True)
+    reshaped_data["ci"] = pad_sequence(reshaped_data["ci"], batch_first=True)
+    reshaped_data["iou_preds"] = pad_sequence(
+        reshaped_data["iou_preds"], batch_first=True
+    )
+
+    # now get back paire img format => batch_size // 2
+
+    reshaped_data["masks"] = reshaped_data["masks"].view(
+        batch_size // 2, -1, *reshaped_data["masks"].shape[-2:]
+    )
+    reshaped_data["bboxes"] = reshaped_data["bboxes"].view(
+        batch_size // 2, -1, reshaped_data["bboxes"].shape[-1]
+    )
+    reshaped_data["ci"] = reshaped_data["ci"].view(batch_size // 2, -1)
+    reshaped_data["iou_preds"] = reshaped_data["iou_preds"].view(batch_size // 2, -1)
+
+    print("====")
+
+    print("masks dim", reshaped_data["masks"].shape)
+    print("bboxes dim", reshaped_data["bboxes"].shape)
+    print("masks dim", reshaped_data["masks"].shape)
+    print("ci dim", reshaped_data["ci"].shape)
+
+    return reshaped_data
 
 
 if __name__ == "__main__":

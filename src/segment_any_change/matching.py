@@ -39,22 +39,31 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
 def extract_masks(img_anns: List[Dict]):
     # B x N x H x W
-    return  pad_sequence([anns["masks"] for anns in img_anns]).permute(1, 0, 2, 3)
+    return pad_sequence([anns["masks"] for anns in img_anns]).permute(1, 0, 2, 3)
+
 
 def extract_bboxes(img_anns: List[Dict]):
     # B x N x D
-    return  pad_sequence([anns["bbox"] for anns in img_anns]).permute(1, 0, 2)
+    return pad_sequence([anns["bbox"] for anns in img_anns]).permute(1, 0, 2)
+
 
 def extract_ious(img_anns: List[Dict]):
     # B x N
-    return  pad_sequence([anns["predicted_iou"] for anns in img_anns]).permute(1, 0)
-
+    return pad_sequence([anns["predicted_iou"] for anns in img_anns]).permute(1, 0)
 
 
 class BitemporalMatching:
-    def __init__(self, model, th_change_proposals: Union[float, str], col_nms_threshold: float, version: SegAnyChangeVersion, **sam_kwargs) -> None:
+    def __init__(
+        self,
+        model,
+        th_change_proposals: Union[float, str],
+        col_nms_threshold: float,
+        version: SegAnyChangeVersion,
+        **sam_kwargs,
+    ) -> None:
         self.mask_generator = SegAnyMaskGenerator(model, **sam_kwargs)
         # useful for future experimentation
         self.seganyversion = version.value
@@ -70,6 +79,9 @@ class BitemporalMatching:
     def run(self, batch: Dict[str, torch.Tensor], filter_method: str, **params) -> Any:
         """
         Run Bitemporal matching - vectorized manner
+
+        # TODO : check new return on sample
+
         """
 
         img_anns = self.mask_generator.generate(batch)
@@ -77,24 +89,25 @@ class BitemporalMatching:
 
         masks = extract_masks(img_anns)
         masks_A, masks_B = masks[:batch_size], masks[batch_size:]
-        
+
         img_embedding_A = get_img_embedding_normed(self.mask_generator, ImgType.A)
         img_embedding_B = get_img_embedding_normed(self.mask_generator, ImgType.B)
 
         # t -> t+1
-        x_t_mA, _, ci = temporal_matching_torch(img_embedding_A, img_embedding_B, masks_A)
+        x_t_mA, _, ci = temporal_matching_torch(
+            img_embedding_A, img_embedding_B, masks_A
+        )
         # t+1 -> t
-        _, x_t1_mB, ci1 = temporal_matching_torch(img_embedding_A, img_embedding_B, masks_B)
+        _, x_t1_mB, ci1 = temporal_matching_torch(
+            img_embedding_A, img_embedding_B, masks_B
+        )
 
-
-        print(ci.shape)
-        print(ci1.shape)
-        print(x_t_mA.shape)
-        print(x_t1_mB.shape)
+        # print(ci.shape)
+        # print(ci1.shape)
+        # print(x_t_mA.shape)
+        # print(x_t1_mB.shape)
 
         # warning nan values : missing element in batch format (pad sequence) - normal behaviour
-        # logger.info(f"nan values ci {torch.sum(np.isnan(ci))}")
-        # logger.info(f"nan values ci1 {torch.sum(np.isnan(ci1))}")
 
         masks = torch.cat([masks_A, masks_B], dim=0)
         confidence_scores = torch.cat([ci, ci1], dim=0)
@@ -108,29 +121,33 @@ class BitemporalMatching:
         data = MaskData(
             masks=masks.flatten(0, 1),
             bboxes=bboxes.flatten(0, 1),
-            ci=confidence_scores.flatten(0, 1), 
+            ci=confidence_scores.flatten(0, 1),
             iou_preds=iou_preds.flatten(0, 1),
             # we don't need position of mask, only info about which batch it belongs
-            batch_indices=torch.arange(masks.shape[0]).repeat_interleave(masks.shape[1])
-            )
+            batch_indices=torch.arange(masks.shape[0]).repeat_interleave(
+                masks.shape[1]
+            ),
+        )
         # simple fusion based on NMS
-        data = proposal_matching_nms(data=data,
-                nms_threshold=self.mask_generator.box_nms_thresh,
-                col_threshold=self.col_nms_threshold,
-            )
+        data = proposal_matching_nms(
+            data=data,
+            nms_threshold=self.mask_generator.box_nms_thresh,
+            col_threshold=self.col_nms_threshold,
+        )
         # apply change threshold
         data["chgt_angle"] = to_degre_torch(data["ci"])
         data, th = change_thresholding(data, method=self.filter_method)
 
-        # we need to get back batch information for each prediction 
+        # we need to get back batch information for each prediction
         data = reconstruct_batch(data, masks.shape[0])
 
         return dict(
-            masks=data["masks"], 
-            iou_preds=data["iou_preds"], 
-            confidence_scores=data["ci"]
-            )
-        
+            masks=data["masks"],
+            iou_preds=data["iou_preds"],
+            confidence_scores=data["ci"],
+        )
+
+
 def neg_cosine_sim(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
     # print(np.linalg.norm(x1))
     # print(np.linalg.norm(x2))
@@ -151,32 +168,31 @@ def neg_cosine_sim_torch(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
     # only interested by element wise dot product
     dot_prod = torch.diagonal(torch.bmm(x1, x2.permute(0, 2, 1)), dim1=1, dim2=2)
     # vectors norms
-    dm =  (torch.linalg.norm(x1, dim=2) * torch.linalg.norm(x2, dim=2))
+    dm = torch.linalg.norm(x1, dim=2) * torch.linalg.norm(x2, dim=2)
 
-    return - dot_prod / dm
-
-
+    return -dot_prod / dm
 
 
 @timeit
-def proposal_matching_nms(data: MaskData,
-                          nms_threshold: float,
-                          col_threshold :str = "ci")-> MaskData:
+def proposal_matching_nms(
+    data: MaskData, nms_threshold: float, col_threshold: str = "ci"
+) -> MaskData:
 
     keep_by_nms = batched_nms(
         data["bboxes"].float(),
         data[col_threshold],
         torch.zeros_like(data["bboxes"][:, 0]),  # categories
-        iou_threshold=nms_threshold, # default SAM : 0.7 for iou - for ci need to search
+        iou_threshold=nms_threshold,  # default SAM : 0.7 for iou - for ci need to search
     )
     data.filter(keep_by_nms)
-    
+
     return data
+
 
 @timeit
 @deprecated
 def proposal_matching_nms_(items: ListProposal, nms_threshold: float) -> ListProposal:
-    
+
     print(f"masks : {items.masks.shape}")
     print(f"ci : {items.confidence_scores.shape}")
     print(f"bboxes : {items.bboxes.shape}")
@@ -185,15 +201,15 @@ def proposal_matching_nms_(items: ListProposal, nms_threshold: float) -> ListPro
     data = MaskData(
         masks=items.masks,
         bboxes=items.bboxes,
-        ci=items.confidence_scores, # change ci shape to (B, N),
+        ci=items.confidence_scores,  # change ci shape to (B, N),
         iou_preds=items.iou_preds,
-        )
+    )
 
     keep_by_nms = batched_nms(
         data["bboxes"].float(),
         data["iou_preds"],
         torch.zeros_like(data["bboxes"][:, 0]),  # categories
-        iou_threshold=nms_threshold, # default SAM : 0.7
+        iou_threshold=nms_threshold,  # default SAM : 0.7
     )
     data.filter(keep_by_nms)
     # Keep old data format
@@ -204,8 +220,12 @@ def proposal_matching_nms_(items: ListProposal, nms_threshold: float) -> ListPro
             confidence_score=ci,
             bbox=bbox,
             iou_pred=iou,
-        ) for m,ci,bbox,iou in zip(data["masks"], data["ci"], data["bboxes"], data["iou_preds"])]
-    
+        )
+        for m, ci, bbox, iou in zip(
+            data["masks"], data["ci"], data["bboxes"], data["iou_preds"]
+        )
+    ]
+
     items_change = ListProposal(items_filtered)
 
     del items
@@ -213,6 +233,7 @@ def proposal_matching_nms_(items: ListProposal, nms_threshold: float) -> ListPro
     del data
 
     return items_change
+
 
 @timeit
 def temporal_matching(
