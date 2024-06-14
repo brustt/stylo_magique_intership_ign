@@ -73,10 +73,11 @@ class BiSam(nn.Module):
         """
 
         input_images = torch.cat([batched_input["img_A"], batched_input["img_B"]])
-        original_size = input_images.shape[-2:]
-        # print("DTYPE", input_images.dtype)
 
         input_images = self.preprocess(input_images)
+        # input_images = input_images.half()
+        print("DTYPE input model", input_images.dtype)
+
         self.image_embeddings = self.image_encoder(input_images)
 
         sparse_embeddings, dense_embeddings = self.prompt_encoder(

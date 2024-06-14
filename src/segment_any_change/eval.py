@@ -53,7 +53,9 @@ class UnitsMetricCounts(Metric):
 
         # ensure [0, 1] values
         MAX = torch.max(label)
-        label = label / MAX
+        # prevent for null-label
+        if MAX:
+            label = label / MAX
 
         self.tp_indices.append((preds * label))
         self.fp_indices.append((preds * (1 - label)))

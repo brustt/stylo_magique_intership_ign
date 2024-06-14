@@ -96,6 +96,9 @@ class SegAnyMaskGenerator:
         )
         # with profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:
         #     with record_function("model_inference"):
+
+        # for param in self.model.parameters():
+        #     print(param.dtype) 
         outputs = self.model(
             batched_input=batched_input, multimask_output=True, return_logits=True
         )

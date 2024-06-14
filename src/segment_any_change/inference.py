@@ -27,7 +27,7 @@ class DataSample:
 
 def load_partial_ds(ds_name: str, dtype, indices: Sequence[int] = None):
     ds = BiTemporalDataset(name=ds_name, dtype=dtype, transform=DefaultTransform())
-    if any(indices):
+    if indices is not None and any(indices):
         ds = torch.utils.data.Subset(ds, indices)
     print(f"DATASET SUBSET : {len(ds)}")
 

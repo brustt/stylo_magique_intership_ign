@@ -213,16 +213,30 @@ def show_points(coords, labels, ax, marker_size=25):
     )
 
 
-def show_prediction_sample(output: Dict):
+def show_prediction_sample(output: Dict, idx:int=None):
+    """Show sample in a row plot : 
+    - img_A
+    - img_B
+    - label
+    - prediction (masks aggregated)
+    Args:
+        output (Dict): output model with batch
+        idx (int, optional): sample index in the batch. Defaults to None.
+    """
     masks = output["pred"]["masks"].cpu().squeeze(0)
     img_A = output["batch"]["img_A"].cpu().squeeze(0)
     img_B = output["batch"]["img_B"].cpu().squeeze(0)
     label = output["batch"]["label"].cpu().squeeze(0)
 
+    if idx is not None:
+        masks = masks[idx].squeeze(0)
+        img_A = img_A[idx].squeeze(0)
+        img_B = img_B[idx].squeeze(0)
+        label = label[idx].squeeze(0)
+
     if masks.ndim == 3:
         masks = torch.sum(masks, dim=0)
     fig, axs = plt.subplots(ncols=4, squeeze=False, figsize=(10, 10))
-
     for i, sample in enumerate(
         zip([img_A, img_B, label, masks], ["img_A", "img_B", "label", "masks_agg"])
     ):
@@ -421,11 +435,11 @@ def reconstruct_batch(data: MaskData, batch_size: int) -> Dict[str, torch.Tensor
             reshaped_data["iou_preds"].append(data["iou_preds"][indices])
         else:
             # if any of the masks from an img is kept - extrem case
-            reshaped_data["masks"].append(torch.empty(0, *data["masks"].shape[1:]))
-            reshaped_data["bboxes"].append(torch.empty(0, *data["bboxes"].shape[1:]))
-            reshaped_data["ci"].append(torch.empty(0, *data["ci"].shape[1:]))
+            reshaped_data["masks"].append(torch.zeros(1, *data["masks"].shape[1:]))
+            reshaped_data["bboxes"].append(torch.zeros(1, *data["bboxes"].shape[1:]))
+            reshaped_data["ci"].append(torch.zeros(1, *data["ci"].shape[1:]))
             reshaped_data["iou_preds"].append(
-                torch.empty(0, *data["iou_preds"].shape[1:])
+                torch.zeros(1, *data["iou_preds"].shape[1:])
             )
 
     # concat and fill dimension
