@@ -381,11 +381,10 @@ def get_units_cnt_obj(tp, fp, tn, fn):
     return tp, fp, tn, fn
 
 
-def plot_confusion_matrix(tp, fp, tn, fn, fig_return: bool = True):
+def plot_confusion_matrix(confusion_matrix, fig_return: bool = True):
     """Tested for binary classification"""
     # create the confusion matrix as a numpy array
-    confusion_matrix = np.array([[tp, fp], [fn, tn]])
-    confusion_matrix = confusion_matrix / np.sum(confusion_matrix)
+    #confusion_matrix = confusion_matrix / np.sum(confusion_matrix)
     # create a heatmap of the confusion matrix using seaborn
     ax = sns.heatmap(
         confusion_matrix,

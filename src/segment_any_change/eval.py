@@ -26,12 +26,18 @@ _register_metric_processing = {
     "BinaryF1Score": "flat",
     "BinaryPrecision": "flat",
     "BinaryRecall": "flat",
-    "BinaryJaccardIndex": "iou",
+    "BinaryJaccardIndex": "flat",
+    "BinaryConfusionMatrix": "flat",
     "MeanAveragePrecision": "mAP",
     "UnitsMetricCounts": "identity",
 }
 
-_register_metric_classif_px = ["BinaryF1Score", "BinaryPrecision", "BinaryRecall"]
+_register_metric_classif_px = [
+    "BinaryF1Score", 
+    "BinaryPrecision", 
+    "BinaryRecall",
+    "BinaryJaccardIndex",
+]
 _register_metric_classif_obj = ["MeanAveragePrecision"]
 
 

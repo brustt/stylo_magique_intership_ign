@@ -1,0 +1,1 @@
+python src/segment_any_change/main.py --ds_name=second --batch_size=2 --n_job_by_node=2

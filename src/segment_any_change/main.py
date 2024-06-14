@@ -103,5 +103,6 @@ if __name__ == "__main__":
 
     params = load_exp_params(**params)
     metrics = load_default_metrics(**params.engine_metric)
+    print(metrics)
     pprint(asdict(params), sort_dicts=False)
     main(params, metrics=metrics, is_debug=False)

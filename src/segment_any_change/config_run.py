@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Union
 
+
 from magic_pen.config import DEVICE, logs_dir
 from magic_pen.dummy import DummyModel
 from segment_any_change.eval import UnitsMetricCounts
@@ -19,6 +20,8 @@ from torchmetrics.classification import (
     BinaryF1Score,
     BinaryPrecision,
     BinaryRecall,
+    BinaryJaccardIndex,
+    BinaryConfusionMatrix
 )
 from segment_any_change.model import BiSam
 
@@ -95,8 +98,9 @@ def load_default_metrics(**kwargs):
         BinaryF1Score(),
         BinaryPrecision(),
         BinaryRecall(),
+        BinaryJaccardIndex(),
         UnitsMetricCounts(),
-        MeanAveragePrecision(iou_type=kwargs.get("iou_type_mAP", "segm")),
+        MeanAveragePrecision(iou_type=kwargs.get("iou_type_mAP", "segm"), max_detection_thresholds=kwargs.get("max_detection_thresholds", None)),
     ]
 
 
@@ -114,7 +118,7 @@ def load_fast_exp_params(**params):
     # fast inference
     new_params = {
         "model_type": "vit_b",
-        "points_per_side": 5,  # lower for speed
+        "points_per_side": 16,  # lower for speed
     }
 
     params = load_default_exp_params(**params)
@@ -140,7 +144,7 @@ def load_default_exp_params(**params):
     # '_'.join([datetime.now().strftime('%Y%m%d'), exp_params["ds_name"], exp_params["model_type"]])
 
     seganychange_params = {
-        "th_change_proposals": 60.0,
+        "th_change_proposals": "otsu",
         "col_nms_threshold": "ci",  # ci | iou_preds
         "seganychange_version": SegAnyChangeVersion.AUTHOR,
     }
@@ -169,7 +173,11 @@ def load_default_exp_params(**params):
     }
 
     engine_metric_params = {
-        "engine_metric": {"iou_type_mAP": "segm", "type_decision_mAP": "ci"}
+        "engine_metric": {
+            "iou_type_mAP": "segm", 
+            "type_decision_mAP": "ci",
+            "max_detection_thresholds": [10, 100, 1000]
+            }
     }
 
     return ExperimentParams(

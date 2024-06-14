@@ -56,9 +56,9 @@ class TensorBoardCallbackLogger(Callback):
             f"pred_{k}": [] for k in _register_metric_classif_px
         }
 
-    def add_metric(self, key, value, pl_module, trainer):
+    def add_metric(self, key, value, pl_module, batch_idx):
         pl_module.logger.experiment.add_scalar(
-            key, value, global_step=pl_module.global_step
+            key, value, global_step=batch_idx
         )
 
     def create_grid_batch(self, preds, batch, tp, fp, fn) -> np.ndarray:
@@ -131,12 +131,17 @@ class TensorBoardCallbackLogger(Callback):
     ) -> None:
 
         preds, tp, fp, fn, tn = self.extract_preds_cls(outputs)
-        self.tp_tracking.append(tp)
-        self.fp_tracking.append(tp)
-        self.fn_tracking.append(fn)
-        self.tn_tracking.append(tn)
+        print(f"TP sum {tp.sum()}", tp.shape)
+        print(f"FP sum {fp.sum()}", fp.shape)
+        print(f"FN sum {fn.sum()}")
+
+        # self.tp_tracking.append(tp)
+        # self.fp_tracking.append(tp)
+        # self.fn_tracking.append(fn)
+        # self.tn_tracking.append(tn)
 
         for key, metric in outputs["metrics"].items():
+            # if it is scalar px classification metric
             if any(
                 [
                     rm_substring(key, substring="pred_") == ref_metric
@@ -145,8 +150,11 @@ class TensorBoardCallbackLogger(Callback):
             ):
                 # self.add_metric(key, metric, pl_module, trainer)
                 self.metrics_px_tracking[key].append(metric)
+                self.add_metric(key, metric, pl_module, batch_idx)
+                #pl_module.log(key, metric, prog_bar=True, on_step=True)
 
-                pl_module.log(key, metric, prog_bar=True, on_step=True)
+            if rm_substring(key, substring="pred_") == "BinaryConfusionMatrix":
+                confmat = metric.cpu().numpy()
             if any(
                 [
                     rm_substring(key, substring="pred_") == ref_metric
@@ -154,8 +162,10 @@ class TensorBoardCallbackLogger(Callback):
                 ]
             ):
                 for skey, smetric in metric.items():
-                    pl_module.log(skey, smetric, prog_bar=True, on_step=True)
+                    #pl_module.log(skey, smetric, prog_bar=True, on_step=True)
+                    self.add_metric(skey, smetric, pl_module, batch_idx)
 
+        # TODO : review
         if batch_idx == 2000000:
             for key, metric in outputs["metrics"].items():
                 if any(
@@ -165,7 +175,7 @@ class TensorBoardCallbackLogger(Callback):
                     ]
                 ):
                     self.add_metric(key, metric, pl_module, trainer)
-                    self.metrics_px_tracking[key].append(metric)
+                    # self.metrics_px_tracking[key].append(metric)
 
                 if any(
                     [
@@ -181,7 +191,7 @@ class TensorBoardCallbackLogger(Callback):
             pl_module.logger.experiment.add_image(
                 f"batch_{batch_idx}",
                 img_sample,
-                pl_module.global_step,
+                batch_idx,
                 dataformats="CHW",
             )
 
@@ -190,28 +200,36 @@ class TensorBoardCallbackLogger(Callback):
         # TODO : put compute() metrics here
 
         # need to change for multiclass
-        self.tp_tracking = torch.cat(self.tp_tracking, dim=0)
-        self.fp_tracking = torch.cat(self.fp_tracking, dim=0)
-        self.fn_tracking = torch.cat(self.fn_tracking, dim=0)
-        self.tn_tracking = torch.cat(self.tn_tracking, dim=0)
+        # very expensive, stack the whole dataset !
+        # self.tp_tracking = torch.cat(self.tp_tracking, dim=0)
+        # self.fp_tracking = torch.cat(self.fp_tracking, dim=0)
+        # self.fn_tracking = torch.cat(self.fn_tracking, dim=0)
+        # self.tn_tracking = torch.cat(self.tn_tracking, dim=0)
 
         # we could count before units on  batch
         # confusion matrix
-        tp_px_cnt, fp_px_cnt, fn_px_cnt, tn_px_cnt = get_units_cnt_px(
-            self.tp_tracking, self.fp_tracking, self.fn_tracking, self.tn_tracking
-        )
+        # tp_px_cnt, fp_px_cnt, fn_px_cnt, tn_px_cnt = get_units_cnt_px(
+        #     self.tp_tracking, self.fp_tracking, self.fn_tracking, self.tn_tracking
+        # )
         # tp_obj_cnt, fp_obj_cnt, fn_obj_cnt, tn_obj_cnt = get_units_cnt_obj(self.tp_tracking , self.fp_tracking , self.fn_tracking, self.tn_tracking)
 
-        conf_mat_fig_px = plot_confusion_matrix(
-            tp_px_cnt, fp_px_cnt, fn_px_cnt, tn_px_cnt, fig_return=True
-        )
+        # conf_mat_fig_px = plot_confusion_matrix(
+        #     tp_px_cnt, fp_px_cnt, fn_px_cnt, tn_px_cnt, fig_return=True
+        # )
         # conf_mat_fig_obj = plot_confusion_matrix(tp_obj_cnt, fp_obj_cnt, fn_obj_cnt, tn_obj_cnt, fig_return=True)
 
+
+
+         # Plot confusion matrix
+        confmat = pl_module.confmat.compute()
+        conf_mat_fig_px = plot_confusion_matrix(
+            confmat["pred_BinaryConfusionMatrix"].cpu().numpy(), fig_return=True
+        )
         pl_module.logger.experiment.add_figure(
-            "binary_confusion_matrix_pixel", conf_mat_fig_px, pl_module.global_step
+             "binary_confusion_matrix_pixel", conf_mat_fig_px, pl_module.global_step
         )
 
-        print(self.metrics_px_tracking)
+        # print(self.metrics_px_tracking)
         pl_module.logger.experiment.add_hparams(
             hparam_dict={
                 "model_type": pl_module.params.model_type,
