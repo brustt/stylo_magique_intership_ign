@@ -4,24 +4,13 @@ import pytorch_lightning as pl
 import torch
 from segment_any_change.config_run import ExperimentParams
 from segment_any_change.eval import MetricEngine
-from torchmetrics.classification import (
-    BinaryF1Score,
-    BinaryPrecision,
-    BinaryRecall,
-    BinaryJaccardIndex,
-    BinaryConfusionMatrix
-)
+
 
 class CDModule(pl.LightningModule):
     def __init__(self, model, metrics: List, params: ExperimentParams):
         super().__init__()
         self.model = model
-        self.metrics_predict = MetricEngine(
-            metrics, prefix="pred_", **params.engine_metric
-        )
-        self.confmat = MetricEngine(
-            [BinaryConfusionMatrix(normalize="true")], prefix="pred_", **params.engine_metric
-        )
+
         self.params = params
 
         self.n_core = int(
@@ -39,17 +28,10 @@ class CDModule(pl.LightningModule):
         pass
 
     def test_step(self, batch, batch_idx) -> Dict[str, Any]:
-        # add inference and metric() in function share by others hook
         preds = self.forward(batch)
-
-        # update and compute - not efficient to compute for each batch - compute in loggercallback if needed
-        pred_metrics = self.metrics_predict(preds, batch["label"])
-        self.confmat.update(preds, batch["label"]) 
-
-        return {"metrics": pred_metrics, "pred": preds, "batch_idx": batch_idx}
+        return {"pred": preds, "batch_idx": batch_idx}
 
     def on_test_epoch_end(self) -> None:
-        self.metrics_predict.reset()
-
+        pass
     def configure_optimizers(self):
         pass

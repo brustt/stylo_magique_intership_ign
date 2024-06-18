@@ -6,8 +6,8 @@ from segment_any_change.masks.mask_items import ImgType
 from segment_any_change.sa_dev_v0.modeling.image_encoder import (
     ImageEncoderViT,
 )  # edited
-from segment_any_change.sa_dev_v0.modeling.mask_decoder import MaskDecoder  # edited
-from segment_any_change.sa_dev_v0.modeling.prompt_encoder import PromptEncoder  # edited
+from segment_any_change.sa_dev.modeling.mask_decoder import MaskDecoder  # edited
+from segment_any_change.sa_dev.modeling.prompt_encoder import PromptEncoder  # edited
 
 from typing import List, Dict, Any, Tuple
 

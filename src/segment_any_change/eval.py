@@ -32,6 +32,13 @@ _register_metric_processing = {
     "UnitsMetricCounts": "identity",
 }
 
+_register_group_metric_processing = {
+    "classif": "flat",
+    "confmat": "flat",
+    "map": "mAP",
+    "units": "identity",
+}
+
 _register_metric_classif_px = [
     "BinaryF1Score", 
     "BinaryPrecision", 
@@ -74,7 +81,13 @@ class UnitsMetricCounts(Metric):
         tp_indices = torch.cat(self.tp_indices, dim=0)
         fp_indices = torch.cat(self.fp_indices, dim=0)
         fn_indices = torch.cat(self.fn_indices, dim=0)
-        tn_indices = torch.cat(self.fn_indices, dim=0)
+        tn_indices = torch.cat(self.tn_indices, dim=0)
+
+        # flush units tracking - maybe better to do
+        self.tp_indices = []
+        self.fp_indices = []
+        self.fn_indices = []
+        self.tn_indices = []
 
         return dict(
             tp_indices=tp_indices,
@@ -177,39 +190,33 @@ class ProcessingEval:
 
 
 class MetricEngine:
-    def __init__(self, in_metrics: List[Metric] = None, prefix="", **kwargs) -> None:
+    def __init__(self, in_metrics: List[Metric], name: str, prefix="", **kwargs) -> None:
         self.prefix = prefix
         self.metrics = MetricCollection(in_metrics, prefix=prefix)
+        self.name=name
         self.params = kwargs
 
     def check_processing(self, name: str) -> str:
         """Extract processing function key name from _register_metric_processing based on metric name"""
         raw_name = re.sub(self.prefix, "", name)
-        if not _register_metric_processing.get(raw_name, None):
+        if not _register_group_metric_processing.get(raw_name, None):
             raise KeyError(f"Please register metric : {name} to use it")
-        return _register_metric_processing[raw_name]
+        return _register_group_metric_processing[name]
 
     def compute(self) -> Dict[str, torch.Tensor]:
-        res_metric = {}
-        # maybe not the most efficient for metrics sharing group feature
-        for name, metric in self.metrics.items():
-            print(f"compute : {name}")
-            res_metric[name] = metric.compute()
-        return res_metric
+        return self.metrics.compute()
 
     def update(self, preds: torch.Tensor, labels: torch.Tensor) -> None:
-        # maybe not the most efficient for metrics sharing group feature
-        for name, metric in self.metrics.items():
-            print(f"update : {name}")
-            proc_method = self.check_processing(name)
-            preds_, labels_ = _factory_metric_processing(
-                proc_method, preds, labels, **self.params
-            )
-            print(f"-")
+        print(f"update : {self.name}")
+        proc_method_name = self.check_processing(self.name)
+        preds, labels = _factory_metric_processing(
+            proc_method_name, preds, labels, **self.params
+        )
+        print(f"-")
 
-            metric.update(
-                preds_, labels_
-            )  # to() will not work on list for bbox- convert in processing
+        self.metrics.update(
+            preds, labels
+        )
 
     def reset(self) -> None:
         self.metrics.reset()

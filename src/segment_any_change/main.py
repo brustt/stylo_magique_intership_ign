@@ -62,7 +62,7 @@ def main(
     )
 
     callbacks = [
-        TensorBoardCallbackLogger(),
+        TensorBoardCallbackLogger(params),
         CustomWriter(output_dir=params.output_dir, write_interval="epoch"),
     ]
     trainer = pl.Trainer(

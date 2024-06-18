@@ -21,6 +21,7 @@ import torch
 from skimage.exposure import match_histograms
 import seaborn as sns  # type: ignore
 import torch.nn.functional as F
+from torchvision.utils import make_grid
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
@@ -382,6 +383,7 @@ def plot_confusion_matrix(confusion_matrix, fig_return: bool = True):
     # create the confusion matrix as a numpy array
     #confusion_matrix = confusion_matrix / np.sum(confusion_matrix)
     # create a heatmap of the confusion matrix using seaborn
+    print(confusion_matrix)
     ax = sns.heatmap(
         confusion_matrix,
         annot=True,
@@ -408,65 +410,54 @@ def plot_confusion_matrix(confusion_matrix, fig_return: bool = True):
         return fig
 
 
-def reconstruct_batch(data: MaskData, batch_size: int) -> Dict[str, torch.Tensor]:
-    """rebuild batch from filtered MaskData items with padded elements
+def create_grid_batch(preds, batch, tp, fp, fn) -> np.ndarray:
+        """create image grid from sample (imgA, imgB), label and masks predictions"""
+        sample = []
+        images_A = batch["img_A"].cpu()
+        images_B = batch["img_B"].cpu()
+        labels = batch["label"].cpu()
+        img_outcome_cls = torch.zeros(images_A.shape[-2:])
 
-    We use masks logits for upscaling
-    batch_size == 2 * B
-    """
+        # to batchify ?
+        for i in range(images_A.size(0)):
 
-    batch_data = defaultdict(list)
-    for idx, batch_idx in enumerate(data["batch_indices"]):
-        batch_data[batch_idx.item()].append(idx)
+            img_A = images_A[i]
+            img_B = images_B[i]
+            # Align to 3 channels
+            label = labels[i].unsqueeze(0).repeat(3, 1, 1)
+            img_outcome_cls = create_overlay_outcome_cls(tp[i], fp[i], fn[i])
 
-    reshaped_data = {"masks_logits": [], "bboxes": [], "ci": [], "iou_preds": []}
-
-    for i in range(batch_size):
-        if i in batch_data:
-            indices = batch_data[i]
-            reshaped_data["masks_logits"].append(data["masks_logits"][indices])
-            reshaped_data["bboxes"].append(data["bboxes"][indices])
-            reshaped_data["ci"].append(data["ci"][indices])
-            reshaped_data["iou_preds"].append(data["iou_preds"][indices])
-        else:
-            # if any of the masks from an img is kept - extrem case
-            reshaped_data["masks_logits"].append(torch.zeros(1, *data["masks_logits"].shape[1:]))
-            reshaped_data["bboxes"].append(torch.zeros(1, *data["bboxes"].shape[1:]))
-            reshaped_data["ci"].append(torch.zeros(1, *data["ci"].shape[1:]))
-            reshaped_data["iou_preds"].append(
-                torch.zeros(1, *data["iou_preds"].shape[1:])
+            # Stack individual masks and align to 3 channels
+            pred = (
+                torch.sum(preds[i, ...], axis=0)
+                .unsqueeze(0)
+                .repeat(3, 1, 1)
+                .to(torch.uint8)
             )
+            pred = shift_range_values(pred, new_bounds=[0, 255]).to(torch.uint8)
+            row = torch.stack((img_A, img_B, label, pred, img_outcome_cls), dim=0)
+            # combined stack as row
+            row = make_grid(
+                row, nrow=row.shape[0], padding=20, pad_value=1, normalize=True
+            )
+            sample.append(row)
 
-    # concat and fill dimension
-    reshaped_data["masks_logits"] = pad_sequence(reshaped_data["masks_logits"], batch_first=True)
-    reshaped_data["bboxes"] = pad_sequence(reshaped_data["bboxes"], batch_first=True)
-    reshaped_data["ci"] = pad_sequence(reshaped_data["ci"], batch_first=True)
-    reshaped_data["iou_preds"] = pad_sequence(
-        reshaped_data["iou_preds"], batch_first=True
-    )
+        grid = make_grid(
+            sample, nrow=1, padding=20, pad_value=1, scale_each=True
+        )
 
-    # retrieve label shape
-    reshaped_data["masks_logits"] = resize(reshaped_data["masks_logits"], IMG_SIZE).to(torch.uint8)
+        return grid
 
-    # now get back paire img format => batch_size // 2
+def extract_preds_cls(
+        outputs: Dict[str, torch.Tensor],
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 
-    reshaped_data["masks_logits"] = reshaped_data["masks_logits"].view(
-        batch_size // 2, -1, *reshaped_data["masks_logits"].shape[-2:]
-    )
-    reshaped_data["bboxes"] = reshaped_data["bboxes"].view(
-        batch_size // 2, -1, reshaped_data["bboxes"].shape[-1]
-    )
-    reshaped_data["ci"] = reshaped_data["ci"].view(batch_size // 2, -1)
-    reshaped_data["iou_preds"] = reshaped_data["iou_preds"].view(batch_size // 2, -1)
+        tp = outputs["pred_UnitsMetricCounts"]["tp_indices"]
+        fp = outputs["pred_UnitsMetricCounts"]["fp_indices"]
+        fn = outputs["pred_UnitsMetricCounts"]["fn_indices"]
+        tn = outputs["pred_UnitsMetricCounts"]["tn_indices"]
 
-    print("====")
-    # check return vizu
-    print("masks dim", reshaped_data["masks_logits"].shape)
-    print("bboxes dim", reshaped_data["bboxes"].shape)
-    print("ci dim", reshaped_data["ci"].shape)
-
-    return reshaped_data
-
+        return tp, fp, fn, tn
 
 if __name__ == "__main__":
     df = load_levircd_sample(size=10, data_type="train")
