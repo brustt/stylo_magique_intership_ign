@@ -100,17 +100,17 @@ class BiSam(nn.Module):
 
         # masks = self.upscale_masks(low_res_masks, original_size)
 
-        masks, iou_predictions = self.select_masks(
+        low_res_masks, iou_predictions = self.select_masks(
             low_res_masks, iou_predictions, multimask_output
         )
 
-        if not return_logits:
-            masks = masks > self.mask_threshold
+        # if not return_logits:
+        #     masks = low_res_masks > self.mask_threshold
 
         return {
-            "masks": masks,
+            "masks": low_res_masks,
             "iou_predictions": iou_predictions,
-            "low_res_logits": low_res_masks,
+            # "low_res_logits": low_res_masks,
         }
 
     def select_masks(

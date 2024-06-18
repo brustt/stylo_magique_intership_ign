@@ -144,7 +144,7 @@ def load_default_exp_params(**params):
     # '_'.join([datetime.now().strftime('%Y%m%d'), exp_params["ds_name"], exp_params["model_type"]])
 
     seganychange_params = {
-        "th_change_proposals": "otsu",
+        "th_change_proposals": 60,
         "col_nms_threshold": "ci",  # ci | iou_preds
         "seganychange_version": SegAnyChangeVersion.AUTHOR,
     }

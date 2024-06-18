@@ -354,3 +354,9 @@ def _bbox_processing(
             )
         case "label":
             return _bbox_processing_labels(labels=labels)
+
+
+
+
+def binarize_mask(masks: torch.Tensor, th: float) -> torch.Tensor:
+    return masks > th

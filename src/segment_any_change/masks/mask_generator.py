@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from magic_pen.data.process import generate_grid_prompt
 from segment_any_change.masks.mask_items import ImgType
 from segment_any_change.masks.mask_process import (
+    binarize_mask,
     filters_masks,
     nms_wrapper,
     postprocess_small_regions,
@@ -55,6 +56,7 @@ class SegAnyMaskGenerator:
         stability_score_offset: float = 1.0,
         box_nms_thresh: float = 0.7,
         min_mask_region_area: int = 0,
+        mask_threshold: float =0.0,
         **kwargs,
     ) -> None:
 
@@ -67,10 +69,14 @@ class SegAnyMaskGenerator:
         self.box_nms_thresh = box_nms_thresh
         self.min_mask_region_area = min_mask_region_area
         self.batch_size = None
+        self.mask_threshold=mask_threshold
 
     @timeit
     @torch.no_grad()
-    def generate(self, batched_input: Dict[str, torch.Tensor]) -> List[Dict[str, Any]]:
+    def generate(self, batched_input: Dict[str, torch.Tensor], batch_point: Optional[Any]=None, batch_label: Optional[Any]=None) -> List[Dict[str, Any]]:
+
+        # TODO : review error handling
+        # assert (int(bool(batch_point)) + int(bool(batch_label))) != 1, "Please provide batch points AND batch labels; or any of them."
 
         batch_anns = []
         self.batch_size = batched_input[next(iter(batched_input))].shape[0]
@@ -78,16 +84,11 @@ class SegAnyMaskGenerator:
         img_size = batched_input[next(iter(batched_input))].shape[-1:]
 
         # generate grid for batch - need to consider batch_size*2 cause of bi-temporal
-        batch_point = (
-            np.tile(
-                generate_grid_prompt(self.points_per_side), (self.batch_size * 2, 1, 1)
+        if not batch_point:
+            batch_point = np.tile(generate_grid_prompt(self.points_per_side), (self.batch_size * 2, 1, 1)) * img_size
+            batch_label = np.ones(
+                (self.batch_size * 2, self.points_per_side * self.points_per_side)
             )
-            * img_size
-        )
-        batch_label = np.ones(
-            (self.batch_size * 2, self.points_per_side * self.points_per_side)
-        )
-
         batched_input["point_coords"] = torch.as_tensor(
             batch_point, dtype=torch.float, device=DEVICE
         )
@@ -104,8 +105,8 @@ class SegAnyMaskGenerator:
         )
         # print(prof.key_averages(group_by_stack_n=5).table(sort_by="self_cpu_time_total", row_limit=10))
 
-        masks, iou_predictions, _ = outputs.values()
-
+        masks, iou_predictions = outputs.values()
+        print(f"OUT MODEL : {masks.shape}")
         for i, i_masks, i_iou_predictions, i_batch_point in zip(
             range(len(masks)), masks, iou_predictions, batch_point
         ):
@@ -113,7 +114,7 @@ class SegAnyMaskGenerator:
             print(f"""ATTACH {data["masks"].shape[0]} masks""")
             img_anns = {
                 "masks": data["masks_binary"].to(torch.uint8).detach(),
-                # "masks_logits": data["masks"],
+                "masks_logits": data["masks"],
                 "bbox": data["boxes"].detach(),
                 "predicted_iou": data["iou_preds"].detach(),
                 # "point_coords": data["points"],
@@ -122,6 +123,7 @@ class SegAnyMaskGenerator:
                 # "crop_box": box_xyxy_to_xywh(data["crop_boxes"][idx]).tolist(),
             }
             batch_anns.append(img_anns)
+
         return batch_anns
 
     def get_img_type(self, i):
@@ -134,7 +136,11 @@ class SegAnyMaskGenerator:
     def postprocess_masks(
         self, masks: torch.Tensor, iou_preds: torch.Tensor, points: np.ndarray
     ) -> MaskData:
-        """Check processing on binary masks vs logits masks"""
+        """Apply postprocessing for mask image : 
+        - thresholding based on iou
+        - NMS
+        - Binarization
+        """
 
         data = MaskData(
             masks=masks.flatten(0, 1),
@@ -146,6 +152,7 @@ class SegAnyMaskGenerator:
         data = self.filters_masks(
             data,
             pred_iou_thresh=self.pred_iou_thresh,
+            mask_threshold=self.mask_threshold,
             stability_score_thresh=self.stability_score_thresh,
             stability_score_offset=self.stability_score_offset,
         )
@@ -154,6 +161,7 @@ class SegAnyMaskGenerator:
 
         keep_by_nms = nms_wrapper(data, self.box_nms_thresh)
         data.filter(keep_by_nms)
+        # deactivated by default
         if self.min_mask_region_area > 0.0:
             data["rles"] = mask_to_rle_pytorch(data["masks_binary"])
             data = postprocess_small_regions(
@@ -193,7 +201,7 @@ class SegAnyMaskGenerator:
         print(f' filter stability_score : {data["masks"].shape[0]}')
 
         # Threshold masks and calculate boxes
-        data["masks_binary"] = data["masks"] > mask_threshold
+        data["masks_binary"] = binarize_mask(data["masks"], mask_threshold)
         print(f' filter mask_threshold : {data["masks_binary"].shape[0]}')
 
         return data

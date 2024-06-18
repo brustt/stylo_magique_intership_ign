@@ -76,6 +76,7 @@ class TensorBoardCallbackLogger(Callback):
             img_B = images_B[i]
             # Align to 3 channels
             label = labels[i].unsqueeze(0).repeat(3, 1, 1)
+            print(f"UNITS : {tp[i].sum()} - {fp[i].sum()} - {fn[i].sum()}")
             img_outcome_cls = create_overlay_outcome_cls(tp[i], fp[i], fn[i])
 
             # Stack individual masks and align to 3 channels
@@ -104,7 +105,7 @@ class TensorBoardCallbackLogger(Callback):
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 
         preds = outputs["pred"]["masks"].cpu()
-        tp, fp, fn, tn = [], [], [], []
+        tp, fp, fn, tn = None, None, None, None
         # pass key pred_UnitsMetricCounts to params
         # maybe keep track of count instead
         if any(
@@ -117,6 +118,9 @@ class TensorBoardCallbackLogger(Callback):
             fp = outputs["metrics"]["pred_UnitsMetricCounts"]["fp_indices"]
             fn = outputs["metrics"]["pred_UnitsMetricCounts"]["fn_indices"]
             tn = outputs["metrics"]["pred_UnitsMetricCounts"]["tn_indices"]
+
+        # flush units tracking - do it in Metric cls
+        del outputs["metrics"]["pred_UnitsMetricCounts"]
 
         return preds, tp, fp, fn, tn
 
@@ -131,9 +135,10 @@ class TensorBoardCallbackLogger(Callback):
     ) -> None:
 
         preds, tp, fp, fn, tn = self.extract_preds_cls(outputs)
-        print(f"TP sum {tp.sum()}", tp.shape)
-        print(f"FP sum {fp.sum()}", fp.shape)
-        print(f"FN sum {fn.sum()}")
+        # print(f"TP sum {tp.sum()}", tp.shape)
+        # print(f"FP sum {fp.sum()}", fp.shape)
+        # print(f"FN sum {fn.sum()}")
+        print(f"Label 1 sum {batch['label'].sum(dim=(1, 2))}")
 
         # self.tp_tracking.append(tp)
         # self.fp_tracking.append(tp)
@@ -186,7 +191,8 @@ class TensorBoardCallbackLogger(Callback):
                     for skey, smetric in metric.items():
                         self.add_metric(skey, smetric, pl_module, trainer)
 
-        if batch_idx % 20 == 0:
+        if batch_idx % 1 == 0:
+            print(f"CHECK label : {tp.sum() + fn.sum()}")
             img_sample = self.create_grid_batch(preds, batch, tp, fp, fn)
             pl_module.logger.experiment.add_image(
                 f"batch_{batch_idx}",

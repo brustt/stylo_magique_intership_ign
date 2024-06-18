@@ -1,5 +1,6 @@
 from typing import Any, Tuple
 import cv2
+from deprecated import deprecated
 import numpy as np
 import torch
 
@@ -12,9 +13,9 @@ from segment_any_change.sa_dev.predictor import SamPredictor
 def resize2d(arr: np.ndarray, target_size: Tuple, method: int):
     return cv2.resize(src=arr, dsize=target_size, interpolation=method)
 
-
-def compute_mask_embedding(mask: np.ndarray, img_embedding: np.ndarray) -> np.ndarray:
-    """Compute mask embedding
+@deprecated
+def compute_mask_embedding_array(mask: np.ndarray, img_embedding: np.ndarray) -> np.ndarray:
+    """Compute mask embedding - `deprecated`
 
     - resize mask to img dimension (256 x 64 x 64)
     - map img embedding to mask value
@@ -36,8 +37,41 @@ def compute_mask_embedding(mask: np.ndarray, img_embedding: np.ndarray) -> np.nd
     mask_embedding = np.where(np.isnan(mask_embedding), 0, mask_embedding)
     return mask_embedding
 
+def compute_mask_embedding(masks: torch.Tensor, img_embedding: torch.Tensor):
+    if masks.ndim > 3:
+        return _compute_mask_embedding_batch_torch(masks, img_embedding)
+    else:
+        return _compute_mask_embedding_torch(masks, img_embedding)
 
-def compute_mask_embedding_torch(
+def _compute_mask_embedding_torch(masks: torch.Tensor, img_embedding: torch.Tensor) -> torch.Tensor:
+    """_summary_
+
+    masks : N x H x W
+    img_embedding : C x He x We
+    Args:
+        masks (torch.Tensor): _description_
+        img_embedding (torch.Tensor): _description_
+
+    Returns:
+        torch.Tensor: _description_
+    """
+    assert img_embedding.ndim == masks.ndim
+    # resize to mask dim
+    img_embedding = resize(img_embedding, masks.shape[-2:])
+    # align dim C x N x Hm x Wm)
+    # use view (expand) for memory efficiency
+    masks = masks.unsqueeze(0).expand(img_embedding.shape[0], -1, -1, -1)
+    # align dim C x N x Hm x Wm
+    # need to copy() (repeat) for later assignation
+    img_embedding = img_embedding.unsqueeze(1).repeat(1, masks.shape[1], 1, 1)
+    # mask no data
+    img_embedding[(masks == 0)] = torch.nan
+    # mask embedding from spatial dim not nan
+    masks_embedding = torch.nanmean(img_embedding, dim=(2, 3))
+    # N x C
+    return masks_embedding.permute(1, 0)
+
+def _compute_mask_embedding_batch_torch(
     masks: torch.Tensor, img_embedding: torch.Tensor
 ) -> torch.Tensor:
     """_summary_
@@ -71,7 +105,7 @@ def compute_mask_embedding_torch(
     return masks_embedding.permute(0, 2, 1)
 
 
-def get_img_embedding_normed(predictor: Any, img_type: ImgType) -> np.ndarray:
+def get_img_embedding_normed(predictor: Any, img_type: ImgType) -> torch.Tensor:
     """Invert affine transformation of the image encoder last LayerNorm Layer.
     Run for a batch
 
@@ -87,9 +121,9 @@ def get_img_embedding_normed(predictor: Any, img_type: ImgType) -> np.ndarray:
         embedding = predictor.model.get_image_embedding(img_type)
     else:
         embedding = predictor.get_image_embedding()
-
+    # check for batch ==1
     # get last layerNorm weights & biais to invert affine transformation
     w = predictor.model._modules["image_encoder"].neck[3].weight
     b = predictor.model._modules["image_encoder"].neck[3].bias
-    embedding = (embedding.squeeze(0) - b[:, None, None]) / w[:, None, None]
+    embedding = (embedding - b[:, None, None]) / w[:, None, None]
     return embedding.detach().half()

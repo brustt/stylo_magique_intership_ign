@@ -52,7 +52,7 @@ class CDDataModule(pl.LightningDataModule):
         return data.DataLoader(
             self.test,
             batch_size=self.batch_size,
-            shuffle=False,
+            shuffle=True,
             num_workers=self.num_worker,
         )
 

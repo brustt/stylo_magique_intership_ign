@@ -77,7 +77,7 @@ def resize(
 
     tensor = F.interpolate(tensor, target_size, mode="bicubic", align_corners=False)
 
-    return tensor
+    return tensor.squeeze(0)
 
 
 def to_numpy(tensor: torch.Tensor, transpose: bool = True, dtype=None) -> np.ndarray:
@@ -265,10 +265,6 @@ def to_degre_torch(x):
     return rad_to_degre(torch.arccos(-x))
 
 
-def rad_to_degre_torch(x):
-    return rad_to_degre(torch.arccos(-x))
-
-
 def timeit(func):
     @wraps(func)
     def timeit_wrapper(*args, **kwargs):
@@ -415,26 +411,26 @@ def plot_confusion_matrix(confusion_matrix, fig_return: bool = True):
 def reconstruct_batch(data: MaskData, batch_size: int) -> Dict[str, torch.Tensor]:
     """rebuild batch from filtered MaskData items with padded elements
 
-    Suppose batch_indices attributes in MaskData
+    We use masks logits for upscaling
+    batch_size == 2 * B
     """
-    # TODO : check if batch_indices data attr before
 
     batch_data = defaultdict(list)
     for idx, batch_idx in enumerate(data["batch_indices"]):
         batch_data[batch_idx.item()].append(idx)
 
-    reshaped_data = {"masks": [], "bboxes": [], "ci": [], "iou_preds": []}
+    reshaped_data = {"masks_logits": [], "bboxes": [], "ci": [], "iou_preds": []}
 
     for i in range(batch_size):
         if i in batch_data:
             indices = batch_data[i]
-            reshaped_data["masks"].append(data["masks"][indices])
+            reshaped_data["masks_logits"].append(data["masks_logits"][indices])
             reshaped_data["bboxes"].append(data["bboxes"][indices])
             reshaped_data["ci"].append(data["ci"][indices])
             reshaped_data["iou_preds"].append(data["iou_preds"][indices])
         else:
             # if any of the masks from an img is kept - extrem case
-            reshaped_data["masks"].append(torch.zeros(1, *data["masks"].shape[1:]))
+            reshaped_data["masks_logits"].append(torch.zeros(1, *data["masks_logits"].shape[1:]))
             reshaped_data["bboxes"].append(torch.zeros(1, *data["bboxes"].shape[1:]))
             reshaped_data["ci"].append(torch.zeros(1, *data["ci"].shape[1:]))
             reshaped_data["iou_preds"].append(
@@ -442,7 +438,7 @@ def reconstruct_batch(data: MaskData, batch_size: int) -> Dict[str, torch.Tensor
             )
 
     # concat and fill dimension
-    reshaped_data["masks"] = pad_sequence(reshaped_data["masks"], batch_first=True)
+    reshaped_data["masks_logits"] = pad_sequence(reshaped_data["masks_logits"], batch_first=True)
     reshaped_data["bboxes"] = pad_sequence(reshaped_data["bboxes"], batch_first=True)
     reshaped_data["ci"] = pad_sequence(reshaped_data["ci"], batch_first=True)
     reshaped_data["iou_preds"] = pad_sequence(
@@ -450,12 +446,12 @@ def reconstruct_batch(data: MaskData, batch_size: int) -> Dict[str, torch.Tensor
     )
 
     # retrieve label shape
-    reshaped_data["masks"] = resize(reshaped_data["masks"], IMG_SIZE).to(torch.uint8)
+    reshaped_data["masks_logits"] = resize(reshaped_data["masks_logits"], IMG_SIZE).to(torch.uint8)
 
     # now get back paire img format => batch_size // 2
 
-    reshaped_data["masks"] = reshaped_data["masks"].view(
-        batch_size // 2, -1, *reshaped_data["masks"].shape[-2:]
+    reshaped_data["masks_logits"] = reshaped_data["masks_logits"].view(
+        batch_size // 2, -1, *reshaped_data["masks_logits"].shape[-2:]
     )
     reshaped_data["bboxes"] = reshaped_data["bboxes"].view(
         batch_size // 2, -1, reshaped_data["bboxes"].shape[-1]
@@ -465,9 +461,8 @@ def reconstruct_batch(data: MaskData, batch_size: int) -> Dict[str, torch.Tensor
 
     print("====")
     # check return vizu
-    print("masks dim", reshaped_data["masks"].shape)
+    print("masks dim", reshaped_data["masks_logits"].shape)
     print("bboxes dim", reshaped_data["bboxes"].shape)
-    print("masks dim", reshaped_data["masks"].shape)
     print("ci dim", reshaped_data["ci"].shape)
 
     return reshaped_data

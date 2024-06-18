@@ -55,7 +55,7 @@ def prepare_prompts(
 class DefaultTransform:
     """Scale Img to square IMG_SIZE preserving original ratio and pad"""
 
-    def __init__(self, half_precision: bool = True) -> None:
+    def __init__(self, half_precision: bool = False) -> None:
         self.transform = ResizeLongestSide(IMG_SIZE[0])
         self.precision = half_precision
 
