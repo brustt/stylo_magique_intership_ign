@@ -5,7 +5,6 @@ import torch
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.callbacks import BasePredictionWriter
-import torchvision
 import os
 import logging
 from torchmetrics.classification import (
@@ -17,24 +16,13 @@ from torchmetrics.classification import (
 )
 from torchmetrics.detection import MeanAveragePrecision
 from segment_any_change.config_run import ExperimentParams
+from segment_any_change.eval import MetricEngine, UnitsMetricCounts
 from segment_any_change.utils import (
     create_grid_batch,
-    create_overlay_outcome_cls,
-    extract_preds_cls,
-    get_units_cnt_obj,
-    get_units_cnt_px,
     plot_confusion_matrix,
-    rm_substring,
-    shift_range_values,
-    substring_present,
-    to_numpy,
+
 )
-from segment_any_change.eval import (
-    MetricEngine,
-    UnitsMetricCounts,
-    _register_metric_classif_px,
-    _register_metric_classif_obj,
-)
+
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")

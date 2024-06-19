@@ -165,12 +165,17 @@ class BitemporalMatching:
         masks_logits = pad_sequence([elem["masks_logits"] for elem in batch_filtered], batch_first=True)
         iou_preds = pad_sequence([elem["iou_preds"] for elem in batch_filtered], batch_first=True)
         ci = pad_sequence([elem["ci"] for elem in batch_filtered], batch_first=True)
-
-        masks_logits = resize(masks_logits, IMG_SIZE)
+        
+        # check if we catch some masks
+        if masks_logits.shape[1]:
+            masks_logits = resize(masks_logits, IMG_SIZE)
+        # else:
+        #     masks_logits =  torch.zeros((masks_logits.shape[0], 0, IMG_SIZE, IMG_SIZE))
         masks_bin = binarize_mask(masks_logits, self.mask_generator.mask_threshold)
 
         return dict(
             masks=masks_bin, # B x max(NA, NB) x H x W
+            img_anns=img_anns,
             iou_preds=iou_preds, # B x max(NA, NB) 
             confidence_scores=ci, # B x max(NA, NB) 
         )

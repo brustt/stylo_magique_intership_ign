@@ -88,6 +88,8 @@ if __name__ == "__main__":
             "--n_job_by_node", type=int, help="Number of job by node", default=1
         )
         parser.add_argument("--batch_size", type=int, help="Batch size", default=2)
+        parser.add_argument("--th_change_proposals", type=str, help="Change Threshold", default=None)
+
         parser.add_argument(
             "--dev",
             help="Fast inference - light model and prompts",

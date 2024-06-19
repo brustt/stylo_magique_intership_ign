@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Sequence, Union
 import numpy as np
 from commons.constants import NamedDataset
@@ -15,7 +15,7 @@ from segment_any_change.utils import SegAnyChangeVersion, load_img
 from segment_any_change.config_run import load_default_exp_params
 import torch
 from magic_pen.data.loader import BiTemporalDataset
-from magic_pen.data.process import DefaultTransform
+from magic_pen.data.process import DefaultTransform, generate_prompt
 from magic_pen.utils_io import load_levircd_sample
 from torch.utils.data import Dataset, DataLoader
 
@@ -27,8 +27,8 @@ class DataSample:
     label_path: str
 
 
-def load_partial_ds(ds_name: str, dtype, indices: Sequence[int] = None):
-    ds = BiTemporalDataset(name=ds_name, dtype=dtype, transform=DefaultTransform())
+def load_partial_ds(ds_name: str, dtype, indices: Sequence[int] = None, params=None):
+    ds = BiTemporalDataset(name=ds_name, dtype=dtype, transform=DefaultTransform(), params=params)
     if indices is not None and any(indices):
         ds = torch.utils.data.Subset(ds, indices)
     print(f"DATASET SUBSET : {len(ds)}")
@@ -36,7 +36,7 @@ def load_partial_ds(ds_name: str, dtype, indices: Sequence[int] = None):
     return ds
 
 class SampleDataset(Dataset):
-    def __init__(self, data_dict: Dict, name: str, transform: Any):
+    def __init__(self, data_dict: Dict, name: str, transform: Any, params: ExperimentParams):
         """Generate Torch Dataset for sample
 
         Args:
@@ -50,6 +50,7 @@ class SampleDataset(Dataset):
         self.sample = data_dict
         self.name = name
         self.transform = transform
+        self.params = params
 
         if name != NamedDataset.LEVIR_CD.value:
             # need to implement custom loading / processing
@@ -66,11 +67,15 @@ class SampleDataset(Dataset):
             self.sample["img_B"] = load_img(self.sample["img_B"])
             self.sample["label"] = load_img(self.sample["label"])
 
-        self.sample = self.sample | dict(index=0)
+        
+        
         if self.transform:
-            sample = self.transform(self.sample)
+            self.sample = self.transform(self.sample)
 
-        return sample
+        prompt_coords, prompt_labels = generate_prompt(self.sample["label"], self.params.prompt_type, self.params.n_prompt, **asdict(self.params))
+        self.sample  = self.sample  | dict(index=0, point_coords=prompt_coords, point_labels=prompt_labels)
+
+        return self.sample 
 
 def infer_on_sample(
     A_path: Any, B_path: Any, label_path: Any, model: Any, params
@@ -81,7 +86,8 @@ def infer_on_sample(
         img_B=B_path, 
         label=label_path),
         name = "levir-cd",
-        transform=DefaultTransform()
+        transform=DefaultTransform(),
+        params=params
         )
 
     dloader = DataLoader(ds, batch_size=1, shuffle=False)

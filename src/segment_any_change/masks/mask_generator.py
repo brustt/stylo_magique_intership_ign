@@ -49,8 +49,6 @@ class SegAnyMaskGenerator:
     def __init__(
         self,
         model: BiSam,
-        points_per_side: Optional[int] = 32,
-        points_per_batch: int = 64,
         pred_iou_thresh: float = 0.88,
         stability_score_thresh: float = 0.95,
         stability_score_offset: float = 1.0,
@@ -61,8 +59,6 @@ class SegAnyMaskGenerator:
     ) -> None:
 
         self.model = model
-        self.points_per_side = points_per_side
-        self.points_per_batch = points_per_batch  # not used
         self.pred_iou_thresh = pred_iou_thresh
         self.stability_score_thresh = stability_score_thresh
         self.stability_score_offset = stability_score_offset
@@ -73,7 +69,7 @@ class SegAnyMaskGenerator:
 
     @timeit
     @torch.no_grad()
-    def generate(self, batched_input: Dict[str, torch.Tensor], batch_point: Optional[Any]=None, batch_label: Optional[Any]=None) -> List[Dict[str, Any]]:
+    def generate(self, batched_input: Dict[str, torch.Tensor]) -> List[Dict[str, Any]]:
 
         # TODO : review error handling
         # assert (int(bool(batch_point)) + int(bool(batch_label))) != 1, "Please provide batch points AND batch labels; or any of them."
@@ -81,20 +77,8 @@ class SegAnyMaskGenerator:
         batch_anns = []
         self.batch_size = batched_input[next(iter(batched_input))].shape[0]
         print(f"BATCH SIZE : {self.batch_size} * 2")
-        img_size = batched_input[next(iter(batched_input))].shape[-1:]
+        print(batched_input.keys())
 
-        # generate grid for batch - need to consider batch_size*2 cause of bi-temporal
-        if not batch_point:
-            batch_point = np.tile(generate_grid_prompt(self.points_per_side), (self.batch_size * 2, 1, 1)) * img_size
-            batch_label = np.ones(
-                (self.batch_size * 2, self.points_per_side * self.points_per_side)
-            )
-        batched_input["point_coords"] = torch.as_tensor(
-            batch_point, dtype=torch.float, device=DEVICE
-        )
-        batched_input["point_labels"] = torch.as_tensor(
-            batch_label, dtype=torch.int, device=DEVICE
-        )
         # with profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:
         #     with record_function("model_inference"):
 
@@ -106,21 +90,20 @@ class SegAnyMaskGenerator:
         # print(prof.key_averages(group_by_stack_n=5).table(sort_by="self_cpu_time_total", row_limit=10))
 
         masks, iou_predictions = outputs.values()
+
         print(f"OUT MODEL : {masks.shape}")
-        for i, i_masks, i_iou_predictions, i_batch_point in zip(
-            range(len(masks)), masks, iou_predictions, batch_point
+
+        for i, i_masks, i_iou_predictions in zip(
+            range(len(masks)), masks, iou_predictions
         ):
-            data = self.postprocess_masks(i_masks, i_iou_predictions, i_batch_point)
+            data = self.postprocess_masks(i_masks, i_iou_predictions)
             print(f"""ATTACH {data["masks"].shape[0]} masks""")
             img_anns = {
                 "masks": data["masks_binary"].to(torch.uint8).detach(),
                 "masks_logits": data["masks"],
                 "bbox": data["boxes"].detach(),
                 "predicted_iou": data["iou_preds"].detach(),
-                # "point_coords": data["points"],
                 "img_type": self.get_img_type(i),
-                # "stability_score": data["stability_score"][idx].item(),
-                # "crop_box": box_xyxy_to_xywh(data["crop_boxes"][idx]).tolist(),
             }
             batch_anns.append(img_anns)
 
@@ -134,7 +117,7 @@ class SegAnyMaskGenerator:
             return ImgType.B
 
     def postprocess_masks(
-        self, masks: torch.Tensor, iou_preds: torch.Tensor, points: np.ndarray
+        self, masks: torch.Tensor, iou_preds: torch.Tensor
     ) -> MaskData:
         """Apply postprocessing for mask image : 
         - thresholding based on iou
@@ -146,7 +129,6 @@ class SegAnyMaskGenerator:
             masks=masks.flatten(0, 1),
             masks_binary=masks.flatten(0, 1),
             iou_preds=iou_preds.flatten(0, 1),
-            points=torch.as_tensor(points.repeat(masks.shape[1], axis=0)),
         )
 
         data = self.filters_masks(
@@ -180,13 +162,16 @@ class SegAnyMaskGenerator:
         stability_score_thresh: float = 0.95,  # could be lower
         stability_score_offset: float = 1.0,
     ) -> MaskData:
+        
+        print(f':: raw masks : {data["masks"].shape[0]} ::')
+
 
         # Filter by predicted IoU
         if pred_iou_thresh > 0.0:
             keep_mask = data["iou_preds"] > pred_iou_thresh
             data.filter(keep_mask)
 
-        print(f'filter iou_th : {data["masks"].shape[0]}')
+        print(f' filter iou_th : {data["masks"].shape[0]}')
 
         # Calculate stability score
         data["stability_score"] = calculate_stability_score(

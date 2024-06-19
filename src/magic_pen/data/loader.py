@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any
 import numpy as np
 import pandas as pd
@@ -10,8 +10,9 @@ from torch.utils.data import Dataset
 # Ignore warnings
 import warnings
 
-from magic_pen.data.process import generate_grid_prompt
+from magic_pen.data.process import generate_grid_prompt, generate_prompt
 from magic_pen.utils_io import load_levircd_sample, load_second_sample
+from segment_any_change.config_run import ExperimentParams
 from segment_any_change.utils import load_img
 
 warnings.filterwarnings("ignore")
@@ -46,15 +47,21 @@ class BiTemporalDataset(Dataset):
         dtype: str = "train",
         transform: Any = None,
         seed: int = SEED,
+        params: ExperimentParams = None
     ) -> None:
 
         if name is None:
-            raise ("Please provide at least items or dataset name")
+            raise RuntimeError("Please provide at least items or dataset name")
+        
+        if not any[params.get("prompt_type", None), params.get("points_per_side", None)]:
+            raise RuntimeError("Please provide prompt generation parameter : prompt_type and points_per_side")
+
         self.items = load_ds(ds_name=name, data_type=dtype)
 
         self.transform = transform
         self.seed = seed
         self.name = name
+        self.params = params
 
     def __len__(self) -> int:
         return self.items.shape[0]
@@ -76,36 +83,18 @@ class BiTemporalDataset(Dataset):
                 np.any(label_A != SECOND_NO_CHANGE_RGB, axis=-1).astype(np.uint8) * 255
             )
 
-        sample = {"img_A": img_A, "img_B": img_B, "label": label, "index": index}
-
-        # add generation prompts based on each label zone
+        sample = {
+            "img_A": img_A, 
+            "img_B": img_B, 
+            "label": label, 
+        }
 
         if self.transform:
             sample = self.transform(sample)
+        
+        prompt_coords, prompt_labels = generate_prompt(sample["label"], self.params.prompt_type, self.params.n_prompt, **asdict(self.params))
+
+
+        sample = sample | dict(index=index, point_coords=prompt_coords, point_labels=prompt_labels)
 
         return sample
-
-
-class PromptDataset(Dataset):
-    def __init__(
-        self,
-        path: str = None,
-        prompts: Any = None,
-        length: int = None,
-        n_points: int = 32,
-    ) -> None:
-
-        if not any([length, prompts]):
-            raise RuntimeError("Length or prompts should be specified")
-
-        self.length = length
-        self.prompts = self.generate_grid(n_points) if prompts is None else prompts
-
-    def generate_grid(self, n_points: int):
-        return np.tile(generate_grid_prompt(n_points), (self.length, 1, 1))
-
-    def __len__(self) -> int:
-        return self.prompts.shape[0]
-
-    def __getitem__(self, index) -> Any:
-        return {"point_coord": self.prompts[index]}

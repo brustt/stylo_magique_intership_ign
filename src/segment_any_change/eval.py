@@ -224,6 +224,12 @@ class MetricEngine:
     def __call__(self, preds, targets) -> Dict[str, torch.Tensor]:
         self.update(preds, targets)
         return self.compute()
+    
+
+class OfflineEvaluator:
+    def __init__(self):
+        """"set metrics from TensorboardCallback"""
+        pass
 
 
 @torch.no_grad()

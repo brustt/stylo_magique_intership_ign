@@ -6,7 +6,8 @@ import argparse
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Union
+import re
+from typing import Dict, Optional, Union
 
 
 from magic_pen.config import DEVICE, logs_dir
@@ -42,8 +43,8 @@ class ExperimentParams:
     seganychange_version: SegAnyChangeVersion
     col_nms_threshold: str
     # sam mask generation
-    points_per_side: int
-    points_per_batch: int
+    prompt_type: int
+    n_prompt: int # number of prompt to sample
     pred_iou_thresh: float
     stability_score_thresh: float
     stability_score_offset: float
@@ -57,6 +58,9 @@ class ExperimentParams:
     num_worker: int
     n_job_by_node: int
     dev: bool  # True : infer with smaller model and less points from grid
+    # sam mask generation
+    loc: Optional[str] = None # pormpt sampling : center or random
+
 
 
 def choose_model(is_debug, params):
@@ -72,8 +76,6 @@ def choose_model(is_debug, params):
             model=sam,
             version=params.seganychange_version,
             th_change_proposals=params.th_change_proposals,
-            points_per_side=params.points_per_side,
-            points_per_batch=params.points_per_batch,
             pred_iou_thresh=params.pred_iou_thresh,
             stability_score_thresh=params.stability_score_thresh,
             stability_score_offset=params.stability_score_offset,
@@ -118,15 +120,16 @@ def load_fast_exp_params(**params):
     # fast inference
     new_params = {
         "model_type": "vit_b",
-        "points_per_side": 16,  # lower for speed
+        "n_prompt": 16*16,  # lower for speed
     }
 
-    params = load_default_exp_params(**params)
+    default_params = load_default_exp_params(**params)
 
     return ExperimentParams(
         **(
-            asdict(params)
+            asdict(default_params)
             | new_params  # merge other parameters - overwrite existing ones
+            | params
         )
     )
 
@@ -140,10 +143,12 @@ def load_default_exp_params(**params):
         "ds_name": params["ds_name"],
     }
     exp_params["exp_id"] = datetime.now().strftime("%Y%m%d_%H%M%S")
-    exp_params["exp_name"] = "seganychange_repr"
+    exp_params["exp_name"] = "seganychange_repr_change_th"
     # '_'.join([datetime.now().strftime('%Y%m%d'), exp_params["ds_name"], exp_params["model_type"]])
 
     seganychange_params = {
+        "prompt_type":"grid",
+        "loc":"center", # only for prompt_type == sample
         "th_change_proposals": "otsu",
         "col_nms_threshold": "ci",  # ci | iou_preds
         "seganychange_version": SegAnyChangeVersion.AUTHOR,
@@ -151,8 +156,7 @@ def load_default_exp_params(**params):
 
     # sam mask generation
     sam_params = {
-        "points_per_side": 32,  # lower for speed
-        "points_per_batch": 64,  # not used
+        "n_prompt": 1024,  # lower for speed
         "pred_iou_thresh": 0.88,  # configure lower for exhaustivity
         "stability_score_thresh": 0.95,  # configure lower for exhaustivity
         "stability_score_offset": 1.0,
@@ -179,6 +183,10 @@ def load_default_exp_params(**params):
             "max_detection_thresholds": [10, 100, 1000]
             }
     }
+
+    if params.get("th_change_proposals", None) and isinstance(params.get("th_change_proposals"), str):
+        if not re.match('[a-z]', params.get("th_change_proposals")):
+            params["th_change_proposals"] = float(params["th_change_proposals"])
 
     return ExperimentParams(
         **(
