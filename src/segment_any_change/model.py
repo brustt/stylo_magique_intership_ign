@@ -1,3 +1,5 @@
+from copy import deepcopy
+from enum import Enum
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -18,6 +20,9 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+class SamModeInference(Enum):
+    AUTO="auto"
+    INTERACTIVE="interactive"
 
 class BiSam(nn.Module):
     mask_threshold: float = 0.0
@@ -58,6 +63,7 @@ class BiSam(nn.Module):
         batched_input: Dict[str, torch.Tensor],
         multimask_output: bool,
         return_logits: bool = False,
+        mode: SamModeInference = SamModeInference.AUTO
     ) -> List[Dict[str, torch.Tensor]]:
         """
         SAM implementation for bi-input and batch inference.
@@ -71,11 +77,17 @@ class BiSam(nn.Module):
         Returns:
             List[Dict[str, torch.Tensor]]: dict return as prediction batch tensor
         """
+        bactch_size = batched_input[next(iter(batched_input))].shape[0]
 
-        input_images = torch.cat([batched_input["img_A"], batched_input["img_B"]])
-
+        if mode == SamModeInference.AUTO:
+            # maybe get out theses lines outside
+            input_images = torch.cat([batched_input["img_A"], batched_input["img_B"]])
+            batched_input["point_coords"] = batched_input["point_coords"].repeat(bactch_size, 1, 1)
+            batched_input["point_labels"] = batched_input["point_labels"].repeat(bactch_size, 1)
+        else:
+            input_images = deepcopy(batched_input["img_A"])
+        
         input_images = self.preprocess(input_images)
-        # input_images = input_images.half()
         print("DTYPE input model", input_images.dtype)
 
         self.image_embeddings = self.image_encoder(input_images)

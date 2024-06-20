@@ -4,14 +4,16 @@ import torch
 from torch.utils import data
 from magic_pen.data.loader import BiTemporalDataset
 from magic_pen.data.process import DefaultTransform
+from segment_any_change.config_run import ExperimentParams
 
 
 class CDDataModule(pl.LightningDataModule):
-    def __init__(self, name, batch_size: int, num_worker: int = 0) -> None:
+    def __init__(self, name, params: ExperimentParams) -> None:
         super().__init__()
         self.name = name
-        self.batch_size = batch_size
-        self.num_worker = num_worker
+        self.batch_size = params.batch_size
+        self.num_worker = params.num_worker
+        self.params = params
 
     def prepare_data(self):
         # download, IO, etc. Useful with shared filesystems
@@ -22,13 +24,13 @@ class CDDataModule(pl.LightningDataModule):
         # make assignments here (val/train/test split)
         # called on every process in DDP
         self.train = BiTemporalDataset(
-            name=self.name, dtype="train", transform=DefaultTransform()
+            name=self.name, dtype="train", transform=DefaultTransform(), params=self.params
         )
         # self.val = BiTemporalDataset(
         #     name=self.name, dtype="val", transform=DefaultTransform()
         # ) # not implement for SECOND
         self.test = BiTemporalDataset(
-            name=self.name, dtype="test", transform=DefaultTransform()
+            name=self.name, dtype="test", transform=DefaultTransform(), params=self.params
         )
 
     def train_dataloader(self):

@@ -88,7 +88,6 @@ class PromptEncoder(nn.Module):
 
             padding_label = -torch.ones((*labels.shape[:2], 1), device=labels.device)
             points = torch.cat([points, padding_point], dim=2)
-
             labels = torch.cat([labels, padding_label], dim=2)
         point_embedding = self.pe_layer.forward_with_coords(
             points, self.input_image_size

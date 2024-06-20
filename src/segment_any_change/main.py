@@ -58,7 +58,7 @@ def main(
     pl_module = CDModule(model=model, metrics=metrics, params=params)
 
     dm = CDDataModule(
-        name=params.ds_name, batch_size=params.batch_size, num_worker=params.num_worker
+        name=params.ds_name, params=params
     )
 
     callbacks = [

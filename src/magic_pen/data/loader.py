@@ -53,7 +53,7 @@ class BiTemporalDataset(Dataset):
         if name is None:
             raise RuntimeError("Please provide at least items or dataset name")
         
-        if not any[params.get("prompt_type", None), params.get("points_per_side", None)]:
+        if not any([params.prompt_type, params.n_prompt]):
             raise RuntimeError("Please provide prompt generation parameter : prompt_type and points_per_side")
 
         self.items = load_ds(ds_name=name, data_type=dtype)

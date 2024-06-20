@@ -18,7 +18,12 @@ from magic_pen.data.loader import BiTemporalDataset
 from magic_pen.data.process import DefaultTransform, generate_prompt
 from magic_pen.utils_io import load_levircd_sample
 from torch.utils.data import Dataset, DataLoader
-
+from torchmetrics.classification import (
+    BinaryF1Score,
+    BinaryPrecision,
+    BinaryRecall,
+    BinaryJaccardIndex
+)
 
 @dataclass
 class DataSample:
@@ -27,7 +32,7 @@ class DataSample:
     label_path: str
 
 
-def load_partial_ds(ds_name: str, dtype, indices: Sequence[int] = None, params=None):
+def load_partial_ds(ds_name: str, dtype,  params=None, indices: Sequence[int] = None):
     ds = BiTemporalDataset(name=ds_name, dtype=dtype, transform=DefaultTransform(), params=params)
     if indices is not None and any(indices):
         ds = torch.utils.data.Subset(ds, indices)
@@ -100,26 +105,27 @@ def infer_on_sample(
 
 
 def partial_inference(
-    params: ExperimentParams = None,
-    ds_name: str = "levir-cd",
-    dtype: str = "test",
+    params: ExperimentParams,
+    ds_dtype: str = "test",
     indices: Sequence[int] = None,
-    dev: bool = False,
     dummy: bool = False,
     return_batch: bool = False,
     in_metrics: List[Metric] = None,
 ) -> List[Dict]:
 
     if params is None:
-        params = load_exp_params(ds_name=ds_name, dev=dev)
+        params = load_exp_params(**asdict(params))
 
     model = choose_model(is_debug=dummy, params=params)
 
-    ds = load_partial_ds(params.ds_name, dtype, indices)
+    ds = load_partial_ds(params.ds_name, ds_dtype, params, indices)
     if in_metrics is None:
-        in_metrics = load_default_metrics(**params.engine_metric)
+        in_metrics = [  BinaryF1Score(),
+                        BinaryPrecision(),
+                        BinaryRecall(),
+                        BinaryJaccardIndex()]
 
-    engine_eval = MetricEngine(in_metrics=in_metrics)
+    engine_eval = MetricEngine(in_metrics=in_metrics, name="classif")
 
     dloader = torch.utils.data.DataLoader(
         ds, batch_size=params.batch_size, shuffle=False
@@ -130,7 +136,7 @@ def partial_inference(
             preds = model(batch)
             metrics = engine_eval(preds, batch["label"])
             out = {
-                "preds": preds,
+                "pred": preds,
                 "metrics": metrics,
                 "batch": batch if return_batch else None,
             }
@@ -139,49 +145,30 @@ def partial_inference(
 
 
 if __name__ == "__main__":
-    params = None
-    batch_size = 2
-    ds_name = "levir-cd"
-    dtype = "test"
-    dev = True  # vit_h - full grid | vit_b - small grid points
-    dummy: bool = False
-    return_batch = True
-    # in_metrics= None
-    seganychange_version = SegAnyChangeVersion.AUTHOR
+    pair_img = load_levircd_sample(1, seed=8)
+    path_label,path_A, path_B = pair_img.iloc[0]
 
-    idx_batch_bug = 10  # 45
-    indices = np.arange((idx_batch_bug * batch_size - 2), (idx_batch_bug * batch_size))
-
-    init_params = dict(
-        batch_size=batch_size,
-        ds_name=ds_name,
-        n_job_by_node=1,
-        dev=dev,
-        seganychange_version=seganychange_version,
+    params = dict(
+        batch_size=2,
+        ds_name="levir-cd",
+        dev=True,
+        n_job_by_node=2,
+        th_change_proposals=50,
+        prompt_type="grid",
+        n_prompt=1024,
+        loc="random",
+        pred_iou_thresh=0.88,
+        stability_score_thresh=0.95
     )
-    if params is None:
-        params = load_exp_params(**init_params)
+    params = load_exp_params(**params)
+    print(params)
+    model = choose_model(is_debug=False, params=params)
 
-    model = choose_model(is_debug=dummy, params=params)
-
-    ds = load_partial_ds(params.ds_name, dtype, indices)
-
-    print(f"len ds : {len(ds)}")
-
-    # if in_metrics is None:
-    #     in_metrics = load_default_metrics(**params.engine_metric)
-
-    # engine_eval = MetricEngine(in_metrics=in_metrics)
-
-    dloader = torch.utils.data.DataLoader(
-        ds, batch_size=params.batch_size, shuffle=False
-    )
-    batch_list = []
-    pred_list = []
-    for i, batch in tqdm(enumerate(dloader), total=len(dloader), desc="Processing"):
-        with torch.no_grad():
-            pred_list.append(model(batch))
-            batch_list.append(batch)
+    output = infer_on_sample(A_path=path_A,
+                    B_path=path_B, 
+                    label_path=path_label,
+                    params=params,
+                    model=model)
 
     # outputs = partial_inference(
     #     ds_name="levir-cd",

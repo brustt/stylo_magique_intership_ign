@@ -110,6 +110,7 @@ class TensorBoardCallbackLogger(Callback):
 
     def on_test_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
 
+        # should I re-compute ?
         confmat = self.confmat.compute()
         out_map = self.map.compute()
         out_classif = self.metrics_classif.compute()

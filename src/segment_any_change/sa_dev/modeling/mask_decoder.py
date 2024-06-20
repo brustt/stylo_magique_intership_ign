@@ -147,7 +147,7 @@ class MaskDecoder(nn.Module):
         See 'forward' for more details.
         MD edit
         """
-        if image_embeddings.ndim < 5:
+        if image_embeddings.ndim < 5: # ?
             image_embeddings = image_embeddings[:, None, ...]
         # Concatenate output tokens
         # [(num_mask+1)+1, 256]
