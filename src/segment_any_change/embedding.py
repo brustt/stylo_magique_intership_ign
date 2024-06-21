@@ -7,11 +7,6 @@ import torch
 from magic_pen.config import IMG_SIZE
 from segment_any_change.masks.mask_items import ImgType
 from segment_any_change.utils import resize
-from segment_any_change.sa_dev.predictor import SamPredictor
-
-
-def resize2d(arr: np.ndarray, target_size: Tuple, method: int):
-    return cv2.resize(src=arr, dsize=target_size, interpolation=method)
 
 @deprecated
 def compute_mask_embedding_array(mask: np.ndarray, img_embedding: np.ndarray) -> np.ndarray:
@@ -87,8 +82,6 @@ def _compute_mask_embedding_batch_torch(
     # resize to mask dim
     img_embedding = resize(img_embedding, masks.shape[-2:])
     # align dim B x C x N x Hm x Wm)
-
-    print(masks.shape)
     # use view (expand) for memory efficiency
     masks = masks.unsqueeze(1).expand(-1, img_embedding.shape[1], -1, -1, -1)
     # align dim B x C x N x Hm x Wm)
@@ -105,7 +98,7 @@ def _compute_mask_embedding_batch_torch(
     return masks_embedding.permute(0, 2, 1)
 
 
-def get_img_embedding_normed(predictor: Any, img_type: ImgType) -> torch.Tensor:
+def get_img_embedding_normed(model: Any, img_type: ImgType) -> torch.Tensor:
     """Invert affine transformation of the image encoder last LayerNorm Layer.
     Run for a batch
 
@@ -117,13 +110,13 @@ def get_img_embedding_normed(predictor: Any, img_type: ImgType) -> torch.Tensor:
         np.ndarray: Scaled embedding
     """
     # workaround BiSam - not clean
-    if type(predictor.model).__name__ == "BiSam":
-        embedding = predictor.model.get_image_embedding(img_type)
+    if type(model).__name__ == "BiSam":
+        embedding = model.get_image_embedding(img_type)
     else:
-        embedding = predictor.get_image_embedding()
+        raise RuntimeError(f"Not implemented for {type(model).__name__}")
     # check for batch ==1
     # get last layerNorm weights & biais to invert affine transformation
-    w = predictor.model._modules["image_encoder"].neck[3].weight
-    b = predictor.model._modules["image_encoder"].neck[3].bias
+    w = model._modules["image_encoder"].neck[3].weight
+    b = model._modules["image_encoder"].neck[3].bias
     embedding = (embedding - b[:, None, None]) / w[:, None, None]
-    return embedding.detach().half()
+    return embedding.detach()

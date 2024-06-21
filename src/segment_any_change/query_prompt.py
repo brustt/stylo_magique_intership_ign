@@ -1,119 +1,188 @@
-from typing import Any, List, Optional, Tuple, Union
+from copy import deepcopy
+from dataclasses import asdict
+from typing import Any, Dict, List, Optional, Tuple, Union
+from magic_pen.data.process import generate_prompt
+from segment_any_change.masks.mask_process import binarize_mask
+from segment_any_change.matching import BitemporalMatching
+from segment_any_change.utils import resize
 import numpy as np
+import torch
+from magic_pen.config import IMG_SIZE
 from segment_any_change.embedding import (
     compute_mask_embedding,
     get_img_embedding_normed,
 )
 from segment_any_change.masks.mask_items import (
     FilteringType,
-    ListProposal,
+    thresholding,
+    MaskData
 )
-from segment_any_change.matching import (
-    neg_cosine_sim,
-)
-from segment_any_change.sa_dev_v0.predictor import SamPredictor
 
-from segment_any_change.utils import to_degre, timeit
+from segment_any_change.model import SamModeInference
+
+from segment_any_change.utils import to_degre, timeit, to_degre_torch
 import logging
+from torch import nn
+from torch.nn.utils.rnn import pad_sequence
 
 
-# To update with new batch version
-class PointQueryMecanism:
+class SegAnyPrompt:
+    def __init__(
+            self,
+            matching_engine: BitemporalMatching,
+            **params):
+        self.matching_engine = matching_engine
+        self.params = params
 
-    S_MASK_EMB = (1024, 1024)
-    S_CHGT_EMB = (256,)
+    def __call__(self, batch: Dict[str, torch.Tensor]):
 
-    def __init__(self, predictor: SamPredictor, items_change: ListProposal) -> None:
-        self.predictor = predictor
+        
+        grid_params = deepcopy(self.params)
+        grid_batch = batch.copy()
+
+        # switch for matching via grid
+        grid_params["prompt_type"] = "grid"
+        grid_params["n_prompt"] = grid_params["n_points_grid"] 
+
+        point_coords, point_labels = generate_prompt(grid_batch["label"], 
+                                                    grid_params["prompt_type"], 
+                                                    grid_params["n_prompt"], 
+                                                    **grid_params)
+        
+        grid_batch["point_coords"] = point_coords.repeat(self.params["batch_size"], 1, 1)
+        grid_batch["point_labels"] = point_labels.repeat(self.params["batch_size"], 1)
+
+        items_change = self.matching_engine(grid_batch,  **grid_params)
+
+        # query prompt
+        query_res = QueryPointMecanism(items_change, 
+                                          model=self.matching_engine.mask_generator.model, # sam 
+                                          th_sim=self.params["th_sim"]).run(batch)
+        
+        return query_res
+
+class QueryPointMecanism:
+    def __init__(self, items_change: Dict, model: Any, th_sim: Any):
         self.items_change = items_change
-        self.th_filtering = None
+        self.model = model
+        self.th_sim = th_sim
 
-    @timeit
-    def run(
-        self,
-        points: np.ndarray,
-        method_filtering: Union[str, float],
-        image: np.ndarray = None,
-        labels: Optional[np.ndarray] = None,
-        multimask_output: bool = True,
-    ) -> ListProposal:
+    def get_best_masks(self, masks: torch.Tensor, ious: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Extract mask associated to the highest IoU
 
-        masks = self.extract_mask_from_multiple_prompt(
-            points, image, labels, multimask_output
-        )
-        embedding = self.extract_proposal_embedding(masks)
-        self.match_changes(embedding, method_filtering)
-
-        return self.items_change
-
-    def match_changes(
-        self, emb_proposal: np.ndarray, method_filtering: Union[str, float, int]
-    ) -> ListProposal:
-
-        scores_chg = [
-            neg_cosine_sim(emb_proposal, item.embedding) for item in self.items_change
-        ]
-        self.items_change.update_field("confidence_score", scores_chg)
-        self.items_change.update_field("chgt_angle", [to_degre(c) for c in scores_chg])
-        self.th_filtering = self.items_change.apply_change_filtering(
-            method_filtering, FilteringType.Inf
-        )
-
-    def extract_mask_from_multiple_prompt(
-        self,
-        points: np.ndarray,
-        image: np.ndarray = None,
-        labels: Optional[np.ndarray] = None,
-        multimask_output: bool = True,
-    ) -> np.ndarray:
-        """Predict mask for each input points
-
-        To DO : batch inference with BiSam
+        predictions from multimask_output == True
 
         Args:
-            points (np.ndarray): input points (x, y) - shape : (N, 1, 2)
-            image (np.ndarray, optional): image np.ndarray. Defaults to None.
-            labels (Optional[Tuple[int]], optional): label of prompt (foreground / background). Defaults to None. shape : (N, 1, 2)
-            multimask_output (bool, optional): output multimask for a prompt. Defaults to True (recommanded).
+            masks (torch.Tensor): sam output masks : B x N x 3 x He x We 
+            ious (torch.Tensor): sam ious predicted : B x N x 3
 
         Returns:
-            np.ndarray: masks for objects NxHxW
+            torch.Tensor: best masks : B x N x He x We
         """
+        best_ious, max_indices = torch.max(ious, dim=2)
+        
+        # align dimensions to masks
+        max_indices_expanded = (
+            max_indices
+            .unsqueeze(-1)
+            .unsqueeze(-1)
+            .unsqueeze(-1)
+            .expand(-1, -1, -1, *masks.shape[-2:])
+        )
+        best_masks = masks.gather(2, max_indices_expanded).squeeze(2)
 
-        selected_masks = np.zeros((points.shape[0], *self.S_MASK_EMB), dtype=np.uint8)
+        return best_masks, best_ious
+    
+    def compute_cross_sim(self, x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
+        """
+        
+        Check why some items change embedding are null => pad sequence ?
+        Args:
+            x1 (torch.Tensor): mask embedding from prompt:  1 x 256
+            x2 (torch.Tensor): items change from bitemporal matching : M x 256
 
-        if labels is None:
-            # init point label as foreground by default
-            labels = np.ones(len(points))
+        Returns:
+            torch.Tensor: sim cosine : 1 x M
+        """
+        norm_1 = torch.linalg.norm(x1)
+        norm_2 = torch.linalg.norm(x2, dim=1)
 
-        # set image if not
-        if not self.predictor.is_image_set:
-            if image is None:
-                raise ValueError("Please provide image to set")
-            self.predictor.set_image(image)
+        dot_prod = (x1 @ x2.permute(1, 0))
+        dm = norm_1 * norm_2
 
-        # predict mask for each prompt
-        # TO DO :  change for batch inference : use predict_torch instead
-        for i, input in enumerate(zip(points, labels)):
-            # from demo notebook : best to keep multimask_output to True
-            point, label = input
-            masks, scores, logits = self.predictor.predict(
-                point_coords=point,
-                point_labels=label,
-                multimask_output=multimask_output,
+        return dot_prod / dm
+    
+
+    def run(self, batched_input: Dict) -> torch.Tensor:
+
+        batch_size = batched_input[next(iter(batched_input))].shape[0]
+
+        # SamModeInference.INTERACTIVE == inference on img_B only
+        outputs = self.model(
+            batched_input=batched_input, 
+            multimask_output=True, 
+            return_logits=True,
+            mode=SamModeInference.INTERACTIVE,
+        )
+        # TODO : prevent image encoder to recompute images embedding
+
+        # new_masks : B x N x Hm x Wm - can be computed on batch
+        # iou_predictions :  B x N
+        new_masks, iou_predictions = outputs.values()
+        new_masks = new_masks > 0.
+        best_masks, best_ious = self.get_best_masks(new_masks, iou_predictions)
+
+        # only one img type was provided to the model for query prompting
+        imgs_embedding_B = get_img_embedding_normed(self.model, img_type=None)
+        # B x N x 256 -- N  number of masks in the img i (== number of prompts)
+        masks_embedding = compute_mask_embedding(best_masks, imgs_embedding_B)
+        
+        # need to have 1 emb => mean of mask_embedding : B x 256
+        masks_embedding = masks_embedding.mean(dim=1)
+
+        print(masks_embedding.shape)
+        print(self.items_change["proposal_emb"].shape)
+        print(batch_size)
+
+        batch_masked = []
+        # check if best_masks not null
+        for i in range(batch_size): 
+
+            # 1 x M --| M number of masks in items change
+            sim_scores = self.compute_cross_sim(masks_embedding[i,...], self.items_change["proposal_emb"][i,...])
+
+            data = MaskData(
+                # M x H x W
+                masks=self.items_change["masks"][i,...], # need to align dimensions
+                # M
+                sim=sim_scores,
+                iou_preds=self.items_change["iou_preds"][i,...],
+                ci=self.items_change["confidence_scores"][i,...],
             )
-            # Choose the model's best mask
-            selected_masks[i, :, :] = masks[np.argmax(scores), :, :]
 
-        return selected_masks
+            # get similar changes
+            data, th = thresholding(data, attr="sim", method=self.th_sim, filtering_type=FilteringType.Sup)
+            batch_masked.append(data)
 
-    def extract_proposal_embedding(self, masks: np.ndarray):
-        embedding = np.zeros((len(masks), *self.S_CHGT_EMB))
+        if best_masks.shape[1]:
+            best_masks = resize(best_masks, IMG_SIZE)
 
-        for i in range(masks.shape[0]):
-            embedding[i, :] = compute_mask_embedding(
-                masks[i, :, :], get_img_embedding_normed(self.predictor)
-            )
-        # get avg of embedding mask
-        embedding = np.mean(embedding, axis=0)
-        return embedding
+        sim_masks = pad_sequence([elem["masks"] for elem in batch_masked], batch_first=True)
+        sim_iou_preds = pad_sequence([elem["iou_preds"] for elem in batch_masked], batch_first=True)
+        sim_ci = pad_sequence([elem["iou_preds"] for elem in batch_masked], batch_first=True)
+        sim_sim = pad_sequence([elem["sim"] for elem in batch_masked], batch_first=True)
+
+        masks = torch.cat([sim_masks, best_masks], dim=1)
+        iou_preds = torch.cat([sim_iou_preds, best_ious], dim=1)
+        
+        # simulate confidence score as changement, i.e neg cosine sim high
+        ci = torch.cat([sim_ci, torch.ones((batch_size, best_masks.shape[1]))], dim=1)
+        # simulate  i.e cosine sim max for prompts objects
+        sim = torch.cat([sim_sim, torch.ones((batch_size, best_masks.shape[1]))], dim=1)
+
+        return dict(masks=masks, 
+                    all_changes=self.items_change["masks"], # tmp
+                    sim=sim, # tmp
+                    prompt_masks=best_masks,
+                    iou_preds=iou_preds, # B x max(NA, NB) 
+                    confidence_scores=ci) # B x max(NA, NB) )

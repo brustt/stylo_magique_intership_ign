@@ -11,31 +11,27 @@ from torchvision.ops.boxes import batched_nms, box_area  # type: ignore
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from magic_pen.data.process import generate_grid_prompt
 from segment_any_change.masks.mask_items import ImgType
 from segment_any_change.masks.mask_process import (
     binarize_mask,
-    filters_masks,
     nms_wrapper,
     postprocess_small_regions,
+    MaskData
 )
 from torch.profiler import profile, record_function, ProfilerActivity
 from segment_any_change.model import BiSam
 from segment_any_change.sa_dev_v0.modeling import Sam
 from segment_any_change.sa_dev_v0 import SamAutomaticMaskGenerator
 from segment_any_change.sa_dev_v0.utils.amg import (
-    MaskData,
     area_from_rle,
     batch_iterator,
     batched_mask_to_box,
     box_xyxy_to_xywh,
-    build_all_layer_point_grids,
     calculate_stability_score,
     coco_encode_rle,
     generate_crop_boxes,
     is_box_near_crop_edge,
     mask_to_rle_pytorch,
-    remove_small_regions,
     rle_to_mask,
     uncrop_boxes_xyxy,
     uncrop_masks,

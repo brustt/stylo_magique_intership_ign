@@ -7,14 +7,15 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 import re
-from typing import Dict, Optional, Union
+from typing import Any, Dict, Optional, Union
 
-
+from commons.constants import NamedModels
 from magic_pen.config import DEVICE, logs_dir
 from magic_pen.dummy import DummyModel
 from segment_any_change.eval import UnitsMetricCounts
 from magic_pen.utils_io import check_dir
 from segment_any_change.matching import BitemporalMatching
+from segment_any_change.query_prompt import SegAnyPrompt
 from segment_any_change.utils import SegAnyChangeVersion, load_sam
 from torchmetrics.detection import MeanAveragePrecision
 from torchmetrics.classification import (
@@ -25,14 +26,16 @@ from torchmetrics.classification import (
     BinaryConfusionMatrix
 )
 from segment_any_change.model import BiSam
-
-
 from magic_pen.utils_io import check_dir
+
+
+# TODO : refacto with hydra & hydra-zen
 
 
 @dataclass
 class ExperimentParams:
     # global
+    model_name: NamedModels
     model_type: str
     batch_size: int
     output_dir: Union[str, Path]
@@ -42,6 +45,9 @@ class ExperimentParams:
     th_change_proposals: str
     seganychange_version: SegAnyChangeVersion
     col_nms_threshold: str
+    # prompt engine
+    th_sim: Any
+    n_points_grid: int
     # sam mask generation
     prompt_type: int
     n_prompt: int # number of prompt to sample
@@ -63,26 +69,40 @@ class ExperimentParams:
 
 
 
-def choose_model(is_debug, params):
+def choose_model(params: ExperimentParams):
 
-    if is_debug:
+    if params.model_name  == NamedModels.DUMMY.value:
+
         return DummyModel(3, 1).to(DEVICE)
-    else:
+
+    elif params.model_name  == NamedModels.SEGANYMATCHING.value:
+
         sam = load_sam(
             model_type=params.model_type, model_cls=BiSam, version="dev", device=DEVICE
         )
         # set to float16 - for cuda runtime
-        return BitemporalMatching(
+        return matching_engine == BitemporalMatching(
             model=sam,
             version=params.seganychange_version,
-            th_change_proposals=params.th_change_proposals,
-            pred_iou_thresh=params.pred_iou_thresh,
-            stability_score_thresh=params.stability_score_thresh,
-            stability_score_offset=params.stability_score_offset,
-            box_nms_thresh=params.box_nms_thresh,
-            min_mask_region_area=params.min_mask_region_area,
-            col_nms_threshold=params.col_nms_threshold,
+            **asdict(params)
         )
+    
+    elif params.model_name  == NamedModels.SEGANYPROMPT.value:
+
+        sam = load_sam(
+            model_type=params.model_type, model_cls=BiSam, version="dev", device=DEVICE
+        )
+
+        matching_engine = BitemporalMatching(
+            model=sam,
+            version=params.seganychange_version,
+            **asdict(params)
+        )
+
+        return SegAnyPrompt(matching_engine, **asdict(params))
+    else:
+        raise RuntimeError(f"Model {params.model_name} not known")
+
 
 
 def load_debug_cli_params():
@@ -141,6 +161,7 @@ def load_default_exp_params(**params):
         "batch_size": params["batch_size"],
         "model_type": "vit_h",
         "ds_name": params["ds_name"],
+
     }
     exp_params["exp_id"] = datetime.now().strftime("%Y%m%d_%H%M%S")
     exp_params["exp_name"] = "seganychange_repr_change_th"
@@ -148,10 +169,12 @@ def load_default_exp_params(**params):
 
     seganychange_params = {
         "prompt_type":"grid",
+        "n_points_grid": 1024,
         "loc":"center", # only for prompt_type == sample
-        "th_change_proposals": "otsu",
+        "th_change_proposals": 60,
         "col_nms_threshold": "ci",  # ci | iou_preds
         "seganychange_version": SegAnyChangeVersion.AUTHOR,
+        "th_sim":"otsu"
     }
 
     # sam mask generation
@@ -186,6 +209,7 @@ def load_default_exp_params(**params):
 
     if params.get("th_change_proposals", None) and isinstance(params.get("th_change_proposals"), str):
         if not re.match('[a-z]', params.get("th_change_proposals")):
+            print("hjk")
             params["th_change_proposals"] = float(params["th_change_proposals"])
 
     return ExperimentParams(

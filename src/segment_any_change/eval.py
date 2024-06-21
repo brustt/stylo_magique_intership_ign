@@ -1,5 +1,4 @@
-from abc import ABC, abstractmethod
-from typing import Any, Callable, List, Dict, Tuple, Union
+from typing import Any, List, Dict, Tuple, Union
 from deprecated import deprecated
 import torch
 from torchmetrics import Metric, MetricCollection
@@ -231,7 +230,7 @@ class OfflineEvaluator:
         """"set metrics from TensorboardCallback"""
         pass
 
-
+# Draft
 @torch.no_grad()
 def evaluate(
     model: Any,

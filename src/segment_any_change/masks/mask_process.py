@@ -4,7 +4,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from magic_pen.config import DEVICE
-from segment_any_change.masks.mask_items import ListProposal
 from segment_any_change.sa_dev.utils.amg import (
     MaskData,
     remove_small_regions,

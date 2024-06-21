@@ -77,15 +77,23 @@ class BiSam(nn.Module):
         Returns:
             List[Dict[str, torch.Tensor]]: dict return as prediction batch tensor
         """
-        bactch_size = batched_input[next(iter(batched_input))].shape[0]
+        batch_size = batched_input[next(iter(batched_input))].shape[0]
+        print(f"Mode : {SamModeInference.AUTO.value}")
 
         if mode == SamModeInference.AUTO:
-            # maybe get out theses lines outside
+
             input_images = torch.cat([batched_input["img_A"], batched_input["img_B"]])
-            batched_input["point_coords"] = batched_input["point_coords"].repeat(bactch_size, 1, 1)
-            batched_input["point_labels"] = batched_input["point_labels"].repeat(bactch_size, 1)
+            point_coords = batched_input["point_coords"].repeat(2, 1, 1)
+            point_labels = batched_input["point_labels"].repeat(2, 1)
+
+        elif mode == SamModeInference.INTERACTIVE:
+
+            input_images = batched_input["img_B"].detach().clone()
+            point_coords = batched_input["point_coords"].detach().clone()
+            point_labels = batched_input["point_labels"].detach().clone()
+            
         else:
-            input_images = deepcopy(batched_input["img_A"])
+            raise ValueError("SAM mode not recognized")
         
         input_images = self.preprocess(input_images)
         print("DTYPE input model", input_images.dtype)
@@ -94,8 +102,8 @@ class BiSam(nn.Module):
 
         sparse_embeddings, dense_embeddings = self.prompt_encoder(
             points=(
-                batched_input["point_coords"][:, :, None, :],
-                batched_input["point_labels"][..., None],
+                point_coords[:, :, None, :],
+                point_labels[..., None],
             ),
             boxes=None,
             masks=None,
@@ -156,7 +164,7 @@ class BiSam(nn.Module):
     def get_image_embedding(self, img_type: ImgType = None) -> torch.Tensor:
         if self.image_embeddings is None:
             raise RuntimeError("Please compute batch images embedding first")
-
+        # TODO: extraction by types is WRONG if only on type (query prompt) is provided
         if img_type == ImgType.A:
             return self.image_embeddings.view(
                 self.image_embeddings.shape[0] // 2,

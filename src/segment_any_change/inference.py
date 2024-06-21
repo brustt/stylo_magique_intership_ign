@@ -5,14 +5,12 @@ from commons.constants import NamedDataset
 from segment_any_change.config_run import (
     ExperimentParams,
     choose_model,
-    load_default_metrics,
     load_exp_params,
 )
 from segment_any_change.eval import MetricEngine
 from torchmetrics import Metric
 from tqdm import tqdm
-from segment_any_change.utils import SegAnyChangeVersion, load_img
-from segment_any_change.config_run import load_default_exp_params
+from segment_any_change.utils import  load_img
 import torch
 from magic_pen.data.loader import BiTemporalDataset
 from magic_pen.data.process import DefaultTransform, generate_prompt

@@ -20,6 +20,7 @@ def generate_grid_prompt(n_points, img_size: int=IMG_SIZE) -> np.ndarray:
 
 
 def generate_prompt(mask, dtype: str, n_point: int, **kwargs) -> torch.Tensor:
+    """Generate n_point prompts for a mask : grid or sample mode (dtype)"""
     img_size = mask.shape[-1]
     match dtype:
         case "grid":
@@ -29,7 +30,6 @@ def generate_prompt(mask, dtype: str, n_point: int, **kwargs) -> torch.Tensor:
         case "sample":
             loc = kwargs.get('loc', "center")
             prompt, labels = PointSampler().sample(mask, n_point, loc=loc)
-            print("PROMPT SAMPLE : ", prompt)
         case _:
             raise ValueError("Please provide valid prompt builder name")
 
@@ -54,9 +54,12 @@ class PointSampler:
             
         # extract shapes from mask
         shapes = extract_object_from_batch(mask).squeeze(0)
+
         # first check to prevent sum over all the masks
         if shapes.shape[0] > 1 or torch.sum(shapes):
+            # check for validity of sampling
             # draw selected shapes
+            n_point = min(shapes.shape[0], n_point)
             id_draw = torch.multinomial(torch.arange(shapes.shape[0], dtype=torch.float), n_point, replacement=False)
             # get the coord of the pixels shapes (M x 3) - M number of not zeros pixels
             coords_candidates = torch.nonzero(shapes[id_draw]).to(torch.float)

@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-import os
 from typing import Any, List, Optional, Tuple, Union
 from segment_any_change.config_run import (
     ExperimentParams,
@@ -53,7 +51,7 @@ def main(
         ),  # parameters meaning ?
     )
 
-    model = choose_model(is_debug, params)
+    model = choose_model(params)
 
     pl_module = CDModule(model=model, metrics=metrics, params=params)
 
@@ -83,6 +81,7 @@ if __name__ == "__main__":
     if not gettrace():
         # CLI
         parser = argparse.ArgumentParser(description="A simple CLI parser")
+        parser.add_argument("--model_name", type=str, help="The name of the dataset")
         parser.add_argument("--ds_name", type=str, help="The name of the dataset")
         parser.add_argument(
             "--n_job_by_node", type=int, help="Number of job by node", default=1

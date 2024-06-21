@@ -10,9 +10,7 @@ import cv2
 from magic_pen.utils_io import load_levircd_sample
 from segment_any_change.sa_dev import sam_model_registry
 from segment_any_change.sa_dev_v0 import sam_model_registry as sam_model_registry_v0
-from segment_any_change.sa_dev.utils.amg import MaskData
 
-from torch.nn.utils.rnn import pad_sequence
 from magic_pen.config import DEVICE, IMG_SIZE, sam_dict_checkpoint
 import time
 from collections.abc import Iterable
@@ -213,13 +211,13 @@ def show_points(coords, labels, ax, marker_size=25):
         linewidth=1.25,
     )
 
-
 def show_prediction_sample(output: Dict, idx:int=None):
-    """Show sample in a row plot : 
+    """Show sample of given batch in a row plot : 
     - img_A
     - img_B
     - label
     - prediction (masks aggregated)
+    ...
     Args:
         output (Dict): output model with batch
         idx (int, optional): sample index in the batch. Defaults to None.
@@ -228,18 +226,31 @@ def show_prediction_sample(output: Dict, idx:int=None):
     img_A = output["batch"]["img_A"].cpu().squeeze(0)
     img_B = output["batch"]["img_B"].cpu().squeeze(0)
     label = output["batch"]["label"].cpu().squeeze(0)
+    #raw_masks = output["pred"]["raw_masks"].cpu().squeeze(0)
+    masks_change = output["pred"]["all_changes"].cpu().squeeze(0)
 
+    prompts = output["batch"]["point_coords"].cpu().squeeze(0)
+    
     if idx is not None:
         masks = masks[idx].squeeze(0)
         img_A = img_A[idx].squeeze(0)
         img_B = img_B[idx].squeeze(0)
         label = label[idx].squeeze(0)
+        prompts = prompts[idx].squeeze(0)
+        #raw_masks = raw_masks[idx].squeeze(0)
+        masks_change = masks_change[idx].squeeze(0)
 
     if masks.ndim == 3:
         masks = torch.sum(masks, dim=0)
-    fig, axs = plt.subplots(ncols=4, squeeze=False, figsize=(10, 10))
+        #raw_masks = torch.sum(raw_masks, dim=0)
+        masks_change = torch.sum(masks_change, dim=0)
+
+    imgs = [img_A, img_B, label, masks_change, masks]
+    names = ["img_A", "img_B", "label", "all_changes", "sim_changes"]
+
+    fig, axs = plt.subplots(ncols=len(imgs), squeeze=False, figsize=(10, 10))
     for i, sample in enumerate(
-        zip([img_A, img_B, label, masks], ["img_A", "img_B", "label", "masks_agg"])
+        zip(imgs, names)
     ):
         img, name = sample
         if name.startswith("im"):
@@ -252,6 +263,13 @@ def show_prediction_sample(output: Dict, idx:int=None):
 
         axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
         axs[0, i].set_title(name)
+        if name == "img_B":
+            if prompts.shape[0] < 100: # prevent showing grid
+                colors = [np.random.choice(range(256), size=3) / 255 for _ in range(len(prompts))]
+                for pt,c in zip(prompts, colors):
+                    print(pt)
+                    axs[0, i].scatter(*pt, color=c, marker='*', s=50)
+
 
 
 def rad_to_degre(x):
