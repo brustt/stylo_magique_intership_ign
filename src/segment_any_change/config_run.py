@@ -149,7 +149,6 @@ def load_fast_exp_params(**params):
         **(
             asdict(default_params)
             | new_params  # merge other parameters - overwrite existing ones
-            | params
         )
     )
 
@@ -209,7 +208,6 @@ def load_default_exp_params(**params):
 
     if params.get("th_change_proposals", None) and isinstance(params.get("th_change_proposals"), str):
         if not re.match('[a-z]', params.get("th_change_proposals")):
-            print("hjk")
             params["th_change_proposals"] = float(params["th_change_proposals"])
 
     return ExperimentParams(

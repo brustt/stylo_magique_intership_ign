@@ -113,7 +113,7 @@ def apply_otsu(
     arr = to_numpy(data[attr], transpose=False)
     th = threshold_otsu(arr[~np.isnan(arr)])
     print(th)
-    return apply_th(data, filtering_type,  th)
+    return apply_th(data, attr, filtering_type,  th)
 
 
 def apply_th(data: MaskData,  attr: str, filtering_type: FilteringType, th: float,
