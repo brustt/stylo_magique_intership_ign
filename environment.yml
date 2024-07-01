@@ -14,7 +14,6 @@ dependencies:
   - gh
   - pandas
   - rasterio
-  - opencv-python
   - matplotlib
   - scikit-image
   - black
@@ -25,8 +24,10 @@ dependencies:
   - pytorch-lightning
   - torchmetrics
   - tqdm
+  - conda-build
+  - hydra-core
   - pip:
     - deprecated
     - torch_tb_profiler
     - pycocotools
-prefix: /home/MDizier/miniforge3/envs/magic_pen
+    - opencv-python-headless
