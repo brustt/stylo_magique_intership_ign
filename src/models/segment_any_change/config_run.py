@@ -3,7 +3,7 @@ tmp file for exploration and experiment params runs
 """
 
 import argparse
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 import re
@@ -30,39 +30,40 @@ from commons.utils_io import check_dir
 
 # TODO : refacto with hydra & hydra-zen
 
+# TODO : add default value here
 
 @dataclass
 class ExperimentParams:
     # global
-    model_name: NamedModels
-    model_type: str
-    batch_size: int
-    output_dir: Union[str, Path]
-    logs_dir: Union[str, Path]
-    ds_name: str  # check for existance - Enum type
+    model_name: NamedModels = NamedModels.SEGANYMATCHING
+    model_type: str = "vit_b"
+    batch_size: int = 2
+    output_dir: Union[str, Path] = "outdir"
+    logs_dir: Union[str, Path] = "logdir"
+    ds_name: str = "levircd"  # check for existance - Enum type
     # seg any change
-    th_change_proposals: str
-    seganychange_version: SegAnyChangeVersion
-    col_nms_threshold: str
+    th_change_proposals: str = "otsu"
+    seganychange_version: SegAnyChangeVersion = SegAnyChangeVersion.AUTHOR
+    col_nms_threshold: str = "col"
     # prompt engine
-    th_sim: Any
-    n_points_grid: int
+    th_sim: Any = "col"
+    n_points_grid: int = 12
     # sam mask generation
-    prompt_type: int
-    n_prompt: int # number of prompt to sample
-    pred_iou_thresh: float
-    stability_score_thresh: float
-    stability_score_offset: float
-    box_nms_thresh: float
-    min_mask_region_area: float
-    engine_metric: Dict
+    prompt_type: int = 12
+    n_prompt: int = 12 # number of prompt to sample
+    pred_iou_thresh: float = 12
+    stability_score_thresh: float = 12
+    stability_score_offset: float = 12
+    box_nms_thresh: float = 12
+    min_mask_region_area: float = 12
+    engine_metric: Dict = field(default_factory=lambda: dict(key=12))
     # exp
-    exp_id: str
-    exp_name: str
+    exp_id: str = "12"
+    exp_name: str  = "12"
     # run
-    num_worker: int
-    n_job_by_node: int
-    dev: bool  # True : infer with smaller model and less points from grid
+    num_worker: int  = 1
+    n_job_by_node: int = 1
+    dev: bool = True # True : infer with smaller model and less points from grid
     # sam mask generation
     loc: Optional[str] = None # pormpt sampling : center or random
 

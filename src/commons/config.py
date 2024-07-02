@@ -11,6 +11,8 @@ root_data_path = Path(os.path.expanduser("~"), "data/dl")
 data_path = Path(project_path, "data")
 sam_data_path = Path(data_path, "demo", "sam")
 
+CONFIG_PATH = Path(project_path, "config")
+
 # TODO : change constants name to uppercase
 # ds paths
 levirCD_path = Path(root_data_path, "levir-cd")
