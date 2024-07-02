@@ -1,4 +1,0 @@
-my_conf:
-  db:
-    host: error
-    port: 1000

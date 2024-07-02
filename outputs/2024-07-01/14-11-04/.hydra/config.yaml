@@ -1,7 +1,0 @@
-db:
-  host: localhost
-  port: 3306
-ui:
-  title: My app
-  width: 1024
-  height: 768

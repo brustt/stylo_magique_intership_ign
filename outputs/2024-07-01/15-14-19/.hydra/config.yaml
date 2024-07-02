@@ -1,4 +1,0 @@
-segany_config:
-  batch_size: 32
-  output_dir: new_outdir
-  logs_dir: new_logdir
