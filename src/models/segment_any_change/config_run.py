@@ -74,6 +74,7 @@ def load_debug_cli_params():
     args.dev = False
     args.n_job_by_node = 1
     args.batch_size = 2
+    args.model_name = NamedModels.SEGANYMATCHING.value
     params = vars(args)
     return params
 

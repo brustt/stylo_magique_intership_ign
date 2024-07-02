@@ -78,7 +78,7 @@ class BiSam(nn.Module):
             List[Dict[str, torch.Tensor]]: dict return as prediction batch tensor
         """
         batch_size = batched_input[next(iter(batched_input))].shape[0]
-        print(f"Mode : {SamModeInference.AUTO.value}")
+        print(f"Mode : {mode}")
 
         if mode == SamModeInference.AUTO:
 
@@ -91,6 +91,7 @@ class BiSam(nn.Module):
             input_images = batched_input["img_B"].detach().clone()
             point_coords = batched_input["point_coords"].detach().clone()
             point_labels = batched_input["point_labels"].detach().clone()
+            print(point_coords.shape)
             
         else:
             raise ValueError("SAM mode not recognized")

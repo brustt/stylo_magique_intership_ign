@@ -3,7 +3,6 @@ from typing import Any, Dict, List
 import pytorch_lightning as pl
 import torch
 from .config_run import ExperimentParams
-from src.commons.eval import MetricEngine
 
 
 class CDModule(pl.LightningModule):

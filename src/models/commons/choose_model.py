@@ -18,8 +18,8 @@ def choose_model(params: ExperimentParams):
         sam = load_sam(
             model_type=params.model_type, model_cls=BiSam, version="dev", device=DEVICE
         )
-        # set to float16 - for cuda runtime
-        return matching_engine == BitemporalMatching(
+        
+        return BitemporalMatching(
             model=sam,
             version=params.seganychange_version,
             **asdict(params)

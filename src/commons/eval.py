@@ -207,9 +207,8 @@ class MetricEngine:
 
     def update(self, preds: torch.Tensor, labels: torch.Tensor) -> None:
         print(f"update : {self.name}")
-        proc_method_name = self.check_processing(self.name)
         preds, labels = _factory_metric_processing(
-            proc_method_name, preds, labels, **self.params
+            _register_group_metric_processing[self.name], preds, labels, **self.params
         )
         print(f"-")
 
