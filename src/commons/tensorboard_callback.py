@@ -107,7 +107,7 @@ class TensorBoardCallbackLogger(Callback):
         self.confmat.update(preds, labels)
         self.metrics_classif.update(preds, labels)
 
-        # pre processing is done twice in regards of global metrics
+        # pre processing is done twice in regards of global metrics :(
         for engine in self._register_engine_instance:
             preds_, labels_ = _factory_metric_processing(
                 engine.check_processing(engine.name), preds, labels, **engine.params
@@ -190,11 +190,14 @@ class TensorBoardCallbackLogger(Callback):
         _top_k = 10
 
         self.tracking_instance_metrics = pd.DataFrame(self.tracking_instance_metrics)
+        print(self.tracking_instance_metrics)
 
-        top_metric = self.tracking_instance_metrics.sort_values(by=_rank_metric)[:_top_k].index 
+        top_metric = self.tracking_instance_metrics.sort_values(by=_rank_metric)[:_top_k] 
         selected_idx = top_metric.index
 
-        dloader = trainer.test_dataloader
+        # dloader = trainer.test_dataloaders
+        # TODO : get best predictions and worst predictions
+        # store predictions in memory vs re-run model on indices vs store 10 best and 10 worst
 
 
 
