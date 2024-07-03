@@ -80,13 +80,13 @@ class BiSam(nn.Module):
         batch_size = batched_input[next(iter(batched_input))].shape[0]
         print(f"Mode : {mode}")
 
-        if mode == SamModeInference.AUTO:
+        if mode.value == SamModeInference.AUTO.value:
 
             input_images = torch.cat([batched_input["img_A"], batched_input["img_B"]])
             point_coords = batched_input["point_coords"].repeat(2, 1, 1)
             point_labels = batched_input["point_labels"].repeat(2, 1)
 
-        elif mode == SamModeInference.INTERACTIVE:
+        elif mode.value == SamModeInference.INTERACTIVE.value:
 
             input_images = batched_input["img_B"].detach().clone()
             point_coords = batched_input["point_coords"].detach().clone()
@@ -94,7 +94,7 @@ class BiSam(nn.Module):
             print(point_coords.shape)
             
         else:
-            raise ValueError("SAM mode not recognized")
+            raise ValueError(f"mode {mode} for SAM not recognized")
         
         input_images = self.preprocess(input_images)
         print("DTYPE input model", input_images.dtype)

@@ -50,7 +50,7 @@ class CDDataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self):
-        subset = torch.utils.data.Subset(self.test, np.arange(4))
+        subset = torch.utils.data.Subset(self.test, np.random.randint(0, 100, 4))
         return data.DataLoader(
             subset,#self.test,
             batch_size=self.batch_size,

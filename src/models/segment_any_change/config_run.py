@@ -10,7 +10,7 @@ import re
 from typing import Any, Dict, Optional, Union
 
 from commons.constants import NamedModels
-from commons.config import DEVICE, logs_dir
+from commons.config import DEVICE, LOGS_DIR
 from commons.eval import UnitsMetricCounts
 from commons.utils_io import check_dir
 from .matching import BitemporalMatching
@@ -46,7 +46,7 @@ class ExperimentParams:
     seganychange_version: SegAnyChangeVersion = SegAnyChangeVersion.AUTHOR
     col_nms_threshold: str = "col"
     # prompt engine
-    th_sim: Any = "col"
+    th_sim: Any = 60
     n_points_grid: int = 12
     # sam mask generation
     prompt_type: int = 12
@@ -102,9 +102,24 @@ def load_exp_params(**params):
 
 def load_fast_exp_params(**params):
     # fast inference
+    project = "seganychange"
     new_params = {
         "model_type": "vit_b",
-        "n_prompt": 16*16,  # lower for speed
+        "n_points_grid": 32,  # lower for speed
+        "ds_name": params["ds_name"],
+        "exp_name": "seganychange_repr_change_th"
+    }
+
+    dir_params = {
+        "output_dir": check_dir(
+            LOGS_DIR,
+            project,
+            new_params["ds_name"],
+            f"predictions-{new_params['model_type']}",
+        ),
+        "logs_dir": check_dir(
+            LOGS_DIR, project, new_params["ds_name"], new_params["exp_name"], new_params['model_type']
+        ),
     }
 
     default_params = load_default_exp_params(**params)
@@ -113,6 +128,7 @@ def load_fast_exp_params(**params):
         **(
             asdict(default_params)
             | new_params  # merge other parameters - overwrite existing ones
+            | dir_params
         )
     )
 
@@ -137,12 +153,12 @@ def load_default_exp_params(**params):
         "th_change_proposals": 60,
         "col_nms_threshold": "ci",  # ci | iou_preds
         "seganychange_version": SegAnyChangeVersion.AUTHOR,
-        "th_sim":"otsu"
+        "th_sim": 0.9
     }
 
     # sam mask generation
     sam_params = {
-        "n_prompt": 1024,  # lower for speed
+        "n_prompt": 3,  # lower for speed
         "pred_iou_thresh": 0.88,  # configure lower for exhaustivity
         "stability_score_thresh": 0.95,  # configure lower for exhaustivity
         "stability_score_offset": 1.0,
@@ -152,13 +168,13 @@ def load_default_exp_params(**params):
 
     dir_params = {
         "output_dir": check_dir(
-            logs_dir,
+            LOGS_DIR,
             project,
             exp_params["ds_name"],
             f"predictions-{exp_params['model_type']}",
         ),
         "logs_dir": check_dir(
-            logs_dir, project, exp_params["ds_name"], exp_params["exp_name"]
+            LOGS_DIR, project, exp_params["ds_name"], exp_params["exp_name"], exp_params['model_type']
         ),
     }
 

@@ -9,11 +9,11 @@ from src.models.commons.choose_model import choose_model
 import torch
 from torchmetrics import Metric
 from commons.tensorboard_callback import (
-    CustomWriter,
+    PredictionWriter,
     TensorBoardCallbackLogger,
 )
 
-from commons.config import DEVICE, SEED, logs_dir
+from commons.config import DEVICE, SEED
 import pytorch_lightning as pl
 from pytorch_lightning.profilers import PyTorchProfiler
 from src.data.datamodule import CDDataModule
@@ -49,6 +49,7 @@ def main(
         schedule=torch.profiler.schedule(
             skip_first=10, wait=1, warmup=1, active=20
         ),  # parameters meaning ?
+        sort_by_key="cpu_memory_usage",
     )
 
     model = choose_model(params)
@@ -61,7 +62,7 @@ def main(
 
     callbacks = [
         TensorBoardCallbackLogger(params),
-        CustomWriter(output_dir=params.output_dir, write_interval="epoch"),
+        # PredictionWriter(output_dir=params.output_dir, write_interval=1)
     ]
     trainer = pl.Trainer(
         logger=logger, accelerator=DEVICE, profiler=profiler, callbacks=callbacks

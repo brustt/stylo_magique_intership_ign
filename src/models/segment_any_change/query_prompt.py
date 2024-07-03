@@ -140,10 +140,6 @@ class QueryPointMecanism:
         # need to have 1 emb => mean of mask_embedding : B x 256
         masks_embedding = masks_embedding.mean(dim=1)
 
-        print(masks_embedding.shape)
-        print(self.items_change["proposal_emb"].shape)
-        print(batch_size)
-
         batch_masked = []
         # check if best_masks not null
         for i in range(batch_size): 

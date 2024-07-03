@@ -77,10 +77,10 @@ class UnitsMetricCounts(Metric):
     def compute(self) -> Dict[str, torch.Tensor]:
         # does we need to keep discrimate objects; i.e not only keep binary indices ?
         # 1 x B x H x W
-        tp_indices = torch.cat(self.tp_indices, dim=0)
-        fp_indices = torch.cat(self.fp_indices, dim=0)
-        fn_indices = torch.cat(self.fn_indices, dim=0)
-        tn_indices = torch.cat(self.tn_indices, dim=0)
+        tp_indices = torch.cat(self.tp_indices, dim=0).clone().detach()
+        fp_indices = torch.cat(self.fp_indices, dim=0).clone().detach()
+        fn_indices = torch.cat(self.fn_indices, dim=0).clone().detach()
+        tn_indices = torch.cat(self.tn_indices, dim=0).clone().detach()
 
         # flush units tracking - maybe better to do
         self.tp_indices = []
@@ -195,7 +195,7 @@ class MetricEngine:
         self.name=name
         self.params = kwargs
 
-    def check_procsegment_any_changessing(self, name: str) -> str:
+    def check_processing(self, name: str) -> str:
         """Extract processing function key name from _register_metric_processing based on metric name"""
         raw_name = re.sub(self.prefix, "", name)
         if not _register_group_metric_processing.get(raw_name, None):
@@ -205,13 +205,12 @@ class MetricEngine:
     def compute(self) -> Dict[str, torch.Tensor]:
         return self.metrics.compute()
 
-    def update(self, preds: torch.Tensor, labels: torch.Tensor) -> None:
+    def update(self, preds: Dict, labels: torch.Tensor, processing: bool=True) -> None:
         print(f"update : {self.name}")
-        preds, labels = _factory_metric_processing(
-            _register_group_metric_processing[self.name], preds, labels, **self.params
-        )
-        print(f"-")
-
+        if processing:
+            preds, labels = _factory_metric_processing(
+                self.check_processing(self.name), preds, labels, **self.params
+            )
         self.metrics.update(
             preds, labels
         )

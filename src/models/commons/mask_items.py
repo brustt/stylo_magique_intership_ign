@@ -84,6 +84,8 @@ class MaskData:
                 
 def thresholding(data: MaskData, attr: str, method: Union[str, float], filtering_type: FilteringType) -> Any:
     """Apply Thresholding based on change angle"""
+    
+    print(f"thresholding : {method} for {attr}")
 
     method_factory = {
         "otsu": apply_otsu,

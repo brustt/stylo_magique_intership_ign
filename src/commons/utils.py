@@ -267,7 +267,6 @@ def show_prediction_sample(output: Dict, idx:int=None):
             if prompts.shape[0] < 100: # prevent showing grid
                 colors = [np.random.choice(range(256), size=3) / 255 for _ in range(len(prompts))]
                 for pt,c in zip(prompts, colors):
-                    print(pt)
                     axs[0, i].scatter(*pt, color=c, marker='*', s=50)
 
 
@@ -407,8 +406,8 @@ def plot_confusion_matrix(confusion_matrix, fig_return: bool = True):
         annot=True,
         cmap="YlGnBu",
         fmt=".2f",
-        xticklabels=["change", "no change"],
-        yticklabels=["change", "no change"],
+        xticklabels=["no change", "change"],
+        yticklabels=["no change", "change"],
         cbar_kws={"shrink": 0.5},
         vmin=0,
         vmax=1,

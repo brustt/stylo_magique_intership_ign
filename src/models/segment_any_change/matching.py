@@ -140,7 +140,10 @@ class BitemporalMatching:
 
             # apply change threshold
             data["chgt_angle"] = to_degre_torch(data["ci"])
-            data, th = thresholding(data, attr="chgt_angle", method=self.filter_method, filtering_type=FilteringType.Inf)
+            print("chgt_angle")
+            print(data["chgt_angle"].shape)
+            data, th = thresholding(data, attr="chgt_angle", method=self.filter_method, filtering_type=FilteringType.Sup)
+            print(data["chgt_angle"].shape)
 
             # we need to get back batch information for each prediction
             # data = reconstruct_batch(data, masks.shape[0])
