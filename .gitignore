@@ -188,3 +188,4 @@ lightning_logs
 tmp/
 checkpoints/
 outputs/
+logs/

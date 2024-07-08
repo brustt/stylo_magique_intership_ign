@@ -26,8 +26,11 @@ dependencies:
   - tqdm
   - conda-build
   - hydra-core
+  - rich=13.*
   - pip:
     - deprecated
     - torch_tb_profiler
     - pycocotools
     - opencv-python-headless
+    - hydra-colorlog
+    - rootutils

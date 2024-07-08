@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from .sam import Sam
-from .image_encoder import ImageEncoderViT
+from .image_encoder_dev import ImageEncoderViT
 from .mask_decoder_dev import MaskDecoder
 from .prompt_encoder_dev import PromptEncoder
 from .transformer import TwoWayTransformer

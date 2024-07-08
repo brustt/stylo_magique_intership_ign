@@ -12,10 +12,10 @@ from typing import Any, Dict, Optional, Union
 from commons.constants import NamedModels
 from commons.config import DEVICE, LOGS_DIR
 from commons.eval import UnitsMetricCounts
-from commons.utils_io import check_dir
+from commons.utils_io import check_dir, load_sam
 from .matching import BitemporalMatching
 from models.segment_any_change.query_prompt import SegAnyPrompt
-from src.commons.utils import SegAnyChangeVersion, load_sam
+from src.commons.utils import SegAnyChangeVersion 
 from torchmetrics.detection import MeanAveragePrecision
 from torchmetrics.classification import (
     BinaryF1Score,

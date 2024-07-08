@@ -6,7 +6,7 @@ from .config_run import ExperimentParams
 
 
 class CDModule(pl.LightningModule):
-    def __init__(self, model, metrics: List, params: ExperimentParams):
+    def __init__(self, model, params: ExperimentParams):
         super().__init__()
         self.model = model
 

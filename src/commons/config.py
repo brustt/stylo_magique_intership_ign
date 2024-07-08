@@ -4,27 +4,24 @@ from pathlib import Path
 
 # TODO : split config paths int models and data
 
-# add sim link to lightnings logs and root_data_path
-project_path = os.path.dirname(find_dotenv())
+PROJECT_PATH = os.environ["PROJECT_PATH"]
+DATA_PATH = os.environ["DATA_PATH"] # simlink to /var/data
+MODEL_PATH = os.environ["CHECKPOINTS_PATH"] # simlink to /var/data
+CONFIG_PATH = Path(PROJECT_PATH, "config")
 
-root_data_path = Path(os.path.expanduser("~"), "data/dl")
-data_path = Path(project_path, "data")
-sam_data_path = Path(data_path, "demo", "sam")
+SAM_DATA_DEMO_PATH = os.environ["SAM_DATA_DEMO_PATH"]
 
-CONFIG_PATH = Path(project_path, "config")
-
-# TODO : change constants name to uppercase
 # ds paths
-levirCD_path = Path(root_data_path, "levir-cd")
-SECOND_PATH = Path(root_data_path, "SECOND")
+LEVIRCD_PATH = Path(DATA_PATH, "levir-cd")
+SECOND_PATH = Path(DATA_PATH, "SECOND")
 
-model_path = Path(project_path, "checkpoints")
-sam_model_path = Path(model_path, "sam")
-sam_model_large = Path(sam_model_path, "sam_vit_h_4b8939.pth")
-sam_model_small = Path(sam_model_path, "sam_vit_b_01ec64.pth")
-sam_dict_checkpoint = {"vit_h": sam_model_large, "vit_b": sam_model_small}
+# sam chkps paths
+SAM_MODEL_PATH = Path(MODEL_PATH, "sam")
+SAM_MODEL_LARGE_PATH = Path(SAM_MODEL_PATH, "sam_vit_h_4b8939.pth")
+SAM_MODEL_SMALL_PATH = Path(SAM_MODEL_PATH, "sam_vit_b_01ec64.pth")
+SAM_DICT_CHECKPOINT = {"vit_h": SAM_MODEL_LARGE_PATH, "vit_b": SAM_MODEL_SMALL_PATH}
 
-LOGS_DIR = Path(project_path, "lightning_logs")  # need simlink
+LOGS_DIR = Path(PROJECT_PATH, "lightning_logs") # simlink to /var/data
 
 ### constants
 

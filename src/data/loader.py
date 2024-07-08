@@ -3,7 +3,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from commons.constants import SECOND_NO_CHANGE_RGB, SECOND_RGB_TO_CAT, NamedDataset
-from commons.config import SECOND_PATH, levirCD_path, SEED
+from commons.config import SECOND_PATH, LEVIRCD_PATH, SEED
 from PIL import Image
 from torch.utils.data import Dataset
 
@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore")
 
 def get_ds_path(ds_name: str) -> str:
     data_sources = {
-        NamedDataset.LEVIR_CD.value: levirCD_path,
+        NamedDataset.LEVIR_CD.value: LEVIRCD_PATH,
         NamedDataset.SECOND.value: SECOND_PATH,
     }
     if not (ds_name in data_sources):

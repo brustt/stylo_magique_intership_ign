@@ -5,6 +5,7 @@ from models.segment_any_change.embedding import (
     get_img_embedding_normed,
 )
 from models.segment_any_change.mask_generator import SegAnyMaskGenerator
+from models.segment_anything.build_sam import load_ckpt_sam
 from src.models.commons.mask_items import (
     FilteringType,
     ImgType,
@@ -34,20 +35,24 @@ logger.setLevel(logging.INFO)
 class BitemporalMatching:
     def __init__(
         self,
-        model,
+        network,
         th_change_proposals: Union[float, str],
-        col_nms_threshold: float,
-        version: SegAnyChangeVersion,
+        col_nms_threshold: str,
         **sam_kwargs,
     ) -> None:
-        self.mask_generator = SegAnyMaskGenerator(model, **sam_kwargs)
+                
+        if not sam_kwargs.get("sam_ckpt_path", None):
+            raise ValueError("please provide sam checkpoint")
+        print(sam_kwargs)
+        print(sam_kwargs)
+
+        print("###")
+        # self.mask_generator = SegAnyMaskGenerator(model=load_ckpt_sam(network, sam_kwargs.get("sam_ckpt_path")), **sam_kwargs)
         # useful for future experimentation
-        self.seganyversion = version.value
         self.col_nms_threshold = col_nms_threshold
         self.filter_method = th_change_proposals
 
     def __call__(self, batch: Dict[str, torch.Tensor], **params) -> Any:
-        logger.info(f"=== {self.seganyversion} ====")
         items_batch = self.run(batch, **params)
         return items_batch
 

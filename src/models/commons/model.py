@@ -5,7 +5,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from .mask_items import ImgType
-from src.models.segment_anything.modeling.image_encoder import (
+from models.segment_anything.modeling.image_encoder_dev import (
     ImageEncoderViT,
 )  # edited
 from src.models.segment_anything.modeling.mask_decoder_dev import MaskDecoder  # edited

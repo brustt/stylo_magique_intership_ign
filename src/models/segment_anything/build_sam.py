@@ -118,3 +118,10 @@ def _build_sam(
             state_dict = torch.load(f)
         sam.load_state_dict(state_dict)
     return sam
+
+def load_ckpt_sam(sam, checkpoint=None):
+    if checkpoint is not None:
+        with open(checkpoint, "rb") as f:
+            state_dict = torch.load(f)
+        sam.load_state_dict(state_dict)
+    return sam

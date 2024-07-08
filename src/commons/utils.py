@@ -1,17 +1,14 @@
-from collections import defaultdict
 from enum import Enum
 from functools import wraps
 import re
-from typing import Any, Dict, List, Tuple, Union, Sequence
+from typing import Any, Dict, List, Tuple, Union
 import numpy as np
 import skimage.io as io
 import matplotlib.pyplot as plt
 import cv2
-from commons.utils_io import load_levircd_sample
-from src.models.segment_anything.build_sam_dev import sam_model_registry
-from src.models.segment_anything.build_sam import sam_model_registry as sam_model_registry_v0
+from commons.utils_io import load_img, load_levircd_sample
 
-from commons.config import DEVICE, IMG_SIZE, sam_dict_checkpoint
+from commons.config import DEVICE
 import time
 from collections.abc import Iterable
 import logging
@@ -110,31 +107,6 @@ def batch_to_list(batch: Dict[str, Any]) -> List[Dict[str, Any]]:
     return batch_list
 
 
-def load_sam(
-    model_type: str, model_cls: Any = None, version: str = "dev", device: str = DEVICE
-):
-
-    sam = None
-
-    match version:
-        case "dev":
-            sam = sam_model_registry[model_type](
-                checkpoint=sam_dict_checkpoint[model_type], model=model_cls
-            ).to(device=device)
-        case "raw":
-            sam = sam_model_registry_v0[model_type](
-                checkpoint=sam_dict_checkpoint[model_type]
-            ).to(device=device)
-        case _:
-            raise ValueError(
-                "Please provide valid sam verison implementation : dev, raw"
-            )
-    return sam
-
-
-def load_img(img_path):
-    img = io.imread(img_path)
-    return img
 
 
 def show_img(img, show_axis=False):

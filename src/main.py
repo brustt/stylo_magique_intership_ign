@@ -13,7 +13,7 @@ from commons.tensorboard_callback import (
     TensorBoardCallbackLogger,
 )
 
-from commons.config import DEVICE, SEED
+from commons.config import DEVICE, PROJECT_PATH, SEED
 import pytorch_lightning as pl
 from pytorch_lightning.profilers import PyTorchProfiler
 from src.data.datamodule import CDDataModule

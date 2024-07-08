@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Tuple
 from commons.config import IMG_SIZE
 from src.models.segment_anything.utils.amg import postprocess_filters
 
-from src.models.segment_anything.modeling.image_encoder import ImageEncoderViT
+from .image_encoder_dev import ImageEncoderViT
 from .mask_decoder_dev import MaskDecoder
 from .prompt_encoder_dev import PromptEncoder
 
