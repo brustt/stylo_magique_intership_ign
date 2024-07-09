@@ -16,7 +16,7 @@ from src.models.commons.mask_process import (
     binarize_mask,
     nms_wrapper,
     postprocess_small_regions,
-    MaskData
+    MaskData,
 )
 from torch.profiler import profile, record_function, ProfilerActivity
 from models.commons.model import BiSam
@@ -50,7 +50,7 @@ class SegAnyMaskGenerator:
         stability_score_offset: float = 1.0,
         box_nms_thresh: float = 0.7,
         min_mask_region_area: int = 0,
-        mask_threshold: float =0.0,
+        mask_threshold: float = 0.0,
         **kwargs,
     ) -> None:
 
@@ -61,7 +61,7 @@ class SegAnyMaskGenerator:
         self.box_nms_thresh = box_nms_thresh
         self.min_mask_region_area = min_mask_region_area
         self.batch_size = None
-        self.mask_threshold=mask_threshold
+        self.mask_threshold = mask_threshold
 
     @timeit
     @torch.no_grad()
@@ -79,7 +79,7 @@ class SegAnyMaskGenerator:
         #     with record_function("model_inference"):
 
         # for param in self.model.parameters():
-        #     print(param.dtype) 
+        #     print(param.dtype)
         outputs = self.model(
             batched_input=batched_input, multimask_output=True, return_logits=True
         )
@@ -115,7 +115,7 @@ class SegAnyMaskGenerator:
     def postprocess_masks(
         self, masks: torch.Tensor, iou_preds: torch.Tensor
     ) -> MaskData:
-        """Apply postprocessing for mask image : 
+        """Apply postprocessing for mask image :
         - thresholding based on iou
         - NMS
         - Binarization
@@ -158,9 +158,8 @@ class SegAnyMaskGenerator:
         stability_score_thresh: float = 0.95,  # could be lower
         stability_score_offset: float = 1.0,
     ) -> MaskData:
-        
-        print(f':: raw masks : {data["masks"].shape[0]} ::')
 
+        print(f':: raw masks : {data["masks"].shape[0]} ::')
 
         # Filter by predicted IoU
         if pred_iou_thresh > 0.0:

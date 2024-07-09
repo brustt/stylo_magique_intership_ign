@@ -9,7 +9,9 @@ from models.segment_anything.modeling.image_encoder_dev import (
     ImageEncoderViT,
 )  # edited
 from src.models.segment_anything.modeling.mask_decoder_dev import MaskDecoder  # edited
-from src.models.segment_anything.modeling.prompt_encoder_dev import PromptEncoder  # edited
+from src.models.segment_anything.modeling.prompt_encoder_dev import (
+    PromptEncoder,
+)  # edited
 
 from typing import List, Dict, Any, Tuple
 
@@ -20,9 +22,11 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
 class SamModeInference(Enum):
-    AUTO="auto"
-    INTERACTIVE="interactive"
+    AUTO = "auto"
+    INTERACTIVE = "interactive"
+
 
 class BiSam(nn.Module):
     mask_threshold: float = 0.0
@@ -63,7 +67,7 @@ class BiSam(nn.Module):
         batched_input: Dict[str, torch.Tensor],
         multimask_output: bool,
         return_logits: bool = False,
-        mode: SamModeInference = SamModeInference.AUTO
+        mode: SamModeInference = SamModeInference.AUTO,
     ) -> List[Dict[str, torch.Tensor]]:
         """
         SAM implementation for bi-input and batch inference.
@@ -92,10 +96,10 @@ class BiSam(nn.Module):
             point_coords = batched_input["point_coords"].detach().clone()
             point_labels = batched_input["point_labels"].detach().clone()
             print(point_coords.shape)
-            
+
         else:
             raise ValueError(f"mode {mode} for SAM not recognized")
-        
+
         input_images = self.preprocess(input_images)
         print("DTYPE input model", input_images.dtype)
 

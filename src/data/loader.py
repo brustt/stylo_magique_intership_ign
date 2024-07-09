@@ -48,14 +48,16 @@ class BiTemporalDataset(Dataset):
         dtype: str = "train",
         transform: Any = None,
         seed: int = SEED,
-        params: Union[DictConfig, ExperimentParams] = None
+        params: Union[DictConfig, ExperimentParams] = None,
     ) -> None:
 
         if name is None:
             raise RuntimeError("Please provide at least items or dataset name")
-        
+
         if not any([params.prompt_type, params.n_prompt]):
-            raise RuntimeError("Please provide prompt generation parameter : prompt_type and points_per_side")
+            raise RuntimeError(
+                "Please provide prompt generation parameter : prompt_type and points_per_side"
+            )
 
         self.items = load_ds(ds_name=name, data_type=dtype)
 
@@ -64,8 +66,9 @@ class BiTemporalDataset(Dataset):
         self.name = name
 
         # warning override params to default if not exists
-        self.params = params if isinstance(params, DictConfig) else OmegaConf.structured(params)
-        print(self.params)
+        self.params = (
+            params if isinstance(params, DictConfig) else OmegaConf.structured(params)
+        )
 
     def __len__(self) -> int:
         return self.items.shape[0]
@@ -88,17 +91,21 @@ class BiTemporalDataset(Dataset):
             )
 
         sample = {
-            "img_A": img_A, 
-            "img_B": img_B, 
-            "label": label, 
+            "img_A": img_A,
+            "img_B": img_B,
+            "label": label,
         }
 
         if self.transform:
             sample = self.transform(sample)
 
-        prompt_coords, prompt_labels = generate_prompt(sample["label"], self.params.prompt_type, self.params.n_prompt, self.params)
+        prompt_coords, prompt_labels = generate_prompt(
+            sample["label"], self.params.prompt_type, self.params.n_prompt, self.params
+        )
         # note : point coords are computed on transformed img (may be resized)
 
-        sample = sample | dict(index=index, point_coords=prompt_coords, point_labels=prompt_labels)
+        sample = sample | dict(
+            index=index, point_coords=prompt_coords, point_labels=prompt_labels
+        )
 
         return sample

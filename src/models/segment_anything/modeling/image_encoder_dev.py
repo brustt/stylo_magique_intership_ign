@@ -76,7 +76,7 @@ class ImageEncoderViT(nn.Module):
         self.img_size = img_size
         if not norm_layer:
             norm_layer = partial(torch.nn.LayerNorm, eps=1e-6)
-            
+
         self.patch_embed = PatchEmbed(
             kernel_size=(patch_size, patch_size),
             stride=(patch_size, patch_size),

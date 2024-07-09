@@ -1,0 +1,31 @@
+defaults:
+  - network/image_encoder: null # override in experiment
+  - network/prompt_encoder: sam_prompt_encoder
+  - network/decoder: sam_mask_decoder
+  - _self_
+
+instance:
+  _target_: src.models.segment_any_change.task.CDModule
+  params:
+    num_worker: 1
+    n_job_by_node: 2
+  model: 
+    _target_: src.models.segment_any_change.query_prompt.SegAnyPrompt
+    matching_engine:
+      _target_: src.models.segment_any_change.matching.BitemporalMatching
+      th_change_proposals: 60
+      col_nms_threshold: ci  
+      sam_ckpt_path: null
+      network: 
+        _target_: src.models.commons.model.BiSam
+        image_encoder: ${model.network.image_encoder} 
+        prompt_encoder: ${model.network.prompt_encoder}
+        mask_decoder: ${model.network.decoder}
+        pixel_mean:
+          - 123.675
+          - 116.28
+          - 103.53
+        pixel_std:
+          - 58.395
+          - 57.12
+          - 57.375

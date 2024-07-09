@@ -24,13 +24,19 @@ class CDDataModule(pl.LightningDataModule):
         # make assignments here (val/train/test split)
         # called on every process in DDP
         self.train = BiTemporalDataset(
-            name=self.name, dtype="train", transform=DefaultTransform(), params=self.params
+            name=self.name,
+            dtype="train",
+            transform=DefaultTransform(),
+            params=self.params,
         )
         # self.val = BiTemporalDataset(
         #     name=self.name, dtype="val", transform=DefaultTransform()
         # ) # not implement for SECOND
         self.test = BiTemporalDataset(
-            name=self.name, dtype="test", transform=DefaultTransform(), params=self.params
+            name=self.name,
+            dtype="test",
+            transform=DefaultTransform(),
+            params=self.params,
         )
 
     def train_dataloader(self):
@@ -52,7 +58,7 @@ class CDDataModule(pl.LightningDataModule):
     def test_dataloader(self):
         subset = torch.utils.data.Subset(self.test, np.random.randint(0, 100, 4))
         return data.DataLoader(
-            subset,#self.test,
+            subset,  # self.test,
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=self.num_worker,

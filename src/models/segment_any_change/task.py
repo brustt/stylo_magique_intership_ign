@@ -32,5 +32,6 @@ class CDModule(pl.LightningModule):
 
     def on_test_epoch_end(self) -> None:
         pass
+
     def configure_optimizers(self):
         pass

@@ -5,10 +5,12 @@ class NamedDataset(Enum):
     LEVIR_CD = "levir-cd"
     SECOND = "second"
 
+
 class NamedModels(Enum):
     DUMMY = "dummy"
     SEGANYMATCHING = "matching"
     SEGANYPROMPT = "seganyprompt"
+
 
 SECOND_RGB_TO_CAT = {
     (0, 255, 0): 1,

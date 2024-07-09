@@ -39,8 +39,8 @@ _register_group_metric_processing = {
 }
 
 _register_metric_classif_px = [
-    "BinaryF1Score", 
-    "BinaryPrecision", 
+    "BinaryF1Score",
+    "BinaryPrecision",
     "BinaryRecall",
     "BinaryJaccardIndex",
 ]
@@ -189,10 +189,12 @@ class ProcessingEval:
 
 
 class MetricEngine:
-    def __init__(self, in_metrics: List[Metric], name: str, prefix="", **kwargs) -> None:
+    def __init__(
+        self, in_metrics: List[Metric], name: str, prefix="", **kwargs
+    ) -> None:
         self.prefix = prefix
         self.metrics = MetricCollection(in_metrics, prefix=prefix)
-        self.name=name
+        self.name = name
         self.params = kwargs
 
     def check_processing(self, name: str) -> str:
@@ -205,15 +207,15 @@ class MetricEngine:
     def compute(self) -> Dict[str, torch.Tensor]:
         return self.metrics.compute()
 
-    def update(self, preds: Dict, labels: torch.Tensor, processing: bool=True) -> None:
+    def update(
+        self, preds: Dict, labels: torch.Tensor, processing: bool = True
+    ) -> None:
         print(f"update : {self.name}")
         if processing:
             preds, labels = _factory_metric_processing(
                 self.check_processing(self.name), preds, labels, **self.params
             )
-        self.metrics.update(
-            preds, labels
-        )
+        self.metrics.update(preds, labels)
 
     def reset(self) -> None:
         self.metrics.reset()
@@ -221,12 +223,13 @@ class MetricEngine:
     def __call__(self, preds, targets) -> Dict[str, torch.Tensor]:
         self.update(preds, targets)
         return self.compute()
-    
+
 
 class OfflineEvaluator:
     def __init__(self):
-        """"set metrics from TensorboardCallback"""
+        """ "set metrics from TensorboardCallback"""
         pass
+
 
 # Draft
 @torch.no_grad()

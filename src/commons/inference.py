@@ -9,7 +9,7 @@ from torchmetrics.classification import (
     BinaryF1Score,
     BinaryPrecision,
     BinaryRecall,
-    BinaryJaccardIndex
+    BinaryJaccardIndex,
 )
 from .constants import NamedDataset
 from .eval import MetricEngine
@@ -17,7 +17,7 @@ from .eval import MetricEngine
 from src.data.loader import BiTemporalDataset
 from src.data.process import DefaultTransform, generate_prompt
 
-from src.commons.utils import  load_img
+from src.commons.utils import load_img
 from src.commons.utils_io import load_levircd_sample
 
 from src.models.commons.choose_model import choose_model
@@ -26,6 +26,7 @@ from src.models.segment_any_change.config_run import (
     load_exp_params,
 )
 
+
 @dataclass
 class DataSample:
     A_path: str
@@ -33,16 +34,21 @@ class DataSample:
     label_path: str
 
 
-def load_partial_ds(ds_name: str, dtype,  params=None, indices: Sequence[int] = None):
-    ds = BiTemporalDataset(name=ds_name, dtype=dtype, transform=DefaultTransform(), params=params)
+def load_partial_ds(ds_name: str, dtype, params=None, indices: Sequence[int] = None):
+    ds = BiTemporalDataset(
+        name=ds_name, dtype=dtype, transform=DefaultTransform(), params=params
+    )
     if indices is not None and any(indices):
         ds = torch.utils.data.Subset(ds, indices)
     print(f"DATASET SUBSET : {len(ds)}")
 
     return ds
 
+
 class SampleDataset(Dataset):
-    def __init__(self, data_dict: Dict, name: str, transform: Any, params: ExperimentParams):
+    def __init__(
+        self, data_dict: Dict, name: str, transform: Any, params: ExperimentParams
+    ):
         """Generate Torch Dataset for sample
 
         Args:
@@ -65,36 +71,40 @@ class SampleDataset(Dataset):
     def __len__(self):
         return 1
 
-    def __getitem__(self, idx):    
+    def __getitem__(self, idx):
 
-    # add generation prompts based on each label zone
+        # add generation prompts based on each label zone
         if isinstance(self.sample["img_A"], str):
             self.sample["img_A"] = load_img(self.sample["img_A"])
             self.sample["img_B"] = load_img(self.sample["img_B"])
             self.sample["label"] = load_img(self.sample["label"])
 
-        
-        
         if self.transform:
             self.sample = self.transform(self.sample)
 
-        prompt_coords, prompt_labels = generate_prompt(self.sample["label"], self.params.prompt_type, self.params.n_prompt, **asdict(self.params))
-        self.sample  = self.sample  | dict(index=0, point_coords=prompt_coords, point_labels=prompt_labels)
+        prompt_coords, prompt_labels = generate_prompt(
+            self.sample["label"],
+            self.params.prompt_type,
+            self.params.n_prompt,
+            **asdict(self.params),
+        )
+        self.sample = self.sample | dict(
+            index=0, point_coords=prompt_coords, point_labels=prompt_labels
+        )
 
-        return self.sample 
+        return self.sample
+
 
 def infer_on_sample(
     A_path: Any, B_path: Any, label_path: Any, model: Any, params
 ) -> Dict[str, Any]:
 
-    ds = SampleDataset(data_dict=dict(
-        img_A=A_path, 
-        img_B=B_path, 
-        label=label_path),
-        name = "levir-cd",
+    ds = SampleDataset(
+        data_dict=dict(img_A=A_path, img_B=B_path, label=label_path),
+        name="levir-cd",
         transform=DefaultTransform(),
-        params=params
-        )
+        params=params,
+    )
 
     dloader = DataLoader(ds, batch_size=1, shuffle=False)
 
@@ -121,10 +131,12 @@ def partial_inference(
 
     ds = load_partial_ds(params.ds_name, ds_dtype, params, indices)
     if in_metrics is None:
-        in_metrics = [  BinaryF1Score(),
-                        BinaryPrecision(),
-                        BinaryRecall(),
-                        BinaryJaccardIndex()]
+        in_metrics = [
+            BinaryF1Score(),
+            BinaryPrecision(),
+            BinaryRecall(),
+            BinaryJaccardIndex(),
+        ]
 
     engine_eval = MetricEngine(in_metrics=in_metrics, name="classif")
 
@@ -147,7 +159,7 @@ def partial_inference(
 
 if __name__ == "__main__":
     pair_img = load_levircd_sample(1, seed=8)
-    path_label,path_A, path_B = pair_img.iloc[0]
+    path_label, path_A, path_B = pair_img.iloc[0]
 
     params = dict(
         batch_size=2,
@@ -159,17 +171,15 @@ if __name__ == "__main__":
         n_prompt=1024,
         loc="random",
         pred_iou_thresh=0.88,
-        stability_score_thresh=0.95
+        stability_score_thresh=0.95,
     )
     params = load_exp_params(**params)
     print(params)
     model = choose_model(is_debug=False, params=params)
 
-    output = infer_on_sample(A_path=path_A,
-                    B_path=path_B, 
-                    label_path=path_label,
-                    params=params,
-                    model=model)
+    output = infer_on_sample(
+        A_path=path_A, B_path=path_B, label_path=path_label, params=params, model=model
+    )
 
     # outputs = partial_inference(
     #     ds_name="levir-cd",

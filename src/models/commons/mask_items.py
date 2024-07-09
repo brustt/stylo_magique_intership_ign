@@ -16,9 +16,11 @@ class ImgType(Enum):
     A = 0
     B = 1
 
+
 class FilteringType(Enum):
     Inf = "inf"
     Sup = "sup"
+
 
 class MaskData:
     """
@@ -81,10 +83,12 @@ class MaskData:
             if isinstance(v, torch.Tensor):
                 self._stats[k] = v.detach().cpu().numpy()
 
-                
-def thresholding(data: MaskData, attr: str, method: Union[str, float], filtering_type: FilteringType) -> Any:
+
+def thresholding(
+    data: MaskData, attr: str, method: Union[str, float], filtering_type: FilteringType
+) -> Any:
     """Apply Thresholding based on change angle"""
-    
+
     print(f"thresholding : {method} for {attr}")
 
     method_factory = {
@@ -115,10 +119,14 @@ def apply_otsu(
     arr = to_numpy(data[attr], transpose=False)
     th = threshold_otsu(arr[~np.isnan(arr)])
     print(th)
-    return apply_th(data, attr, filtering_type,  th)
+    return apply_th(data, attr, filtering_type, th)
 
 
-def apply_th(data: MaskData,  attr: str, filtering_type: FilteringType, th: float,
+def apply_th(
+    data: MaskData,
+    attr: str,
+    filtering_type: FilteringType,
+    th: float,
 ) -> Tuple[MaskData, float]:
     if filtering_type == FilteringType.Inf:
         keep_indices = torch.where(data[attr] < th)[0]
@@ -128,4 +136,3 @@ def apply_th(data: MaskData,  attr: str, filtering_type: FilteringType, th: floa
         raise AttributeError("Please provide valid filtering type")
     data.filter(keep_indices)
     return data, th
-

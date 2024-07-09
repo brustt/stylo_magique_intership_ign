@@ -176,8 +176,9 @@ def extract_object_from_batch(masks: torch.Tensor) -> torch.Tensor:
         # no object found in batch : masks => B x 0 x H x W
         # return B x 1 x H x W zeros masks
         return torch.zeros(masks.shape[0], 1, *masks.shape[-2:])
-    
+
     return masks
+
 
 def extract_individual_object_from_mask(masks: torch.Tensor) -> torch.Tensor:
     assert masks.ndim == 3  # assert batch
@@ -353,8 +354,6 @@ def _bbox_processing(
             )
         case "label":
             return _bbox_processing_labels(labels=labels)
-
-
 
 
 def binarize_mask(masks: torch.Tensor, th: float) -> torch.Tensor:

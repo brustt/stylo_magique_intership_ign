@@ -2,10 +2,10 @@
 
 defaults:
   - override /data: levir-cd
-  - override /model: seganychange
+  - override /model: seganymatching
   - _self_
 
-tags: ["seganychange"]
+tags: ["seganychange matching"]
 
 model:
   instance:
@@ -22,7 +22,7 @@ model:
 data:
   params:
     prompt_type: "grid"
-    n_prompt: 5
+    n_prompt: 1024
     loc: center
     batch_size: 2
     num_worker: 2

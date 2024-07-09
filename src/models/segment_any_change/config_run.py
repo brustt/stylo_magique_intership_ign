@@ -15,14 +15,14 @@ from commons.eval import UnitsMetricCounts
 from commons.utils_io import check_dir, load_sam
 from .matching import BitemporalMatching
 from models.segment_any_change.query_prompt import SegAnyPrompt
-from src.commons.utils import SegAnyChangeVersion 
+from src.commons.utils import SegAnyChangeVersion
 from torchmetrics.detection import MeanAveragePrecision
 from torchmetrics.classification import (
     BinaryF1Score,
     BinaryPrecision,
     BinaryRecall,
     BinaryJaccardIndex,
-    BinaryConfusionMatrix
+    BinaryConfusionMatrix,
 )
 from models.commons.model import BiSam
 from commons.utils_io import check_dir
@@ -31,6 +31,7 @@ from commons.utils_io import check_dir
 # TODO : refacto with hydra & hydra-zen
 
 # TODO : add default value here
+
 
 @dataclass
 class ExperimentParams:
@@ -50,7 +51,7 @@ class ExperimentParams:
     n_points_grid: int = 12
     # sam mask generation
     prompt_type: int = 12
-    n_prompt: int = 12 # number of prompt to sample
+    n_prompt: int = 12  # number of prompt to sample
     pred_iou_thresh: float = 12
     stability_score_thresh: float = 12
     stability_score_offset: float = 12
@@ -59,13 +60,13 @@ class ExperimentParams:
     engine_metric: Dict = field(default_factory=lambda: dict(key=12))
     # exp
     exp_id: str = "12"
-    exp_name: str  = "12"
+    exp_name: str = "12"
     # run
-    num_worker: int  = 1
+    num_worker: int = 1
     n_job_by_node: int = 1
-    dev: bool = True # True : infer with smaller model and less points from grid
+    dev: bool = True  # True : infer with smaller model and less points from grid
     # sam mask generation
-    loc: Optional[str] = None # pormpt sampling : center or random
+    loc: Optional[str] = None  # pormpt sampling : center or random
 
 
 def load_debug_cli_params():
@@ -86,7 +87,10 @@ def load_default_metrics(**kwargs):
         BinaryRecall(),
         BinaryJaccardIndex(),
         UnitsMetricCounts(),
-        MeanAveragePrecision(iou_type=kwargs.get("iou_type_mAP", "segm"), max_detection_thresholds=kwargs.get("max_detection_thresholds", None)),
+        MeanAveragePrecision(
+            iou_type=kwargs.get("iou_type_mAP", "segm"),
+            max_detection_thresholds=kwargs.get("max_detection_thresholds", None),
+        ),
     ]
 
 
@@ -107,7 +111,7 @@ def load_fast_exp_params(**params):
         "model_type": "vit_b",
         "n_points_grid": 32,  # lower for speed
         "ds_name": params["ds_name"],
-        "exp_name": "seganychange_repr_change_th"
+        "exp_name": "seganychange_repr_change_th",
     }
 
     dir_params = {
@@ -118,7 +122,11 @@ def load_fast_exp_params(**params):
             f"predictions-{new_params['model_type']}",
         ),
         "logs_dir": check_dir(
-            LOGS_DIR, project, new_params["ds_name"], new_params["exp_name"], new_params['model_type']
+            LOGS_DIR,
+            project,
+            new_params["ds_name"],
+            new_params["exp_name"],
+            new_params["model_type"],
         ),
     }
 
@@ -140,20 +148,19 @@ def load_default_exp_params(**params):
         "batch_size": params["batch_size"],
         "model_type": "vit_h",
         "ds_name": params["ds_name"],
-
     }
     exp_params["exp_id"] = datetime.now().strftime("%Y%m%d_%H%M%S")
     exp_params["exp_name"] = "seganychange_repr_change_th"
     # '_'.join([datetime.now().strftime('%Y%m%d'), exp_params["ds_name"], exp_params["model_type"]])
 
     seganychange_params = {
-        "prompt_type":"grid",
+        "prompt_type": "grid",
         "n_points_grid": 1024,
-        "loc":"center", # only for prompt_type == sample
+        "loc": "center",  # only for prompt_type == sample
         "th_change_proposals": 60,
         "col_nms_threshold": "ci",  # ci | iou_preds
         "seganychange_version": SegAnyChangeVersion.AUTHOR,
-        "th_sim": 0.9
+        "th_sim": 0.9,
     }
 
     # sam mask generation
@@ -174,20 +181,26 @@ def load_default_exp_params(**params):
             f"predictions-{exp_params['model_type']}",
         ),
         "logs_dir": check_dir(
-            LOGS_DIR, project, exp_params["ds_name"], exp_params["exp_name"], exp_params['model_type']
+            LOGS_DIR,
+            project,
+            exp_params["ds_name"],
+            exp_params["exp_name"],
+            exp_params["model_type"],
         ),
     }
 
     engine_metric_params = {
         "engine_metric": {
-            "iou_type_mAP": "segm", 
+            "iou_type_mAP": "segm",
             "type_decision_mAP": "ci",
-            "max_detection_thresholds": [10, 100, 1000]
-            }
+            "max_detection_thresholds": [10, 100, 1000],
+        }
     }
 
-    if params.get("th_change_proposals", None) and isinstance(params.get("th_change_proposals"), str):
-        if not re.match('[a-z]', params.get("th_change_proposals")):
+    if params.get("th_change_proposals", None) and isinstance(
+        params.get("th_change_proposals"), str
+    ):
+        if not re.match("[a-z]", params.get("th_change_proposals")):
             params["th_change_proposals"] = float(params["th_change_proposals"])
 
     return ExperimentParams(

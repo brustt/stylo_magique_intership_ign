@@ -107,8 +107,6 @@ def batch_to_list(batch: Dict[str, Any]) -> List[Dict[str, Any]]:
     return batch_list
 
 
-
-
 def show_img(img, show_axis=False):
     io.imshow(img)
     if not show_axis:
@@ -183,8 +181,9 @@ def show_points(coords, labels, ax, marker_size=25):
         linewidth=1.25,
     )
 
-def show_prediction_sample(output: Dict, idx:int=None):
-    """Show sample of given batch in a row plot : 
+
+def show_prediction_sample(output: Dict, idx: int = None):
+    """Show sample of given batch in a row plot :
     - img_A
     - img_B
     - label
@@ -198,32 +197,30 @@ def show_prediction_sample(output: Dict, idx:int=None):
     img_A = output["batch"]["img_A"].cpu().squeeze(0)
     img_B = output["batch"]["img_B"].cpu().squeeze(0)
     label = output["batch"]["label"].cpu().squeeze(0)
-    #raw_masks = output["pred"]["raw_masks"].cpu().squeeze(0)
+    # raw_masks = output["pred"]["raw_masks"].cpu().squeeze(0)
     masks_change = output["pred"]["all_changes"].cpu().squeeze(0)
 
     prompts = output["batch"]["point_coords"].cpu().squeeze(0)
-    
+
     if idx is not None:
         masks = masks[idx].squeeze(0)
         img_A = img_A[idx].squeeze(0)
         img_B = img_B[idx].squeeze(0)
         label = label[idx].squeeze(0)
         prompts = prompts[idx].squeeze(0)
-        #raw_masks = raw_masks[idx].squeeze(0)
+        # raw_masks = raw_masks[idx].squeeze(0)
         masks_change = masks_change[idx].squeeze(0)
 
     if masks.ndim == 3:
         masks = torch.sum(masks, dim=0)
-        #raw_masks = torch.sum(raw_masks, dim=0)
+        # raw_masks = torch.sum(raw_masks, dim=0)
         masks_change = torch.sum(masks_change, dim=0)
 
     imgs = [img_A, img_B, label, masks_change, masks]
     names = ["img_A", "img_B", "label", "all_changes", "sim_changes"]
 
     fig, axs = plt.subplots(ncols=len(imgs), squeeze=False, figsize=(10, 10))
-    for i, sample in enumerate(
-        zip(imgs, names)
-    ):
+    for i, sample in enumerate(zip(imgs, names)):
         img, name = sample
         if name.startswith("im"):
             img = to_numpy(img, transpose=True) / 255
@@ -236,11 +233,13 @@ def show_prediction_sample(output: Dict, idx:int=None):
         axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
         axs[0, i].set_title(name)
         if name == "img_B":
-            if prompts.shape[0] < 100: # prevent showing grid
-                colors = [np.random.choice(range(256), size=3) / 255 for _ in range(len(prompts))]
-                for pt,c in zip(prompts, colors):
-                    axs[0, i].scatter(*pt, color=c, marker='*', s=50)
-
+            if prompts.shape[0] < 100:  # prevent showing grid
+                colors = [
+                    np.random.choice(range(256), size=3) / 255
+                    for _ in range(len(prompts))
+                ]
+                for pt, c in zip(prompts, colors):
+                    axs[0, i].scatter(*pt, color=c, marker="*", s=50)
 
 
 def rad_to_degre(x):
@@ -370,7 +369,7 @@ def get_units_cnt_obj(tp, fp, tn, fn):
 def plot_confusion_matrix(confusion_matrix, fig_return: bool = True):
     """Tested for binary classification"""
     # create the confusion matrix as a numpy array
-    #confusion_matrix = confusion_matrix / np.sum(confusion_matrix)
+    # confusion_matrix = confusion_matrix / np.sum(confusion_matrix)
     # create a heatmap of the confusion matrix using seaborn
     print(confusion_matrix)
     ax = sns.heatmap(
@@ -400,53 +399,51 @@ def plot_confusion_matrix(confusion_matrix, fig_return: bool = True):
 
 
 def create_grid_batch(preds, batch, tp, fp, fn) -> np.ndarray:
-        """create image grid from sample (imgA, imgB), label and masks predictions"""
-        sample = []
-        images_A = batch["img_A"].cpu()
-        images_B = batch["img_B"].cpu()
-        labels = batch["label"].cpu()
-        img_outcome_cls = torch.zeros(images_A.shape[-2:])
+    """create image grid from sample (imgA, imgB), label and masks predictions"""
+    sample = []
+    images_A = batch["img_A"].cpu()
+    images_B = batch["img_B"].cpu()
+    labels = batch["label"].cpu()
+    img_outcome_cls = torch.zeros(images_A.shape[-2:])
 
-        # to batchify ?
-        for i in range(images_A.size(0)):
+    # to batchify ?
+    for i in range(images_A.size(0)):
 
-            img_A = images_A[i]
-            img_B = images_B[i]
-            # Align to 3 channels
-            label = labels[i].unsqueeze(0).repeat(3, 1, 1)
-            img_outcome_cls = create_overlay_outcome_cls(tp[i], fp[i], fn[i])
+        img_A = images_A[i]
+        img_B = images_B[i]
+        # Align to 3 channels
+        label = labels[i].unsqueeze(0).repeat(3, 1, 1)
+        img_outcome_cls = create_overlay_outcome_cls(tp[i], fp[i], fn[i])
 
-            # Stack individual masks and align to 3 channels
-            pred = (
-                torch.sum(preds[i, ...], axis=0)
-                .unsqueeze(0)
-                .repeat(3, 1, 1)
-                .to(torch.uint8)
-            )
-            pred = shift_range_values(pred, new_bounds=[0, 255]).to(torch.uint8)
-            row = torch.stack((img_A, img_B, label, pred, img_outcome_cls), dim=0)
-            # combined stack as row
-            row = make_grid(
-                row, nrow=row.shape[0], padding=20, pad_value=1, normalize=True
-            )
-            sample.append(row)
-
-        grid = make_grid(
-            sample, nrow=1, padding=20, pad_value=1, scale_each=True
+        # Stack individual masks and align to 3 channels
+        pred = (
+            torch.sum(preds[i, ...], axis=0)
+            .unsqueeze(0)
+            .repeat(3, 1, 1)
+            .to(torch.uint8)
         )
+        pred = shift_range_values(pred, new_bounds=[0, 255]).to(torch.uint8)
+        row = torch.stack((img_A, img_B, label, pred, img_outcome_cls), dim=0)
+        # combined stack as row
+        row = make_grid(row, nrow=row.shape[0], padding=20, pad_value=1, normalize=True)
+        sample.append(row)
 
-        return grid
+    grid = make_grid(sample, nrow=1, padding=20, pad_value=1, scale_each=True)
+
+    return grid
+
 
 def extract_preds_cls(
-        outputs: Dict[str, torch.Tensor],
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    outputs: Dict[str, torch.Tensor],
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 
-        tp = outputs["pred_UnitsMetricCounts"]["tp_indices"]
-        fp = outputs["pred_UnitsMetricCounts"]["fp_indices"]
-        fn = outputs["pred_UnitsMetricCounts"]["fn_indices"]
-        tn = outputs["pred_UnitsMetricCounts"]["tn_indices"]
+    tp = outputs["pred_UnitsMetricCounts"]["tp_indices"]
+    fp = outputs["pred_UnitsMetricCounts"]["fp_indices"]
+    fn = outputs["pred_UnitsMetricCounts"]["fn_indices"]
+    tn = outputs["pred_UnitsMetricCounts"]["tn_indices"]
 
-        return tp, fp, fn, tn
+    return tp, fp, fn, tn
+
 
 if __name__ == "__main__":
     df = load_levircd_sample(size=10, data_type="train")

@@ -8,8 +8,11 @@ from commons.config import IMG_SIZE
 from src.models.commons.mask_items import ImgType
 from src.commons.utils import resize
 
+
 @deprecated
-def compute_mask_embedding_array(mask: np.ndarray, img_embedding: np.ndarray) -> np.ndarray:
+def compute_mask_embedding_array(
+    mask: np.ndarray, img_embedding: np.ndarray
+) -> np.ndarray:
     """Compute mask embedding - `deprecated`
 
     - resize mask to img dimension (256 x 64 x 64)
@@ -32,13 +35,17 @@ def compute_mask_embedding_array(mask: np.ndarray, img_embedding: np.ndarray) ->
     mask_embedding = np.where(np.isnan(mask_embedding), 0, mask_embedding)
     return mask_embedding
 
+
 def compute_mask_embedding(masks: torch.Tensor, img_embedding: torch.Tensor):
     if masks.ndim > 3:
         return _compute_mask_embedding_batch_torch(masks, img_embedding)
     else:
         return _compute_mask_embedding_torch(masks, img_embedding)
 
-def _compute_mask_embedding_torch(masks: torch.Tensor, img_embedding: torch.Tensor) -> torch.Tensor:
+
+def _compute_mask_embedding_torch(
+    masks: torch.Tensor, img_embedding: torch.Tensor
+) -> torch.Tensor:
     """_summary_
 
     masks : N x H x W
@@ -65,6 +72,7 @@ def _compute_mask_embedding_torch(masks: torch.Tensor, img_embedding: torch.Tens
     masks_embedding = torch.nanmean(img_embedding, dim=(2, 3))
     # N x C
     return masks_embedding.permute(1, 0)
+
 
 def _compute_mask_embedding_batch_torch(
     masks: torch.Tensor, img_embedding: torch.Tensor

@@ -14,6 +14,7 @@ from src.commons import (
     log_hyperparameters,
     task_wrapper,
 )
+
 log = RankedLogger(__name__, rank_zero_only=True)
 
 
@@ -44,7 +45,6 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     # # instantiate ok : cls bitemporal matching
     # print(type(module.model))
     # print(type(module.model.mask_generator))
-
 
     log.info("Instantiating loggers...")
     logger: List[Logger] = instantiate_loggers(cfg.get("logger"))
@@ -86,7 +86,7 @@ def main(cfg: DictConfig) -> None:
     """
     # apply extra utilities
     # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
-    #extras(cfg)
+    # extras(cfg)
     evaluate(cfg)
 
 
