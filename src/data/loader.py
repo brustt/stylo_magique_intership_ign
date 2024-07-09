@@ -1,11 +1,12 @@
 from dataclasses import asdict, dataclass
-from typing import Any
+from typing import Any, Union
 import numpy as np
 import pandas as pd
 from commons.constants import SECOND_NO_CHANGE_RGB, SECOND_RGB_TO_CAT, NamedDataset
 from commons.config import SECOND_PATH, LEVIRCD_PATH, SEED
 from PIL import Image
 from torch.utils.data import Dataset
+from omegaconf import OmegaConf, DictConfig
 
 # Ignore warnings
 import warnings
@@ -47,7 +48,7 @@ class BiTemporalDataset(Dataset):
         dtype: str = "train",
         transform: Any = None,
         seed: int = SEED,
-        params: ExperimentParams = None
+        params: Union[DictConfig, ExperimentParams] = None
     ) -> None:
 
         if name is None:
@@ -61,7 +62,10 @@ class BiTemporalDataset(Dataset):
         self.transform = transform
         self.seed = seed
         self.name = name
-        self.params = params
+
+        # warning override params to default if not exists
+        self.params = params if isinstance(params, DictConfig) else OmegaConf.structured(params)
+        print(self.params)
 
     def __len__(self) -> int:
         return self.items.shape[0]
@@ -91,8 +95,8 @@ class BiTemporalDataset(Dataset):
 
         if self.transform:
             sample = self.transform(sample)
-        
-        prompt_coords, prompt_labels = generate_prompt(sample["label"], self.params.prompt_type, self.params.n_prompt, **asdict(self.params))
+
+        prompt_coords, prompt_labels = generate_prompt(sample["label"], self.params.prompt_type, self.params.n_prompt, self.params)
         # note : point coords are computed on transformed img (may be resized)
 
         sample = sample | dict(index=index, point_coords=prompt_coords, point_labels=prompt_labels)

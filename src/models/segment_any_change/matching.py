@@ -44,11 +44,7 @@ class BitemporalMatching:
         if not sam_kwargs.get("sam_ckpt_path", None):
             raise ValueError("please provide sam checkpoint")
         print(sam_kwargs)
-        print(sam_kwargs)
-
-        print("###")
-        # self.mask_generator = SegAnyMaskGenerator(model=load_ckpt_sam(network, sam_kwargs.get("sam_ckpt_path")), **sam_kwargs)
-        # useful for future experimentation
+        self.mask_generator = SegAnyMaskGenerator(model=load_ckpt_sam(network, sam_kwargs.get("sam_ckpt_path")), **sam_kwargs)
         self.col_nms_threshold = col_nms_threshold
         self.filter_method = th_change_proposals
 

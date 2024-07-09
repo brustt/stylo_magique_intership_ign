@@ -186,6 +186,6 @@ models/*
 # sim link
 lightning_logs
 tmp/
-checkpoints/
+checkpoints/* 
 outputs/
 logs/

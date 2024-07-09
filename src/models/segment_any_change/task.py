@@ -1,6 +1,6 @@
 import os
 from typing import Any, Dict, List
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import torch
 from .config_run import ExperimentParams
 

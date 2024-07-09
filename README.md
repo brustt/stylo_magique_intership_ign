@@ -46,4 +46,14 @@ Configurez paramètres de run depuis `inference.py`.
 python src/segment_any_change/inference.py 
 ```
 
+
+### Set environment variable
+create `.env` file and put project paths :
+
+```
+PROJECT_PATH = <..>
+DATA_PATH = <..>
+CHECKPOINTS_PATH = <..>
+```
+
 python = 3.10

@@ -1,0 +1,1 @@
+python src/main.py --model_name=seganyprompt --ds_name=levir-cd --batch_size=2 --th_change_proposals=70 --dev

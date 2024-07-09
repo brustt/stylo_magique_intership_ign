@@ -1,5 +1,4 @@
 from copy import deepcopy
-from dataclasses import asdict
 from typing import Any, Dict, List, Optional, Tuple, Union
 from src.data.process import generate_prompt
 from src.models.commons.mask_process import binarize_mask

@@ -1,5 +1,6 @@
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 from deprecated import deprecated
+from omegaconf import DictConfig
 import torch
 import numpy as np
 import torch.nn.functional as F
@@ -19,7 +20,7 @@ def generate_grid_prompt(n_points, img_size: int=IMG_SIZE) -> np.ndarray:
     return build_point_grid(n_points) * img_size
 
 
-def generate_prompt(mask, dtype: str, n_point: int, **kwargs) -> torch.Tensor:
+def generate_prompt(mask, dtype: str, n_point: int, kwargs: DictConfig) -> torch.Tensor:
     """Generate n_point prompts for a mask : grid or sample mode (dtype)"""
     img_size = mask.shape[-1]
     match dtype:
