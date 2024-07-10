@@ -10,7 +10,7 @@ import re
 from typing import Any, Dict, Optional, Union
 
 from commons.constants import NamedModels
-from commons.config import DEVICE, LOGS_DIR
+from commons.config import DEVICE, LOGS_PATH
 from commons.eval import UnitsMetricCounts
 from commons.utils_io import check_dir, load_sam
 from .matching import BitemporalMatching
@@ -116,13 +116,13 @@ def load_fast_exp_params(**params):
 
     dir_params = {
         "output_dir": check_dir(
-            LOGS_DIR,
+            LOGS_PATH,
             project,
             new_params["ds_name"],
             f"predictions-{new_params['model_type']}",
         ),
         "logs_dir": check_dir(
-            LOGS_DIR,
+            LOGS_PATH,
             project,
             new_params["ds_name"],
             new_params["exp_name"],
@@ -175,13 +175,13 @@ def load_default_exp_params(**params):
 
     dir_params = {
         "output_dir": check_dir(
-            LOGS_DIR,
+            LOGS_PATH,
             project,
             exp_params["ds_name"],
             f"predictions-{exp_params['model_type']}",
         ),
         "logs_dir": check_dir(
-            LOGS_DIR,
+            LOGS_PATH,
             project,
             exp_params["ds_name"],
             exp_params["exp_name"],
