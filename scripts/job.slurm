@@ -1,5 +1,5 @@
 #!/bin/bash 
-export PROJECT_PATH=$WORK/projects/stage_stylo_magique_2024
+export PROJECT_PATH=$SCRATCH/projects/stage_stylo_magique_2024
 export DATA_PATH=$SCRATCH/data
 export CHECKPOINTS_PATH=$WORK/checkpoints
 export OUT_DIR=$WORK/outjob_logs
