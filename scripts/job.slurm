@@ -20,4 +20,4 @@ mkdir -p ${OUTPUT_DIR}
 
 
 
-srun python $PROJECT_PATH/src/main.py
+srun python $PROJECT_PATH/src/eval.py +experiment=seganychange_prompt  +sam_type=small
