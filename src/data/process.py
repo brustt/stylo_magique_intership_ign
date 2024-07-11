@@ -65,13 +65,15 @@ class PointSampler:
         # extract shapes from mask
         shapes = extract_object_from_batch(mask).squeeze(0)
 
-        # print("SHAPE", shapes.shape)
-        # check if there is some shapes
+        print("FIND SHAPES", torch.sum(shapes))
+        # check if there is some shapes - check sum for no-shapes return - check > 1 first for speed
         if shapes.shape[0] > 1 or torch.sum(shapes):
-            # we sample with replacement to keeping same tensor dimensions over batch if not enough shapes
+            # assign equals probability
+            probs = torch.ones(shapes.shape[0]) / shapes.shape[0]
             id_draw = torch.multinomial(
-                torch.arange(shapes.shape[0], dtype=torch.float),
+                probs,
                 n_point,
+                # we sample with replacement to keeping same tensor dimensions over batch if not enough shapes
                 replacement=False if shapes.shape[0] >= n_point else True
             )
             # get the coord of the pixels shapes (M x 3) - M number of not zeros pixels
@@ -89,9 +91,11 @@ class PointSampler:
             )
 
 
-        # simulate point type (foreground / background)
+        # simulate point type (foreground / background) - foreground default
         labels_points = torch.ones(len(sample_coords))
 
+        # print("coords", sample_coords.shape)
+        # print("labels", labels_points.shape)
         return sample_coords, labels_points
 
     def draw_random_point(self, shape):

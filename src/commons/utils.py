@@ -6,7 +6,7 @@ import numpy as np
 import skimage.io as io
 import matplotlib.pyplot as plt
 import cv2
-from commons.utils_io import load_img, load_levircd_sample
+from commons.utils_io import load_img
 
 from commons.config import DEVICE
 import time
@@ -444,8 +444,9 @@ def extract_preds_cls(
 
     return tp, fp, fn, tn
 
+def extract_number(file_path):
+    match = re.search(r'_(\d+).png', file_path)
+    if match:
+        return int(match.group(1))
+    return np.inf  
 
-if __name__ == "__main__":
-    df = load_levircd_sample(size=10, data_type="train")
-    print(df.shape)
-    print(df)

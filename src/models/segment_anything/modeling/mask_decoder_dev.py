@@ -156,7 +156,7 @@ class MaskDecoder(nn.Module):
         # extent image embedding in points dimensions
         src = torch.repeat_interleave(image_embeddings, tokens.shape[1], dim=1)
 
-        # print(f"img_embedding (src) : {src.shape}")
+        # print(f"img_embedding (src) expanded to tokens dim : {src.shape}")
 
         src = src + dense_prompt_embeddings
         pos_src = torch.repeat_interleave(image_pe, tokens.shape[1], dim=0)

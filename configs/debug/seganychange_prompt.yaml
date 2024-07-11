@@ -1,0 +1,15 @@
+# @package _global_
+
+defaults:
+  - override /data: ??
+  - override /model: seganyprompt
+  - _self_
+data:
+  params:
+    prompt_type: "sample"
+    n_prompt: 3
+
+model:
+  instance:
+    model: 
+      n_points_grid: 64

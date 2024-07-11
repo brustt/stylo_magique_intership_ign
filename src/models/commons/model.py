@@ -111,8 +111,8 @@ class BiSam(nn.Module):
             boxes=None,
             masks=None,
         )
-        # print(f"sparse_embeddings: {sparse_embeddings.shape}")
-        # print(f"dense_embeddings: {dense_embeddings.shape}")
+        print(f"sparse_embeddings: {sparse_embeddings.shape}")
+        print(f"dense_embeddings: {dense_embeddings.shape}")
 
         low_res_masks, iou_predictions = self.mask_decoder.predict_masks_batch(
             image_embeddings=self.image_embeddings,  # (B, 256, 64, 64)
