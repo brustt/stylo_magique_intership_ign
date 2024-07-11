@@ -156,7 +156,7 @@ class TensorBoardCallbackLogger(Callback):
         preds, label = outputs["pred"], batch["label"]
 
         self.update_metrics(preds, label)
-        self.tracking_instance.append(dataloader_idx)
+        self.tracking_instance.append(batch["label"])
 
         if batch_idx % 15 == 0:
             pred_cls = self.confmat_units(preds, label)
@@ -221,7 +221,7 @@ class TensorBoardCallbackLogger(Callback):
         # store predictions in memory vs re-run model on indices vs store 10 best and 10 worst
 
         hydra_output_dir = HydraConfig.get().run.dir
-        self.tracking_instance_metrics.to_csv(make_path("instances_metrics.csv", hydra_output_dir))
+        self.tracking_instance_metrics.to_csv(make_path("instances_metrics.csv", hydra_output_dir), index=False)
 
 """
 # CustomWriter : 

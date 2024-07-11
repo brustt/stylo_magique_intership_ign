@@ -28,7 +28,7 @@ class CDModule(pl.LightningModule):
 
     def test_step(self, batch, batch_idx) -> Dict[str, Any]:
         preds = self.forward(batch)
-        return {"pred": preds, "batch_idx": batch_idx}
+        return {"pred": preds, "batch": batch}
 
     def on_test_epoch_end(self) -> None:
         pass

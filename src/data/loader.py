@@ -80,6 +80,8 @@ class BiTemporalDataset(Dataset):
             img_A = load_img(row["A"])
             img_B = load_img(row["B"])
             label = load_img(row["label"])
+
+            label_path = row["label"]
             print(row["label"])
 
 
@@ -92,12 +94,15 @@ class BiTemporalDataset(Dataset):
                 np.any(label_A != SECOND_NO_CHANGE_RGB, axis=-1).astype(np.uint8) * 255
             )
             print(row["label_A"])
+            label_path = row["label_A"]
 
 
         sample = {
             "img_A": img_A,
             "img_B": img_B,
             "label": label,
+            "label_path": label_path,
+
         }
 
         if self.transform:
