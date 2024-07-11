@@ -7,9 +7,8 @@ from deprecated import deprecated
 import numpy as np
 from skimage.filters import threshold_otsu
 import torch
-from commons.config import DEVICE, IMG_SIZE
 from src.models.segment_anything.utils.amg import MaskData
-from src.commons.utils import flatten, to_degre, to_numpy
+from src.commons.utils import to_numpy
 
 
 class ImgType(Enum):

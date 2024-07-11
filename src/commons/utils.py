@@ -63,7 +63,7 @@ def resize(
 ) -> torch.Tensor:
 
     if not isinstance(tensor, torch.Tensor):
-        tensor = torch.as_tensor(tensor, device=DEVICE)
+        tensor = torch.as_tensor(tensor)
 
     if tensor.ndim < 4:
         tensor = tensor.unsqueeze(0)

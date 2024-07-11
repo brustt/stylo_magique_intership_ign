@@ -6,7 +6,7 @@ from .matching import BitemporalMatching
 from src.commons.utils import resize
 import numpy as np
 import torch
-from commons.config import IMG_SIZE
+from commons.config import DEVICE, IMG_SIZE
 from models.segment_any_change.embedding import (
     compute_mask_embedding,
     get_img_embedding_normed,
@@ -180,17 +180,26 @@ class QueryPointMecanism:
         if best_masks.shape[1]:
             best_masks = resize(best_masks, IMG_SIZE)
 
+        # set everything to cpu
+
+        best_masks = best_masks.to("cpu")
+        best_ious = best_ious.to("cpu")
+        
         sim_masks = pad_sequence(
             [elem["masks"] for elem in batch_masked], batch_first=True
-        )
+        ).to("cpu")
         sim_iou_preds = pad_sequence(
             [elem["iou_preds"] for elem in batch_masked], batch_first=True
-        )
+        ).to("cpu")
         sim_ci = pad_sequence(
             [elem["iou_preds"] for elem in batch_masked], batch_first=True
-        )
-        sim_sim = pad_sequence([elem["sim"] for elem in batch_masked], batch_first=True)
+        ).to("cpu")
+        sim_sim = pad_sequence(
+            [elem["sim"] for elem in batch_masked], batch_first=True
+        ).to("cpu")
 
+        # print("simmasks", sim_masks.shape)
+        # print("best masks", best_masks.shape)
         masks = torch.cat([sim_masks, best_masks], dim=1)
         iou_preds = torch.cat([sim_iou_preds, best_ious], dim=1)
 

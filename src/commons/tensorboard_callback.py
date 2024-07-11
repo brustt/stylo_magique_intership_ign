@@ -114,6 +114,8 @@ class TensorBoardCallbackLogger(Callback):
             self.map_instance,
         ]
 
+        # logger.info("Metric device : ", next(iter(self.confmat.metrics.values())).device)
+
     def add_metric(self, key, value, pl_module, batch_idx):
         pl_module.logger.experiment.add_scalar(key, value, global_step=batch_idx)
 

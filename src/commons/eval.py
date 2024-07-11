@@ -4,7 +4,6 @@ import torch
 from torchmetrics import Metric, MetricCollection
 from torch.utils.data import Dataset, DataLoader
 
-from commons.config import DEVICE
 from src.models.commons.mask_process import (
     _bbox_processing,
     _mask_processing,

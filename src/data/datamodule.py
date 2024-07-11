@@ -56,13 +56,13 @@ class CDDataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self):
-        subset = torch.utils.data.Subset(self.test, np.arange(0, 4))
+        #subset = torch.utils.data.Subset(self.test, np.arange(2))
         return data.DataLoader(
-            subset,  # self.test,
+            self.test, # subset,  
             batch_size=self.batch_size,
-            # shuffle=False,
+            shuffle=False,
             num_workers=self.num_worker,
-            sampler=data.SequentialSampler(subset),
+            #sampler=data.SequentialSampler(subset),
         )
 
         # return data.DataLoader(self.test, batch_size=self.batch_size, shuffle=False)

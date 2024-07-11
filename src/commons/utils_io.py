@@ -6,7 +6,7 @@ from src.models.segment_anything.build_sam_dev import sam_model_registry
 from src.models.segment_anything.build_sam import (
     sam_model_registry as sam_model_registry_v0,
 )
-from commons.config import DEVICE, IMG_SIZE, SAM_DICT_CHECKPOINT
+from commons.config import DEVICE, SAM_DICT_CHECKPOINT
 import skimage.io as io
 
 

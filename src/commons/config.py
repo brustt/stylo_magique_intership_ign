@@ -28,4 +28,8 @@ SAM_DICT_CHECKPOINT = {"vit_h": SAM_MODEL_LARGE_PATH, "vit_b": SAM_MODEL_SMALL_P
 
 SEED = 12
 DEVICE = "cpu"
+DEVICE_MAP = {
+    "gpu":"cuda",
+    "cpu":"cpu"
+}
 IMG_SIZE = (1024, 1024)

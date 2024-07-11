@@ -28,6 +28,7 @@ class CDModule(pl.LightningModule):
 
     def test_step(self, batch, batch_idx) -> Dict[str, Any]:
         preds = self.forward(batch)
+        batch["label"] = batch["label"].to(preds["masks"].device)
         return {"pred": preds, "batch": batch}
 
     def on_test_epoch_end(self) -> None:

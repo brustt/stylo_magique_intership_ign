@@ -3,7 +3,6 @@ from typing import Dict, List, Tuple, Union
 import numpy as np
 import torch
 import torch.nn.functional as F
-from commons.config import DEVICE
 from src.models.segment_anything.utils.amg import (
     MaskData,
     remove_small_regions,

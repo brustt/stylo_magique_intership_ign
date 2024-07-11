@@ -12,4 +12,4 @@ data:
 model:
   instance:
     model: 
-      n_points_grid: 64
+      n_points_grid: 10

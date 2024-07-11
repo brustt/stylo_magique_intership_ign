@@ -12,10 +12,6 @@ from src.models.segment_anything.utils.transforms import ResizeLongestSide
 from src.models.segment_anything.utils.amg import build_point_grid
 from src.commons.utils import apply_histogram
 
-PX_MEAN = torch.Tensor([123.675, 116.28, 103.53]).view(-1, 1, 1).to(DEVICE)
-PX_STD = torch.Tensor([58.395, 57.12, 57.375]).view(-1, 1, 1).to(DEVICE)
-
-
 def generate_grid_prompt(n_points, img_size: int = IMG_SIZE) -> np.ndarray:
     return build_point_grid(n_points) * img_size
 
@@ -65,7 +61,7 @@ class PointSampler:
         # extract shapes from mask
         shapes = extract_object_from_batch(mask).squeeze(0)
 
-        print("FIND SHAPES", torch.sum(shapes))
+        print("FIND SHAPES", shapes.shape[0])
         # check if there is some shapes - check sum for no-shapes return - check > 1 first for speed
         if shapes.shape[0] > 1 or torch.sum(shapes):
             # assign equals probability
@@ -142,7 +138,7 @@ class DefaultTransform:
         return input_tensor
 
     def to_tensor(self, img: np.ndarray) -> torch.Tensor:
-        input_image_torch = torch.as_tensor(img, device=DEVICE, dtype=torch.float)
+        input_image_torch = torch.as_tensor(img, dtype=torch.float)
         if input_image_torch.ndim > 2:
             input_image_torch = input_image_torch.permute(2, 0, 1).contiguous()
         return input_image_torch

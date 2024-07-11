@@ -27,7 +27,7 @@ model:
 
     model: 
       _target_: src.models.segment_any_change.query_prompt.SegAnyPrompt
-      n_points_grid: 100
+      n_points_grid: 1024
       batch_size: ${data.params.batch_size}
       th_sim: 0.9
 
