@@ -106,7 +106,6 @@ class BiTemporalDataset(Dataset):
             sample["label"], self.params.prompt_type, self.params.n_prompt, self.params
         )
         # note : point coords are computed on transformed img (may be resized)
-
         sample = sample | dict(
             index=index, point_coords=prompt_coords, point_labels=prompt_labels
         )

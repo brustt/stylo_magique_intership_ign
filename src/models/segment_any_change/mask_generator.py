@@ -63,7 +63,7 @@ class SegAnyMaskGenerator:
         self.batch_size = None
         self.mask_threshold = mask_threshold
 
-    @timeit
+    # @timeit
     @torch.no_grad()
     def generate(self, batched_input: Dict[str, torch.Tensor]) -> List[Dict[str, Any]]:
 

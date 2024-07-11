@@ -1,5 +1,6 @@
 import os
 from typing import Any, Dict, Tuple, Union
+from commons.utils_io import make_path
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
 import pandas as pd
@@ -15,6 +16,7 @@ from torchmetrics.classification import (
     BinaryConfusionMatrix,
 )
 from torchmetrics.detection import MeanAveragePrecision
+from hydra.core.hydra_config import HydraConfig
 
 from src.models.segment_any_change.config_run import ExperimentParams
 from .eval import MetricEngine, UnitsMetricCounts, _factory_metric_processing
@@ -135,7 +137,7 @@ class TensorBoardCallbackLogger(Callback):
             # loop over batch instances
             for i, (p, l) in enumerate(zip(preds_, labels_)):
                 engine.metrics.update(*format_input_engine[engine.name](p, l))
-                out_metric = engine.compute()
+                out_metric = {k:np.round(_.item(), 3) for k,_ in engine.compute().items()} 
                 batch_metrics[i] = batch_metrics[i] | out_metric
             engine.reset()
         # save instance metric level
@@ -207,17 +209,19 @@ class TensorBoardCallbackLogger(Callback):
 
         self.tracking_instance_metrics = pd.DataFrame(self.tracking_instance_metrics)
         # TODO : save to logs
-        print(self.tracking_instance_metrics)
+        logger.info(self.tracking_instance_metrics.sort_values(by=_rank_metric).head(20))
 
-        top_metric = self.tracking_instance_metrics.sort_values(by=_rank_metric)[
-            :_top_k
-        ]
-        selected_idx = top_metric.index
+        # top_metric = self.tracking_instance_metrics.sort_values(by=_rank_metric)[
+        #     :_top_k
+        # ]
+        # selected_idx = top_metric.index
 
         # dloader = trainer.test_dataloaders
         # TODO : get best predictions and worst predictions
         # store predictions in memory vs re-run model on indices vs store 10 best and 10 worst
 
+        hydra_output_dir = HydraConfig.get().run.dir
+        self.tracking_instance_metrics.to_csv(make_path("instances_metrics.csv", hydra_output_dir))
 
 """
 # CustomWriter : 

@@ -65,7 +65,7 @@ class PointSampler:
         # extract shapes from mask
         shapes = extract_object_from_batch(mask).squeeze(0)
 
-        print("SHAPE", shapes.shape)
+        # print("SHAPE", shapes.shape)
         # check if there is some shapes
         if shapes.shape[0] > 1 or torch.sum(shapes):
             # we sample with replacement to keeping same tensor dimensions over batch if not enough shapes

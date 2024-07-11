@@ -53,7 +53,6 @@ class BitemporalMatching:
         items_batch = self.run(batch, **params)
         return items_batch
 
-    @timeit
     def run(self, batch: Dict[str, torch.Tensor], **params) -> Any:
         """
         Run Bitemporal matching - vectorized manner
@@ -209,7 +208,6 @@ def stack_tensor_from_sam_output(
         return pad_sequence(img_anns, batch_first=True)
 
 
-@timeit
 def proposal_matching_nms(
     data: MaskData, nms_threshold: float, col_threshold: str = "ci"
 ) -> MaskData:
@@ -225,7 +223,6 @@ def proposal_matching_nms(
     return data
 
 
-@timeit
 def temporal_matching_torch(
     img_embedding_A: torch.Tensor, img_embedding_B: torch.Tensor, masks: torch.Tensor
 ) -> Tuple[List[torch.Tensor], List[torch.Tensor], List[torch.Tensor]]:

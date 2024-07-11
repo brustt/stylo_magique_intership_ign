@@ -50,7 +50,6 @@ class SegAnyPrompt:
         # switch for matching via grid
         grid_params["prompt_type"] = "grid"
         grid_params["n_prompt"] = grid_params["n_points_grid"]
-
         # TODO : refacto generate_prompt() inputs cleaner
         point_coords, point_labels = generate_prompt(
             grid_batch["label"],
@@ -58,7 +57,6 @@ class SegAnyPrompt:
             grid_params["n_prompt"],
             grid_params,
         )
-
         grid_batch["point_coords"] = point_coords.repeat(
             self.params["batch_size"], 1, 1
         )

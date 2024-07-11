@@ -146,7 +146,6 @@ class ProcessingEval:
 
         return masks, labels
 
-    @timeit
     def mAP_processing(
         self, preds: Dict[str, torch.Tensor], labels: torch.Tensor, **kwargs
     ) -> Tuple[List[Dict], List[Dict]]:

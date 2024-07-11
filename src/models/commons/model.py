@@ -82,7 +82,7 @@ class BiSam(nn.Module):
             List[Dict[str, torch.Tensor]]: dict return as prediction batch tensor
         """
         batch_size = batched_input[next(iter(batched_input))].shape[0]
-        print(f"Mode : {mode}")
+        # print(f"Mode : {mode}")
 
         if mode.value == SamModeInference.AUTO.value:
 
@@ -95,13 +95,11 @@ class BiSam(nn.Module):
             input_images = batched_input["img_B"].detach().clone()
             point_coords = batched_input["point_coords"].detach().clone()
             point_labels = batched_input["point_labels"].detach().clone()
-            print(point_coords.shape)
 
         else:
             raise ValueError(f"mode {mode} for SAM not recognized")
 
         input_images = self.preprocess(input_images)
-        # print("DTYPE input model", input_images.dtype)
 
         self.image_embeddings = self.image_encoder(input_images)
 
@@ -113,8 +111,8 @@ class BiSam(nn.Module):
             boxes=None,
             masks=None,
         )
-        print(f"sparse_embeddings: {sparse_embeddings.shape}")
-        print(f"dense_embeddings: {dense_embeddings.shape}")
+        # print(f"sparse_embeddings: {sparse_embeddings.shape}")
+        # print(f"dense_embeddings: {dense_embeddings.shape}")
 
         low_res_masks, iou_predictions = self.mask_decoder.predict_masks_batch(
             image_embeddings=self.image_embeddings,  # (B, 256, 64, 64)
