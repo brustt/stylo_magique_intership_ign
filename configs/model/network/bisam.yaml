@@ -1,20 +1,16 @@
 defaults:
-  - image_encoder: vit-b
+  - image_encoder: ??
   - prompt_encoder: sam_prompt_encoder
-  - decoder: sam_mask_decoder
+  - mask_decoder: sam_mask_decoder
   - _self_
 
-instance:
-  _target_: src.models.commons.model.BiSam
-  image_encoder: ${model.network.image_encoder}
-  prompt_encoder: ${model.network.prompt_encoder}
-  mask_decoder: ${model.network.decoder}
+_target_: src.models.commons.model.BiSam
 
-  pixel_mean:
-    - 123.675
-    - 116.28
-    - 103.53
-  pixel_std:
-    - 58.395
-    - 57.12
-    - 57.375
+pixel_mean:
+  - 123.675
+  - 116.28
+  - 103.53
+pixel_std:
+  - 58.395
+  - 57.12
+  - 57.375

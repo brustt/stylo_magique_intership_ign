@@ -114,14 +114,14 @@ class BitemporalMatching:
             # 2, max(NA,NB) x 256
             proposal_emb = pad_sequence([x_t_mA, x_t1_mB], batch_first=True)
 
-            print("NMS masks fusion")
-            print("masks", masks.shape)
-            print("masks i A", masks_A.shape)
-            print("masks i B", masks_B.shape)
-            print("ci", confidence_scores.shape)
-            print("bboxes", bboxes.shape)
-            print("ious", iou_preds.shape)
-            print("masks_logits", masks_logits.shape)
+            # print("NMS masks fusion")
+            # print("masks", masks.shape)
+            # print("masks i A", masks_A.shape)
+            # print("masks i B", masks_B.shape)
+            # print("ci", confidence_scores.shape)
+            # print("bboxes", bboxes.shape)
+            # print("ious", iou_preds.shape)
+            # print("masks_logits", masks_logits.shape)
 
             # use data structure
             data = MaskData(
@@ -141,16 +141,12 @@ class BitemporalMatching:
 
             # apply change threshold
             data["chgt_angle"] = to_degre_torch(data["ci"])
-            print("chgt_angle")
-            print(data["chgt_angle"].shape)
             data, th = thresholding(
                 data,
                 attr="chgt_angle",
                 method=self.filter_method,
                 filtering_type=FilteringType.Sup,
             )
-            print(data["chgt_angle"].shape)
-
             # we need to get back batch information for each prediction
             # data = reconstruct_batch(data, masks.shape[0])
 

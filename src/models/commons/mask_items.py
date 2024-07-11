@@ -89,7 +89,7 @@ def thresholding(
 ) -> Any:
     """Apply Thresholding based on change angle"""
 
-    print(f"thresholding : {method} for {attr}")
+    # print(f"thresholding : {method} for {attr}")
 
     method_factory = {
         "otsu": apply_otsu,
@@ -118,7 +118,7 @@ def apply_otsu(
     # set otsu threshold on batch
     arr = to_numpy(data[attr], transpose=False)
     th = threshold_otsu(arr[~np.isnan(arr)])
-    print(th)
+    # print(th)
     return apply_th(data, attr, filtering_type, th)
 
 

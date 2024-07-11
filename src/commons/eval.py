@@ -210,7 +210,7 @@ class MetricEngine:
     def update(
         self, preds: Dict, labels: torch.Tensor, processing: bool = True
     ) -> None:
-        print(f"update : {self.name}")
+        # print(f"update : {self.name}")
         if processing:
             preds, labels = _factory_metric_processing(
                 self.check_processing(self.name), preds, labels, **self.params

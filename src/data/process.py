@@ -65,18 +65,18 @@ class PointSampler:
         # extract shapes from mask
         shapes = extract_object_from_batch(mask).squeeze(0)
 
-        # first check to prevent sum over all the masks
+        print("SHAPE", shapes.shape)
+        # check if there is some shapes
         if shapes.shape[0] > 1 or torch.sum(shapes):
-            # check for validity of sampling
-            # draw selected shapes
-            n_point = min(shapes.shape[0], n_point)
+            # we sample with replacement to keeping same tensor dimensions over batch if not enough shapes
             id_draw = torch.multinomial(
                 torch.arange(shapes.shape[0], dtype=torch.float),
                 n_point,
-                replacement=False,
+                replacement=False if shapes.shape[0] >= n_point else True
             )
             # get the coord of the pixels shapes (M x 3) - M number of not zeros pixels
             coords_candidates = torch.nonzero(shapes[id_draw]).to(torch.float)
+
             # iterate over the shapes
             sample_coords = torch.stack(
                 [
@@ -87,6 +87,8 @@ class PointSampler:
                     for s in torch.unique(coords_candidates[:, 0])
                 ]
             )
+
+
         # simulate point type (foreground / background)
         labels_points = torch.ones(len(sample_coords))
 
@@ -101,6 +103,7 @@ class PointSampler:
         return torch.flip(shape[idx], dims=(0,))
 
     def draw_center_point(self, shape):
+        # TODO: modify with weighted avg approximation
         return torch.flip(torch.mean(shape, dim=0).to(int), dims=(0,))
 
 

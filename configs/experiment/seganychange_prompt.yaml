@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - override /data: levir-cd
+  - override /data: ??
   - override /model: seganyprompt
   - _self_
 
@@ -10,22 +10,27 @@ tags: ["seganychange prompt"]
 data:
   params:
     prompt_type: "sample"
-    n_prompt: 3
+    n_prompt: 5
     loc: center
     batch_size: 2
-    num_worker: 2
+    num_worker: ${model.instance.params.num_worker}
 
 model:
   instance:
     _target_: src.models.segment_any_change.task.CDModule
     params:
-      num_worker: 1
-      n_job_by_node: 2
+      num_worker: 0
+      n_job_by_node: 1
+      model_type: ${sam_enc_arch}
+      batch_size: ${data.params.batch_size}
+      th_change_proposals: ${model.instance.model.matching_engine.th_change_proposals}
+
     model: 
       _target_: src.models.segment_any_change.query_prompt.SegAnyPrompt
-      n_points_grid: 1024
+      n_points_grid: 100
       batch_size: ${data.params.batch_size}
-      th_sim: 0.8
+      th_sim: 0.9
+
       matching_engine:
         _target_: src.models.segment_any_change.matching.BitemporalMatching
         th_change_proposals: 60

@@ -2,9 +2,12 @@
 export PROJECT_PATH=$SCRATCH/projects/stage_stylo_magique_2024
 export DATA_PATH=$SCRATCH/data
 export CHECKPOINTS_PATH=$WORK/checkpoints
-export OUT_DIR=$WORK/outjob_logs
+export LOGS_PATH=$WORK/logs
+export LOGS_PATH=$WORK//stylo_magique/logs
 
-mkdir -p ${OUTPUT_DIR}
+export HYDRA_FULL_ERROR=1
+
+mkdir -p ${LOGS_PATH}
 
 #SBATCH --account=ofp@v100
 #SBATCH --job-name=seganychange # nom du job 
@@ -20,4 +23,4 @@ mkdir -p ${OUTPUT_DIR}
 
 
 
-srun python $PROJECT_PATH/src/eval.py +experiment=seganychange_prompt  +sam_type=small
+srun src/eval.py experiment=seganychange_prompt  sam_type=small data=levir-cd

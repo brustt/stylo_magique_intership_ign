@@ -1,9 +1,13 @@
 import os
 from typing import Any, Dict, List, Tuple
 
+from commons.config import SEED
+from commons.instantiators import instantiate_callbacks
+from commons.utils import flush_memory
 import hydra
+from pytorch_lightning import Callback
 import rootutils
-from lightning.pytorch import LightningDataModule, LightningModule, Trainer
+from lightning.pytorch import LightningDataModule, LightningModule, Trainer, seed_everything
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
 
@@ -28,29 +32,21 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     :param cfg: DictConfig configuration composed by Hydra.
     :return: Tuple[dict, dict] with metrics and dict with all instantiated objects.
     """
-    # assert cfg.ckpt_path
+
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
-    print(cfg.keys())
-
-    # log.info(f"Instantiating sam <{cfg.model.network.model._target_}>")
-    # sam: Any = hydra.utils.instantiate(cfg.model.network)
-
-    log.info(cfg)
 
     log.info(f"Instantiating module <{cfg.model.instance._target_}>")
     module: LightningModule = hydra.utils.instantiate(cfg.model.instance)
-    # instantiate ok : pl module
-    # print(type(module))
-    # # instantiate ok : cls bitemporal matching
-    # print(type(module.model))
-    # print(type(module.model.mask_generator))
 
     log.info("Instantiating loggers...")
     logger: List[Logger] = instantiate_loggers(cfg.get("logger"))
 
+    log.info("Instantiating callbacks...")
+    callbacks: List[Callback] = instantiate_callbacks(cfg.callbacks)
+
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
-    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, logger=logger)
+    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, logger=logger, callbacks=callbacks)
 
     object_dict = {
         "cfg": cfg,
@@ -65,15 +61,14 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         log_hyperparameters(object_dict)
 
     log.info("Starting testing!")
+    # ckpt is provide in BitemporalMatching for SegmentAnyChange models
     trainer.test(model=module, datamodule=datamodule)
     # trainer.test(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
 
     # # for predictions use trainer.predict(...)
     # # predictions = trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
 
-    # metric_dict = trainer.callback_metrics
-
-    metric_dict, object_dict = None, None
+    metric_dict = trainer.callback_metrics
 
     return metric_dict, object_dict
 
@@ -84,12 +79,12 @@ def main(cfg: DictConfig) -> None:
 
     :param cfg: DictConfig configuration composed by Hydra.
     """
+    flush_memory()
+    seed_everything(seed=cfg.seed)
     # apply extra utilities
-    # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
-    # extras(cfg)
+    extras(cfg)
     evaluate(cfg)
 
 
 if __name__ == "__main__":
-    print(os.environ["PROJECT_PATH"])
     main()

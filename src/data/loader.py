@@ -80,6 +80,8 @@ class BiTemporalDataset(Dataset):
             img_A = load_img(row["A"])
             img_B = load_img(row["B"])
             label = load_img(row["label"])
+            print(row["label"])
+
 
         elif self.name == NamedDataset.SECOND.value:
             img_A = load_img(row["A"])
@@ -89,6 +91,8 @@ class BiTemporalDataset(Dataset):
             label = (
                 np.any(label_A != SECOND_NO_CHANGE_RGB, axis=-1).astype(np.uint8) * 255
             )
+            print(row["label_A"])
+
 
         sample = {
             "img_A": img_A,
@@ -98,7 +102,6 @@ class BiTemporalDataset(Dataset):
 
         if self.transform:
             sample = self.transform(sample)
-
         prompt_coords, prompt_labels = generate_prompt(
             sample["label"], self.params.prompt_type, self.params.n_prompt, self.params
         )
@@ -107,5 +110,4 @@ class BiTemporalDataset(Dataset):
         sample = sample | dict(
             index=index, point_coords=prompt_coords, point_labels=prompt_labels
         )
-
         return sample

@@ -180,10 +180,10 @@ class MaskDecoder(nn.Module):
 
         b, n, c, h, w = src.shape
 
-        print("--in transformer--")
-        print(f"src : {src.shape}")
-        print(f"pos_src : {pos_src.shape}")
-        print(f"tokens : {tokens.shape}")
+        # print("--in transformer--")
+        # print(f"src : {src.shape}")
+        # print(f"pos_src : {pos_src.shape}")
+        # print(f"tokens : {tokens.shape}")
 
         # Run the transformer
         hs, src = self.transformer(src, pos_src, tokens)

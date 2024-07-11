@@ -1,29 +1,32 @@
 # @package _global_
 
 defaults:
-  - override /data: levir-cd
+  - override /data: ??
   - override /model: seganymatching
   - _self_
 
 tags: ["seganychange matching"]
 
-model:
-  instance:
-    _target_: src.models.segment_any_change.task.CDModule
-    params:
-      num_worker: 1
-      n_job_by_node: 2
-    model: 
-      _target_: src.models.segment_any_change.matching.BitemporalMatching
-      th_change_proposals: 60
-      col_nms_threshold: ci  
-      sam_ckpt_path: ${sam_ckpt_path} # override in sam_type
-
 data:
   params:
     prompt_type: "grid"
     n_prompt: 1024
-    loc: center
+    loc: null
     batch_size: 2
-    num_worker: 2
+    num_worker: ${model.instance.params.num_worker}
+
+model:
+  instance:
+    _target_: src.models.segment_any_change.task.CDModule
+    params:
+      num_worker: 0
+      n_job_by_node: 1
+      model_type: ${sam_enc_arch}
+      batch_size: ${data.params.batch_size}
+      th_change_proposals: ${model.instance.model.th_change_proposals}
+
+    model: 
+      th_change_proposals: 60
+      col_nms_threshold: ci  
+      sam_ckpt_path: ${sam_ckpt_path} # override in sam_type
 

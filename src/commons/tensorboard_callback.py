@@ -1,10 +1,11 @@
 import os
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Union
 import numpy as np
+from omegaconf import DictConfig, OmegaConf
 import pandas as pd
 import torch
-from pytorch_lightning import LightningModule, Trainer
-from pytorch_lightning.callbacks import Callback
+from lightning.pytorch import LightningModule, Trainer
+from lightning.pytorch.callbacks import Callback, BasePredictionWriter
 import logging
 from torchmetrics.classification import (
     BinaryF1Score,
@@ -21,9 +22,6 @@ from .utils import (
     create_grid_batch,
     plot_confusion_matrix,
 )
-
-from pytorch_lightning.callbacks import BasePredictionWriter
-
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
@@ -46,8 +44,12 @@ class TensorBoardCallbackLogger(Callback):
 
     _units_key_name = "UnitsMetricCounts"
 
-    def __init__(self, params: ExperimentParams):
+    def __init__(self, params: DictConfig):
         super().__init__()
+        
+        # recursively convert OmegaConfDictConfig to plain python object for MetricEngine compliance
+        params = OmegaConf.to_object(params)
+
         self.tracking_instance_metrics = []
         self.tracking_instance = []
         self.metrics_classif = MetricEngine(
@@ -59,7 +61,7 @@ class TensorBoardCallbackLogger(Callback):
             ],
             prefix="",
             name="classif",
-            **params.engine_metric,
+            **params.get("engine_metric"),
         )
         self.metrics_classif_instance = MetricEngine(
             [
@@ -70,43 +72,39 @@ class TensorBoardCallbackLogger(Callback):
             ],
             prefix="",
             name="classif",
-            **params.engine_metric,
+            **params.get("engine_metric"),
         )
         self.map = MetricEngine(
             [
                 MeanAveragePrecision(
-                    iou_type=params.engine_metric.get("iou_type_mAP", "segm"),
-                    max_detection_thresholds=params.engine_metric.get(
-                        "max_detection_thresholds", None
-                    ),
+                    iou_type=params.get("engine_metric").get("iou_type_mAP"),
+                    max_detection_thresholds=params.get("engine_metric").get("max_detection_thresholds")
                 ),
             ],
             prefix="",
             name="map",
-            **params.engine_metric,
+            **params.get("engine_metric"),
         )
         self.map_instance = MetricEngine(
             [
                 MeanAveragePrecision(
-                    iou_type=params.engine_metric.get("iou_type_mAP", "segm"),
-                    max_detection_thresholds=params.engine_metric.get(
-                        "max_detection_thresholds", None
-                    ),
+                    iou_type=params.get("engine_metric").get("iou_type_mAP"),
+                    max_detection_thresholds=params.get("engine_metric").get("max_detection_thresholds")
                 ),
             ],
             prefix="",
             name="map",
-            **params.engine_metric,
+            **params.get("engine_metric"),
         )
         self.confmat = MetricEngine(
             [BinaryConfusionMatrix(normalize="true")],
             prefix="",
             name="confmat",
-            **params.engine_metric,
+            **params.get("engine_metric"),
         )
 
         self.confmat_units = MetricEngine(
-            [UnitsMetricCounts()], prefix="", name="units", **params.engine_metric
+            [UnitsMetricCounts()], prefix="", name="units", **params.get("engine_metric")
         )
 
         self._register_engine_instance = [
@@ -208,6 +206,7 @@ class TensorBoardCallbackLogger(Callback):
         _top_k = 10
 
         self.tracking_instance_metrics = pd.DataFrame(self.tracking_instance_metrics)
+        # TODO : save to logs
         print(self.tracking_instance_metrics)
 
         top_metric = self.tracking_instance_metrics.sort_values(by=_rank_metric)[

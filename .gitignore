@@ -187,5 +187,7 @@ models/*
 lightning_logs
 tmp/
 checkpoints/* 
+checkpoints
 outputs/
 logs/
+logs

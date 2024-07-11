@@ -45,14 +45,14 @@ def postprocess_masks(masks, iou_preds, points):
         iou_preds=iou_preds.flatten(0, 1),
         points=torch.as_tensor(points.repeat(masks.shape[1], axis=0)),
     )
-    print(data["masks"].shape[0])
+    # print(data["masks"].shape[0])
 
     data = filters_masks(data)
     data["boxes"] = batched_mask_to_box(data["masks_binary"])
 
     keep_by_nms = nms_wrapper(data, box_nms_thresh)
     data.filter(keep_by_nms)
-    print(data["masks"].shape[0])
+    # print(data["masks"].shape[0])
 
     if min_area > 0.0:
         data["rles"] = mask_to_rle_pytorch(data["masks_binary"])

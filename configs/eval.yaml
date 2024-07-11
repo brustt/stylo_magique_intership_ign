@@ -1,25 +1,26 @@
 # TODO: 
-  # - configure paths in /configs/logger/tensorboard & configs/hydra
 defaults:
-  - data: second
-  - model: seganychange
+  - data: ??
+  - model: ??
+  - sam_type: ??
+  - experiment: ??
+  - metrics: default
   - callbacks: default
   - logger: tensorboard 
   - trainer: default
   - paths: default
-  # - extras: default
+  - extras: default
   - hydra: default
   - hparams_search: null # config for hyperparameter optimization
   - optional local: default # optional local config for machine/user specific settings
   - debug: null # debugging config (enable through command line, e.g. `python train.py debug=default)
   - exp: null
   - _self_
-  
-task_name: "eval"
-tags: ["eval"]
+
+task_name: "segany_rpr_prompt"
+
+tags: ["dev"]
 # data_dir: ${paths.data_dir}/${dataset.name}/
 compile: True # compile model for faster training with pytorch 2.0
-seed: 32 # seed for random number generators in pytorch, numpy and python.random
+seed: 12 # seed for random number generators in pytorch, numpy and python.random
 # experiment_name: ${dataset.name}_${model.name}
-
-sam_ckpt_path: null

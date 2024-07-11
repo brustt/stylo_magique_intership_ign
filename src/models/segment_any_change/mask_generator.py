@@ -72,8 +72,8 @@ class SegAnyMaskGenerator:
 
         batch_anns = []
         self.batch_size = batched_input[next(iter(batched_input))].shape[0]
-        print(f"BATCH SIZE : {self.batch_size} * 2")
-        print(batched_input.keys())
+        # print(f"BATCH SIZE : {self.batch_size} * 2")
+        # print(batched_input.keys())
 
         # with profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:
         #     with record_function("model_inference"):
@@ -87,7 +87,7 @@ class SegAnyMaskGenerator:
 
         masks, iou_predictions = outputs.values()
 
-        print(f"OUT MODEL : {masks.shape}")
+        # print(f"OUT MODEL : {masks.shape}")
 
         for i, i_masks, i_iou_predictions in zip(
             range(len(masks)), masks, iou_predictions
@@ -159,14 +159,14 @@ class SegAnyMaskGenerator:
         stability_score_offset: float = 1.0,
     ) -> MaskData:
 
-        print(f':: raw masks : {data["masks"].shape[0]} ::')
+        # print(f':: raw masks : {data["masks"].shape[0]} ::')
 
         # Filter by predicted IoU
         if pred_iou_thresh > 0.0:
             keep_mask = data["iou_preds"] > pred_iou_thresh
             data.filter(keep_mask)
 
-        print(f' filter iou_th : {data["masks"].shape[0]}')
+        # print(f' filter iou_th : {data["masks"].shape[0]}')
 
         # Calculate stability score
         data["stability_score"] = calculate_stability_score(
@@ -178,11 +178,11 @@ class SegAnyMaskGenerator:
             keep_mask = data["stability_score"] >= stability_score_thresh
             data.filter(keep_mask)
 
-        print(f' filter stability_score : {data["masks"].shape[0]}')
+        # print(f' filter stability_score : {data["masks"].shape[0]}')
 
         # Threshold masks and calculate boxes
         data["masks_binary"] = binarize_mask(data["masks"], mask_threshold)
-        print(f' filter mask_threshold : {data["masks_binary"].shape[0]}')
+        # print(f' filter mask_threshold : {data["masks_binary"].shape[0]}')
 
         return data
 

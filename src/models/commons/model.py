@@ -101,7 +101,7 @@ class BiSam(nn.Module):
             raise ValueError(f"mode {mode} for SAM not recognized")
 
         input_images = self.preprocess(input_images)
-        print("DTYPE input model", input_images.dtype)
+        # print("DTYPE input model", input_images.dtype)
 
         self.image_embeddings = self.image_encoder(input_images)
 

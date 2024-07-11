@@ -1,5 +1,6 @@
 # @package _global_
 defaults:
   - override /model/network/image_encoder: vit-h
-name: huge
+sam_name: huge
 sam_ckpt_path: ${paths.sam_ckpt_dir}/sam_vit_h_4b8939.pth
+sam_enc_arch: vit-h

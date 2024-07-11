@@ -2,8 +2,8 @@ _target_: src.data.datamodule.CDDataModule
 name: levir-cd
 
 params:
-  prompt_type: "grid"
-  n_prompt: 32
-  loc: center
-  batch_size: 2
-  num_worker: 2
+  prompt_type: ??
+  n_prompt: ??
+  loc: null
+  batch_size: ??
+  num_worker: ??

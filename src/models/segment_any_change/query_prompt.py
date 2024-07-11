@@ -37,7 +37,6 @@ class SegAnyPrompt:
                 raise RuntimeError("please provide sam checkpoint")
 
             self.matching_engine = BitemporalMatching(model=network, **params)
-            print(params)
 
         else:
             self.matching_engine = matching_engine
@@ -47,8 +46,6 @@ class SegAnyPrompt:
 
         grid_params = deepcopy(self.params)
         grid_batch = batch.copy()
-        print("=====")
-        print(grid_params)
 
         # switch for matching via grid
         grid_params["prompt_type"] = "grid"

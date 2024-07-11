@@ -371,7 +371,7 @@ def plot_confusion_matrix(confusion_matrix, fig_return: bool = True):
     # create the confusion matrix as a numpy array
     # confusion_matrix = confusion_matrix / np.sum(confusion_matrix)
     # create a heatmap of the confusion matrix using seaborn
-    print(confusion_matrix)
+    # print(confusion_matrix)
     ax = sns.heatmap(
         confusion_matrix,
         annot=True,
