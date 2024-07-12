@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import cv2
 from commons.utils_io import load_img
 
-from commons.config import DEVICE
+from commons.constants import DEVICE
 import time
 from collections.abc import Iterable
 import logging
@@ -444,9 +444,9 @@ def extract_preds_cls(
 
     return tp, fp, fn, tn
 
+
 def extract_number(file_path):
-    match = re.search(r'_(\d+).png', file_path)
+    match = re.search(r"_(\d+).png", file_path)
     if match:
         return int(match.group(1))
-    return np.inf  
-
+    return np.inf

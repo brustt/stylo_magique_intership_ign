@@ -5,12 +5,13 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 
-from commons.config import DEVICE, IMG_SIZE
+from commons.constants import DEVICE, IMG_SIZE
 from src.models.commons.mask_process import extract_object_from_batch
 from src.models.segment_anything.utils.transforms import ResizeLongestSide
 
 from src.models.segment_anything.utils.amg import build_point_grid
 from src.commons.utils import apply_histogram
+
 
 def generate_grid_prompt(n_points, img_size: int = IMG_SIZE) -> np.ndarray:
     return build_point_grid(n_points) * img_size
@@ -70,7 +71,7 @@ class PointSampler:
                 probs,
                 n_point,
                 # we sample with replacement to keeping same tensor dimensions over batch if not enough shapes
-                replacement=False if shapes.shape[0] >= n_point else True
+                replacement=False if shapes.shape[0] >= n_point else True,
             )
             # get the coord of the pixels shapes (M x 3) - M number of not zeros pixels
             coords_candidates = torch.nonzero(shapes[id_draw]).to(torch.float)
@@ -85,7 +86,6 @@ class PointSampler:
                     for s in torch.unique(coords_candidates[:, 0])
                 ]
             )
-
 
         # simulate point type (foreground / background) - foreground default
         labels_points = torch.ones(len(sample_coords))

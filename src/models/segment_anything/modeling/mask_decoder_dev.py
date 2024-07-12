@@ -19,6 +19,7 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
 class MaskDecoder(nn.Module):
     def __init__(
         self,

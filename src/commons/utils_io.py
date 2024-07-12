@@ -1,12 +1,11 @@
 import os
 import pickle
 from typing import Dict, Any, Union
-from commons.config import *
 from src.models.segment_anything.build_sam_dev import sam_model_registry
 from src.models.segment_anything.build_sam import (
     sam_model_registry as sam_model_registry_v0,
 )
-from commons.config import DEVICE, SAM_DICT_CHECKPOINT
+from commons.constants import DEVICE, SAM_DICT_CHECKPOINT
 import skimage.io as io
 
 
@@ -28,6 +27,7 @@ def load_pickle(path):
     with open(path, "rb") as f:
         data = pickle.load(f)
     return data
+
 
 def load_sam(
     model_type: str, model_cls: Any = None, version: str = "dev", device: str = DEVICE

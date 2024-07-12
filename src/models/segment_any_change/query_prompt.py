@@ -6,7 +6,7 @@ from .matching import BitemporalMatching
 from src.commons.utils import resize
 import numpy as np
 import torch
-from commons.config import DEVICE, IMG_SIZE
+from commons.constants import DEVICE, IMG_SIZE
 from models.segment_any_change.embedding import (
     compute_mask_embedding,
     get_img_embedding_normed,
@@ -184,7 +184,7 @@ class QueryPointMecanism:
 
         best_masks = best_masks.to("cpu")
         best_ious = best_ious.to("cpu")
-        
+
         sim_masks = pad_sequence(
             [elem["masks"] for elem in batch_masked], batch_first=True
         ).to("cpu")

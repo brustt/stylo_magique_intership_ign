@@ -1,13 +1,18 @@
 import os
 from typing import Any, Dict, List, Tuple
 
-from commons.config import SEED
+from commons.constants import SEED
 from commons.instantiators import instantiate_callbacks
 from commons.utils import flush_memory
 import hydra
 from pytorch_lightning import Callback
 import rootutils
-from lightning.pytorch import LightningDataModule, LightningModule, Trainer, seed_everything
+from lightning.pytorch import (
+    LightningDataModule,
+    LightningModule,
+    Trainer,
+    seed_everything,
+)
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
 
@@ -46,7 +51,9 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     callbacks: List[Callback] = instantiate_callbacks(cfg.callbacks)
 
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
-    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, logger=logger, callbacks=callbacks)
+    trainer: Trainer = hydra.utils.instantiate(
+        cfg.trainer, logger=logger, callbacks=callbacks
+    )
 
     object_dict = {
         "cfg": cfg,

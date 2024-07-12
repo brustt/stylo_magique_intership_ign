@@ -38,7 +38,7 @@ from src.models.segment_anything.utils.amg import (
     uncrop_points,
 )
 from src.commons.utils import timeit
-from commons.config import *
+from commons.constants import *
 
 
 class SegAnyMaskGenerator:

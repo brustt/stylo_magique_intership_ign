@@ -10,7 +10,7 @@ import re
 from typing import Any, Dict, Optional, Union
 
 from commons.constants import NamedModels
-from commons.config import LOGS_PATH
+from commons.constants import LOGS_PATH
 from commons.eval import UnitsMetricCounts
 from commons.utils_io import check_dir, load_sam
 from .matching import BitemporalMatching

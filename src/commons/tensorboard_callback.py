@@ -48,7 +48,7 @@ class TensorBoardCallbackLogger(Callback):
 
     def __init__(self, params: DictConfig):
         super().__init__()
-        
+
         # recursively convert OmegaConfDictConfig to plain python object for MetricEngine compliance
         params = OmegaConf.to_object(params)
 
@@ -80,7 +80,9 @@ class TensorBoardCallbackLogger(Callback):
             [
                 MeanAveragePrecision(
                     iou_type=params.get("engine_metric").get("iou_type_mAP"),
-                    max_detection_thresholds=params.get("engine_metric").get("max_detection_thresholds")
+                    max_detection_thresholds=params.get("engine_metric").get(
+                        "max_detection_thresholds"
+                    ),
                 ),
             ],
             prefix="",
@@ -91,7 +93,9 @@ class TensorBoardCallbackLogger(Callback):
             [
                 MeanAveragePrecision(
                     iou_type=params.get("engine_metric").get("iou_type_mAP"),
-                    max_detection_thresholds=params.get("engine_metric").get("max_detection_thresholds")
+                    max_detection_thresholds=params.get("engine_metric").get(
+                        "max_detection_thresholds"
+                    ),
                 ),
             ],
             prefix="",
@@ -106,7 +110,10 @@ class TensorBoardCallbackLogger(Callback):
         )
 
         self.confmat_units = MetricEngine(
-            [UnitsMetricCounts()], prefix="", name="units", **params.get("engine_metric")
+            [UnitsMetricCounts()],
+            prefix="",
+            name="units",
+            **params.get("engine_metric"),
         )
 
         self._register_engine_instance = [
@@ -139,7 +146,9 @@ class TensorBoardCallbackLogger(Callback):
             # loop over batch instances
             for i, (p, l) in enumerate(zip(preds_, labels_)):
                 engine.metrics.update(*format_input_engine[engine.name](p, l))
-                out_metric = {k:np.round(_.item(), 3) for k,_ in engine.compute().items()} 
+                out_metric = {
+                    k: np.round(_.item(), 3) for k, _ in engine.compute().items()
+                }
                 batch_metrics[i] = batch_metrics[i] | out_metric
             engine.reset()
         # save instance metric level
@@ -211,7 +220,9 @@ class TensorBoardCallbackLogger(Callback):
 
         self.tracking_instance_metrics = pd.DataFrame(self.tracking_instance_metrics)
         # TODO : save to logs
-        logger.info(self.tracking_instance_metrics.sort_values(by=_rank_metric).head(20))
+        logger.info(
+            self.tracking_instance_metrics.sort_values(by=_rank_metric).head(20)
+        )
 
         # top_metric = self.tracking_instance_metrics.sort_values(by=_rank_metric)[
         #     :_top_k
@@ -223,7 +234,10 @@ class TensorBoardCallbackLogger(Callback):
         # store predictions in memory vs re-run model on indices vs store 10 best and 10 worst
 
         hydra_output_dir = HydraConfig.get().run.dir
-        self.tracking_instance_metrics.to_csv(make_path("instances_metrics.csv", hydra_output_dir), index=False)
+        self.tracking_instance_metrics.to_csv(
+            make_path("instances_metrics.csv", hydra_output_dir), index=False
+        )
+
 
 """
 # CustomWriter : 

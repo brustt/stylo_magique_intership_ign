@@ -2,7 +2,7 @@ from dataclasses import asdict
 
 from commons.utils_io import load_sam
 
-from src.commons.config import DEVICE
+from src.commons.constants import DEVICE
 from src.commons.constants import NamedModels
 from src.models.segment_any_change.config_run import ExperimentParams
 from src.models.segment_any_change.matching import BitemporalMatching

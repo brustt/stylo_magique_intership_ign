@@ -4,7 +4,7 @@ from deprecated import deprecated
 import numpy as np
 import torch
 
-from commons.config import IMG_SIZE
+from commons.constants import IMG_SIZE
 from src.models.commons.mask_items import ImgType
 from src.commons.utils import resize
 

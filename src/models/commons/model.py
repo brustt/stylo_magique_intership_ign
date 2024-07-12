@@ -1,6 +1,6 @@
 from copy import deepcopy
 from enum import Enum
-from commons.config import DEVICE_MAP
+from commons.constants import DEVICE_MAP
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -58,8 +58,12 @@ class BiSam(nn.Module):
         self.prompt_encoder = prompt_encoder.to(self.device)
         self.mask_decoder = mask_decoder.to(self.device)
         self.image_embeddings = None
-        self.pixel_mean = torch.tensor([123.675, 116.28, 103.53]).view(-1, 1, 1).to(self.device) 
-        self.pixel_std = torch.tensor([58.395, 57.12, 57.375]).view(-1, 1, 1).to(self.device)
+        self.pixel_mean = (
+            torch.tensor([123.675, 116.28, 103.53]).view(-1, 1, 1).to(self.device)
+        )
+        self.pixel_std = (
+            torch.tensor([58.395, 57.12, 57.375]).view(-1, 1, 1).to(self.device)
+        )
 
         # self.register_buffer(
         #     "pixel_mean", torch.tensor([123.675, 116.28, 103.53]).view(-1, 1, 1), False
@@ -76,7 +80,7 @@ class BiSam(nn.Module):
     ) -> List[Dict[str, torch.Tensor]]:
         """
         SAM implementation for bi-input and batch inference.
-        TO DO : 
+        TO DO :
         - add multi size prompts
         - force lightning associated device through python class wrapper
 
@@ -93,15 +97,21 @@ class BiSam(nn.Module):
 
         if mode.value == SamModeInference.AUTO.value:
 
-            input_images = torch.cat([batched_input["img_A"], batched_input["img_B"]]).to(self.device)
+            input_images = torch.cat(
+                [batched_input["img_A"], batched_input["img_B"]]
+            ).to(self.device)
             point_coords = batched_input["point_coords"].repeat(2, 1, 1).to(self.device)
             point_labels = batched_input["point_labels"].repeat(2, 1).to(self.device)
 
         elif mode.value == SamModeInference.INTERACTIVE.value:
             # for training remove detach()
             input_images = batched_input["img_B"].detach().clone().to(self.device)
-            point_coords = batched_input["point_coords"].detach().clone().to(self.device)
-            point_labels = batched_input["point_labels"].detach().clone().to(self.device)
+            point_coords = (
+                batched_input["point_coords"].detach().clone().to(self.device)
+            )
+            point_labels = (
+                batched_input["point_labels"].detach().clone().to(self.device)
+            )
 
         else:
             raise ValueError(f"mode {mode} for SAM not recognized")
@@ -109,9 +119,9 @@ class BiSam(nn.Module):
         # print("device input B:", batched_input["img_B"].detach().clone().device)
         # print("device input pts coords :", batched_input["point_coords"].detach().clone().device)
         # print("device input pts labels:", batched_input["point_labels"].detach().clone().device)
-        
+
         input_images = self.preprocess(input_images)
-        
+
         self.image_embeddings = self.image_encoder(input_images)
 
         sparse_embeddings, dense_embeddings = self.prompt_encoder(

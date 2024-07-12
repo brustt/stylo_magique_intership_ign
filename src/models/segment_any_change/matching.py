@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Tuple, Union
-from commons.config import IMG_SIZE
+from commons.constants import IMG_SIZE
 from models.segment_any_change.embedding import (
     compute_mask_embedding,
     get_img_embedding_normed,

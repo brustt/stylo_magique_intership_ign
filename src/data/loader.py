@@ -4,7 +4,7 @@ from typing import Any, Union
 import numpy as np
 import pandas as pd
 from commons.constants import SECOND_NO_CHANGE_RGB, NamedDataset
-from commons.config import SECOND_PATH, LEVIRCD_PATH, SEED
+from commons.constants import SECOND_PATH, LEVIRCD_PATH, SEED
 from torch.utils.data import Dataset
 from omegaconf import OmegaConf, DictConfig
 
@@ -84,7 +84,6 @@ class BiTemporalDataset(Dataset):
             label_path = row["label"]
             print(row["label"])
 
-
         elif self.name == NamedDataset.SECOND.value:
             img_A = load_img(row["A"])
             img_B = load_img(row["B"])
@@ -96,13 +95,11 @@ class BiTemporalDataset(Dataset):
             print(row["label_A"])
             label_path = row["label_A"]
 
-
         sample = {
             "img_A": img_A,
             "img_B": img_B,
             "label": label,
             "label_path": label_path,
-
         }
 
         if self.transform:
@@ -218,22 +215,25 @@ def load_levircd_sample(
             make_path(_, path, "label")
             for _ in os.listdir(Path(path, "label"))
             if Path(_).suffix == ".png"
-        ], key=extract_number
+        ],
+        key=extract_number,
     )
     files_A = sorted(
         [
             make_path(_, path, "A")
             for _ in os.listdir(Path(path, "A"))
             if Path(_).suffix == ".png"
-        ], key=extract_number
+        ],
+        key=extract_number,
     )
-    
+
     files_B = sorted(
         [
             make_path(_, path, "B")
             for _ in os.listdir(Path(path, "B"))
             if Path(_).suffix == ".png"
-        ], key=extract_number
+        ],
+        key=extract_number,
     )
 
     df = pd.DataFrame({"label": labels, "A": files_A, "B": files_B})
