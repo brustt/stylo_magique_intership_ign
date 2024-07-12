@@ -16,7 +16,7 @@ defaults:
   - debug: null # debugging config (enable through command line, e.g. `python train.py debug=default)
   - _self_
 
-task_name: "segany_rpr_prompt"
+task_name: "segany_rpr_matching"
 
 tags: ["dev"]
 # data_dir: ${paths.data_dir}/${dataset.name}/
