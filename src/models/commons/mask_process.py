@@ -356,4 +356,4 @@ def _bbox_processing(
 
 
 def binarize_mask(masks: torch.Tensor, th: float) -> torch.Tensor:
-    return masks > th
+    return (masks > th).float()

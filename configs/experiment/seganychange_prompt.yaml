@@ -10,7 +10,8 @@ tags: ["seganychange prompt"]
 data:
   params:
     prompt_type: "sample"
-    n_prompt: 3
+    n_prompt: 1
+    n_shape: 3
     loc: center
     batch_size: 2
     num_worker: ${model.instance.params.num_worker}
@@ -39,3 +40,4 @@ model:
 
 
 
+experiment: seganychange_prompt

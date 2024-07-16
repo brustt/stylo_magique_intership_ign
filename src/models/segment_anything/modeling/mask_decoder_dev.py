@@ -132,8 +132,6 @@ class MaskDecoder(nn.Module):
         See 'forward' for more details.
         MD edit
         """
-        if image_embeddings.ndim < 5:  # ?
-            image_embeddings = image_embeddings[:, None, ...]
         # Concatenate output tokens
         # [(num_mask+1)+1, 256]
         output_tokens = torch.cat(
@@ -155,7 +153,7 @@ class MaskDecoder(nn.Module):
         # print(f"tokens shape : {tokens.shape}")
 
         # extent image embedding in points dimensions
-        src = torch.repeat_interleave(image_embeddings, tokens.shape[1], dim=1)
+        src = torch.repeat_interleave(image_embeddings[:, None, ...], tokens.shape[1], dim=1)
 
         # print(f"img_embedding (src) expanded to tokens dim : {src.shape}")
 

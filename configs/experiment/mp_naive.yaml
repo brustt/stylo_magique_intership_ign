@@ -1,0 +1,20 @@
+# @package _global_
+
+defaults:
+  - override /data: ??
+  - override /model: diff_naive
+  - _self_
+
+tags: ["diff_naive"]
+
+data:
+  params:
+    prompt_type: "sample"
+    n_prompt: 1
+    n_shape: null
+    loc: "center"
+    batch_size: 2
+
+
+
+

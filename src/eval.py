@@ -68,9 +68,11 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         log_hyperparameters(object_dict)
 
     log.info("Starting testing!")
-    # ckpt is provide in BitemporalMatching for SegmentAnyChange models
-    trainer.test(model=module, datamodule=datamodule)
-    # trainer.test(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
+    # ckpt is provide in BitemporalMatching for SegmentAnyChange models otherwise it sould be mention here
+    if cfg.experiment in ["seganychange_matching", "seganychange_prompt"]:
+        trainer.test(model=module, datamodule=datamodule)
+    else:
+        trainer.test(model=module, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
 
     # # for predictions use trainer.predict(...)
     # # predictions = trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)

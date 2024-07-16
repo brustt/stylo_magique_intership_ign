@@ -10,9 +10,13 @@ from src.models.segment_any_change.config_run import ExperimentParams
 class CDDataModule(pl.LightningDataModule):
     def __init__(self, name, params: ExperimentParams) -> None:
         super().__init__()
+
+        if name == "second":
+            raise NotImplementedError('Please implement validation set before')
+        
         self.name = name
         self.batch_size = params.batch_size
-        self.num_worker = params.num_worker
+        self.num_worker = 0 #params.num_worker # compute this parameter instead
         self.params = params
 
     def prepare_data(self):
@@ -29,9 +33,13 @@ class CDDataModule(pl.LightningDataModule):
             transform=DefaultTransform(),
             params=self.params,
         )
-        # self.val = BiTemporalDataset(
-        #     name=self.name, dtype="val", transform=DefaultTransform()
-        # ) # not implement for SECOND
+        self.val = BiTemporalDataset(
+            name=self.name,
+            dtype="train",
+            transform=DefaultTransform(),
+            params=self.params,
+        ) 
+
         self.test = BiTemporalDataset(
             name=self.name,
             dtype="test",
@@ -39,40 +47,56 @@ class CDDataModule(pl.LightningDataModule):
             params=self.params,
         )
 
+        self.ds_dict_type = dict(
+            train=self.train,
+            test=self.test,
+            val=self.val
+        )
+    
+    def check_dataset_mode(self, dtype: str) -> BiTemporalDataset:
+        
+        if self.params.get("ds_sample", None):
+            subset = torch.utils.data.Subset(
+                self.ds_dict_type[dtype], 
+                np.random.randint(0, len(self.ds_dict_type[dtype]), self.params.get("ds_sample"))
+                )
+            return subset
+        return self.ds_dict_type[dtype]
+
     def train_dataloader(self):
+        ds = self.check_dataset_mode("train")
         return data.DataLoader(
-            self.train,
+            ds,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_worker,
         )
 
     def val_dataloader(self):
+        ds = self.check_dataset_mode("val")
         return data.DataLoader(
-            self.val,
+            ds,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_worker,
         )
 
     def test_dataloader(self):
-        # subset = torch.utils.data.Subset(self.test, np.arange(2))
+        ds = self.check_dataset_mode("test")
         return data.DataLoader(
-            self.test,  # subset,
+            ds,  
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_worker,
             # sampler=data.SequentialSampler(subset),
         )
 
-        # return data.DataLoader(self.test, batch_size=self.batch_size, shuffle=False)
-
-    def predict_dataloader(self):
-        # sample first n paires
-        subset = torch.utils.data.Subset(self.test, np.arange(2))
-        return data.DataLoader(
-            subset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_worker,
-        )
+    # def predict_dataloader(self):
+    #     # sample first n paires
+    #     subset = torch.utils.data.Subset(self.test, np.arange(2))
+    #     return data.DataLoader(
+    #         subset,
+    #         batch_size=self.batch_size,
+    #         shuffle=False,
+    #         num_workers=self.num_worker,
+    #     )

@@ -181,7 +181,7 @@ class SegAnyMaskGenerator:
         # print(f' filter stability_score : {data["masks"].shape[0]}')
 
         # Threshold masks and calculate boxes
-        data["masks_binary"] = binarize_mask(data["masks"], mask_threshold)
+        data["masks_binary"] = (data["masks"] > mask_threshold)
         # print(f' filter mask_threshold : {data["masks_binary"].shape[0]}')
 
         return data

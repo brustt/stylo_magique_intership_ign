@@ -2,6 +2,8 @@
 
 # default debugging setup, runs 1 full epoch
 # other debugging configs can inherit from this one
+defaults:
+  - override /data: ??
 
 # overwrite task name so debugging logs are stored in separate folder
 task_name: "debug"
@@ -31,5 +33,7 @@ trainer:
   detect_anomaly: true # raise exception if NaN or +/-inf is detected in any tensor
 
 data:
-  num_workers: 0 # debuggers don't like multiprocessing
-  pin_memory: False # disable gpu memory pin
+  params:
+    num_workers: 0 # debuggers don't like multiprocessing
+    pin_memory: False # disable gpu memory pin
+    ds_sample: 1

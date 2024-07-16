@@ -137,8 +137,8 @@ class ProcessingEval:
         if masks.ndim > 3:
             masks = torch.sum(masks, axis=1)
         # binarize
-        labels = (labels > 1) * 1
-        masks = (masks > 1) * 1
+        labels = (labels >= 1) * 1
+        masks = (masks >= 1) * 1
         # flat
         masks = masks.view(masks.shape[0], -1)
         labels = labels.view(labels.shape[0], -1)

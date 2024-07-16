@@ -17,6 +17,7 @@ from skimage.exposure import match_histograms
 import seaborn as sns  # type: ignore
 import torch.nn.functional as F
 from torchvision.utils import make_grid
+from PIL import Image
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
@@ -188,6 +189,61 @@ def show_prediction_sample(output: Dict, idx: int = None):
     - img_B
     - label
     - prediction (masks aggregated)
+    ...
+    Args:
+        plt fig
+    """
+    masks = output["pred"].cpu()
+    img_A = output["batch"]["img_A"].cpu()
+    img_B = output["batch"]["img_B"].cpu()
+    label = output["batch"]["label"].cpu()
+
+    prompts = output["batch"]["point_coords"].cpu()
+
+    if idx is not None:
+        masks = masks[idx].squeeze(0)
+        img_A = img_A[idx].squeeze(0)
+        img_B = img_B[idx].squeeze(0)
+        label = label[idx].squeeze(0)
+        prompts = prompts[idx].squeeze(0)            
+    if masks.ndim == 3:
+        masks = torch.sum(masks, dim=0)
+
+    imgs = [img_A, img_B, label, masks]
+    names = ["img_A", "img_B w prompts", "label", "predicted changes"]
+
+    fig, axs = plt.subplots(ncols=len(imgs), squeeze=False, figsize=(15, 15))
+    for i, sample in enumerate(zip(imgs, names)):
+        img, name = sample
+        if name.startswith("im"):
+            img = to_numpy(img, transpose=True) / 255
+            axs[0, i].imshow(img)
+
+        else:
+            img = to_numpy(img, transpose=False)
+            axs[0, i].imshow(img, cmap="grey")
+
+        axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+        axs[0, i].set_title(name)
+        if name == "img_B w prompts":
+            if prompts.shape[0] < 100:  # prevent showing grid
+                colors = [
+                    np.random.choice(range(256), size=3) / 255
+                    for _ in range(len(prompts))
+                ]
+                for pt, c in zip(prompts, colors):
+                    axs[0, i].scatter(*pt, color=c, marker="*", s=40)
+    plt.close()
+    return fig
+
+def show_prediction_sample_seganychange(output: Dict, idx: int = None):
+    """Show sample of given batch in a row plot :
+    - img_A
+    - img_B
+    - label
+    - prediction (masks aggregated)
+
+    SEGANYCHANGE UTILS FUNCTION
     ...
     Args:
         output (Dict): output model with batch
@@ -450,3 +506,52 @@ def extract_number(file_path):
     if match:
         return int(match.group(1))
     return np.inf
+
+
+def fig2arr(fig) -> np.ndarray:
+    """Convert a Matplotlib figure to np.array"""
+    import io
+    buf = io.BytesIO()
+    fig.savefig(buf)
+    buf.seek(0)
+    img = Image.open(buf)
+    # keep first 3 dims
+    arr = np.array(img.copy())[:, :, :3]
+    img.close()
+    return arr
+
+
+def create_sample_grid_with_prompt(batch):
+    """batch size == 1"""
+    img_A = batch["img_A"].squeeze(0).detach() / 255
+    img_B = batch["img_B"].squeeze(0).detach() / 255
+    label = batch["label"]
+    coord_points = batch["point_coords"].squeeze(0)
+    label_ = torch.repeat_interleave(label, 3, dim=0)
+    grid = make_grid([img_A, img_B, label_], padding=2, pad_value=1)
+    label = get_mask_with_prompt(label, coord_points)
+
+def get_mask_with_prompt(img, coord_points) -> np.ndarray:
+    """
+    show prompts points on img (binary image HxW)
+    return np.ndarray
+    """
+
+    if isinstance(img, torch.tensor):
+        img = to_numpy(img, transpose=False)
+    if isinstance(img, torch.tensor):
+        coord_points = to_numpy(coord_points, transpose=False)
+
+    show_img(to_numpy(img > 0, transpose=False))
+    ax = plt.gca()
+    colors = [
+        np.random.choice(range(256), size=3) / 255
+        for _ in range(len(coord_points))
+        ]
+    
+    for pt,c in zip(coord_points, colors):
+        ax.scatter(*pt[::-1], color=c, marker='*', s=30)
+    
+    fig=plt.gcf()
+    plt.close()
+    return fig2arr(fig)

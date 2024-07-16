@@ -123,7 +123,7 @@ class PromptEncoder(nn.Module):
         masks: Optional[torch.Tensor],
     ) -> int:
         """
-        Gets the batch size of the output given the batch size of the input prompts.
+        Gets the batch size (number of prompts) of the output given the batch size of the input prompts.
         """
         if points is not None:
             return points[0].shape[1]
@@ -156,9 +156,9 @@ class PromptEncoder(nn.Module):
         Returns:
           torch.Tensor: sparse embeddings for the points and boxes, with shape
             BxNx(embed_dim), where N is determined by the number of input points
-            and boxes.
+            and boxes. embed_dim = (2, 256)
           torch.Tensor: dense embeddings for the masks, in the shape
-            Bx(embed_dim)x(embed_H)x(embed_W)
+            Bx(embed_dim)x(embed_H)x(embed_W) : Bx256x64x64
         """
         B = points[0].shape[0]
         bs = self._get_batch_size(points, boxes, masks)
@@ -178,6 +178,7 @@ class PromptEncoder(nn.Module):
         if masks is not None:
             dense_embeddings = self._embed_masks(masks)
         else:
+            # TODO: check if dim bs is necessary and do not cause overhead
             dense_embeddings = self.no_mask_embed.weight.reshape(1, -1, 1, 1).expand(
                 B, bs, -1, self.image_embedding_size[0], self.image_embedding_size[1]
             )

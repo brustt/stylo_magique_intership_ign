@@ -54,3 +54,5 @@ def load_sam(
 def load_img(img_path):
     img = io.imread(img_path)
     return img
+
+

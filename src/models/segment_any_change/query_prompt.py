@@ -51,7 +51,7 @@ class SegAnyPrompt:
         grid_params["prompt_type"] = "grid"
         grid_params["n_prompt"] = grid_params["n_points_grid"]
         # TODO : refacto generate_prompt() inputs cleaner
-        point_coords, point_labels = generate_prompt(
+        point_coords, point_labels, _ = generate_prompt(
             grid_batch["label"],
             grid_params["prompt_type"],
             grid_params["n_prompt"],

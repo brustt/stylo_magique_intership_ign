@@ -30,3 +30,5 @@ model:
       col_nms_threshold: ci  
       sam_ckpt_path: ${sam_ckpt_path} # override in sam_type
 
+experiment: seganychange_matching
+

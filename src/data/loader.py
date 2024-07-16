@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from commons.constants import SECOND_NO_CHANGE_RGB, NamedDataset
 from commons.constants import SECOND_PATH, LEVIRCD_PATH, SEED
+import torch
 from torch.utils.data import Dataset
 from omegaconf import OmegaConf, DictConfig
 
@@ -104,12 +105,15 @@ class BiTemporalDataset(Dataset):
 
         if self.transform:
             sample = self.transform(sample)
-        prompt_coords, prompt_labels = generate_prompt(
+
+        prompt_coords, prompt_labels, new_label = generate_prompt(
             sample["label"], self.params.prompt_type, self.params.n_prompt, self.params
         )
+        #print("LABEL", torch.unique(new_label.flatten()))
+        # check if we need to process labels
         # note : point coords are computed on transformed img (may be resized)
         sample = sample | dict(
-            index=index, point_coords=prompt_coords, point_labels=prompt_labels
+            label=new_label, index=index, point_coords=prompt_coords, point_labels=prompt_labels
         )
         return sample
 

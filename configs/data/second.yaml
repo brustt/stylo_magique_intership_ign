@@ -1,9 +1,5 @@
-_target_: src.data.datamodule.CDDataModule
-name: second
+defaults:
+  - default
 
-params:
-  prompt_type: ??
-  n_prompt: ??
-  loc: null
-  batch_size: ??
-  num_worker: ??
+name: second
+_target_: src.data.datamodule.CDDataModule
