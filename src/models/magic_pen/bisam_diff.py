@@ -61,7 +61,8 @@ class BiSamDiff(nn.Module):
         self.register_buffer(
             "pixel_mean", torch.tensor([123.675, 116.28, 103.53]).view(-1, 1, 1), False
         )
-        self.register_buffer("pixel_std", torch.tensor([58.395, 57.12, 57.375]).view(-1, 1, 1), False)
+        self.register_buffer(
+            "pixel_std", torch.tensor([58.395, 57.12, 57.375]).view(-1, 1, 1), False)
 
     def forward(
         self,

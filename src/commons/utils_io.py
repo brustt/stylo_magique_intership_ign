@@ -5,6 +5,8 @@ from src.models.segment_anything.build_sam_dev import sam_model_registry
 from src.models.segment_anything.build_sam import (
     sam_model_registry as sam_model_registry_v0,
 )
+from src.models.segment_anything.build_sam_v2 import sam_model_registry as sam_model_registry_v2
+
 from commons.constants import DEVICE, SAM_DICT_CHECKPOINT
 import skimage.io as io
 
@@ -36,6 +38,10 @@ def load_sam(
     sam = None
 
     match version:
+        case "dev2":
+            sam = sam_model_registry_v2[model_type](
+                checkpoint=SAM_DICT_CHECKPOINT[model_type], model=model_cls
+            ).to(device=device)
         case "dev":
             sam = sam_model_registry[model_type](
                 checkpoint=SAM_DICT_CHECKPOINT[model_type], model=model_cls

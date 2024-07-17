@@ -543,7 +543,7 @@ def get_mask_with_prompt(img: Union[np.ndarray, torch.Tensor], coord_points: Uni
     if isinstance(coord_points, torch.Tensor):
         coord_points = to_numpy(coord_points, transpose=False)
 
-    show_img(img > 0, transpose=False)
+    show_img(img > 0)
     ax = plt.gca()
     colors = [
         np.random.choice(range(256), size=3) / 255

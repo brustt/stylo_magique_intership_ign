@@ -1,4 +1,4 @@
-_target_: src.models.segment_anything.modeling.transformer.TwoWayTransformer
+_target_: src.models.segment_anything.modeling.transformer_dev.TwoWayTransformer
 depth: 2
 embedding_dim: 256
 mlp_dim: 2048
