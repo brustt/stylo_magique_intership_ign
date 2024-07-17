@@ -529,20 +529,21 @@ def create_sample_grid_with_prompt(batch):
     coord_points = batch["point_coords"].squeeze(0)
     label_ = torch.repeat_interleave(label, 3, dim=0)
     grid = make_grid([img_A, img_B, label_], padding=2, pad_value=1)
-    label = get_mask_with_prompt(label, coord_points)
+    fig = get_mask_with_prompt(label, coord_points)
+    return fig
 
-def get_mask_with_prompt(img, coord_points) -> np.ndarray:
+def get_mask_with_prompt(img: Union[np.ndarray, torch.Tensor], coord_points: Union[np.ndarray, torch.Tensor]) -> np.ndarray:
     """
     show prompts points on img (binary image HxW)
     return np.ndarray
     """
 
-    if isinstance(img, torch.tensor):
+    if isinstance(img, torch.Tensor):
         img = to_numpy(img, transpose=False)
-    if isinstance(img, torch.tensor):
+    if isinstance(coord_points, torch.Tensor):
         coord_points = to_numpy(coord_points, transpose=False)
 
-    show_img(to_numpy(img > 0, transpose=False))
+    show_img(img > 0, transpose=False)
     ax = plt.gca()
     colors = [
         np.random.choice(range(256), size=3) / 255
@@ -550,7 +551,7 @@ def get_mask_with_prompt(img, coord_points) -> np.ndarray:
         ]
     
     for pt,c in zip(coord_points, colors):
-        ax.scatter(*pt[::-1], color=c, marker='*', s=30)
+        ax.scatter(*pt, color=c, marker='*', s=30)
     
     fig=plt.gcf()
     plt.close()

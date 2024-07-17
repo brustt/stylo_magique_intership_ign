@@ -37,7 +37,8 @@ class BiSam(nn.Module):
         image_encoder: ImageEncoderViT,
         prompt_encoder: PromptEncoder,
         mask_decoder: MaskDecoder,
-        device: str,
+        device: str=None,
+        **kwargs
     ) -> None:
         """
         SAM predicts object masks from an batch of images and prompts
@@ -53,7 +54,7 @@ class BiSam(nn.Module):
         """
         super().__init__()
 
-        self.device = DEVICE_MAP[device]
+        self.device = DEVICE_MAP[device] if device else "cpu"
         self.image_encoder = image_encoder.to(self.device)
         self.prompt_encoder = prompt_encoder.to(self.device)
         self.mask_decoder = mask_decoder.to(self.device)

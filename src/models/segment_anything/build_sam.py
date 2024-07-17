@@ -10,11 +10,11 @@ from functools import partial
 
 # TODO : re add original mask decoder and prompt decoder
 from src.models.segment_anything.modeling import (
-    ImageEncoderViT,
-    MaskDecoder,
-    PromptEncoder,
+    ImageEncoderViT_ori,
+    MaskDecoder_ori,
+    PromptEncoder_ori,
     Sam,
-    TwoWayTransformer,
+    TwoWayTransformer_ori,
 )
 import logging
 
@@ -77,7 +77,7 @@ def _build_sam(
     vit_patch_size = 16
     image_embedding_size = image_size // vit_patch_size
     sam = Sam(
-        image_encoder=ImageEncoderViT(
+        image_encoder=ImageEncoderViT_ori(
             depth=encoder_depth,
             embed_dim=encoder_embed_dim,
             img_size=image_size,
@@ -91,15 +91,15 @@ def _build_sam(
             window_size=14,
             out_chans=prompt_embed_dim,
         ),
-        prompt_encoder=PromptEncoder(
+        prompt_encoder=PromptEncoder_ori(
             embed_dim=prompt_embed_dim,
             image_embedding_size=(image_embedding_size, image_embedding_size),
             input_image_size=(image_size, image_size),
             mask_in_chans=16,
         ),
-        mask_decoder=MaskDecoder(
+        mask_decoder=MaskDecoder_ori(
             num_multimask_outputs=3,
-            transformer=TwoWayTransformer(
+            transformer=TwoWayTransformer_ori(
                 depth=2,
                 embedding_dim=prompt_embed_dim,
                 mlp_dim=2048,

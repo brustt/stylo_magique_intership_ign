@@ -70,7 +70,7 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     if cfg.experiment in ["seganychange_matching", "seganychange_prompt"]:
         trainer.test(model=module, datamodule=datamodule)
     else:
-        trainer.test(model=module, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
+        trainer.test(model=module, datamodule=datamodule, ckpt_path=cfg.get('sam_ckpt_path'))
 
     # # for predictions use trainer.predict(...)
     # # predictions = trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)

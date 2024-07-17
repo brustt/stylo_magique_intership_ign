@@ -58,7 +58,6 @@ class TwoWayTransformer(nn.Module):
             embedding_dim, num_heads, downsample_rate=attention_downsample_rate
         )
         self.norm_final_attn = nn.LayerNorm(embedding_dim)
-        # self.norm_final_attn = LayerNorm2dScale(embedding_dim)
 
     def forward(
         self,
@@ -80,13 +79,9 @@ class TwoWayTransformer(nn.Module):
           torch.Tensor: the processed image_embedding
         """
         # BxCxHxW -> BxHWxC == B x N_image_tokens x C
-        bs, n, c, h, w = image_embedding.shape
-        # EDIT MD
-        image_embedding = image_embedding.flatten(3).permute(0, 1, 3, 2)
-        image_pe = image_pe.flatten(3).permute(0, 1, 3, 2)
-
-        # print(f"- In transf src : {image_embedding.shape}")
-        # print(f"- In transf image_pe : {image_pe.shape}")
+        bs, c, h, w = image_embedding.shape
+        image_embedding = image_embedding.flatten(2).permute(0, 2, 1)
+        image_pe = image_pe.flatten(2).permute(0, 2, 1)
 
         # Prepare queries
         queries = point_embedding
@@ -107,6 +102,7 @@ class TwoWayTransformer(nn.Module):
         attn_out = self.final_attn_token_to_image(q=q, k=k, v=keys)
         queries = queries + attn_out
         queries = self.norm_final_attn(queries)
+
         return queries, keys
 
 
@@ -202,9 +198,7 @@ class Attention(nn.Module):
         self.embedding_dim = embedding_dim
         self.internal_dim = embedding_dim // downsample_rate
         self.num_heads = num_heads
-        assert (
-            self.internal_dim % num_heads == 0
-        ), "num_heads must divide embedding_dim."
+        assert self.internal_dim % num_heads == 0, "num_heads must divide embedding_dim."
 
         self.q_proj = nn.Linear(embedding_dim, self.internal_dim)
         self.k_proj = nn.Linear(embedding_dim, self.internal_dim)
@@ -212,16 +206,14 @@ class Attention(nn.Module):
         self.out_proj = nn.Linear(self.internal_dim, embedding_dim)
 
     def _separate_heads(self, x: Tensor, num_heads: int) -> Tensor:
-        # EDIT MD
-        b, np, n, c = x.shape
-        x = x.reshape(b, np, n, num_heads, c // num_heads)
-        return x.transpose(2, 3)  # B x np x N_heads x N_tokens x C_per_head
+        b, n, c = x.shape
+        x = x.reshape(b, n, num_heads, c // num_heads)
+        return x.transpose(1, 2)  # B x N_heads x N_tokens x C_per_head
 
     def _recombine_heads(self, x: Tensor) -> Tensor:
-        # EDIT MD
-        b, np, n_heads, n_tokens, c_per_head = x.shape
-        x = x.transpose(2, 3)
-        return x.reshape(b, np, n_tokens, n_heads * c_per_head)  # B x np x N_tokens x C
+        b, n_heads, n_tokens, c_per_head = x.shape
+        x = x.transpose(1, 2)
+        return x.reshape(b, n_tokens, n_heads * c_per_head)  # B x N_tokens x C
 
     def forward(self, q: Tensor, k: Tensor, v: Tensor) -> Tensor:
         # Input projections
@@ -235,9 +227,8 @@ class Attention(nn.Module):
         v = self._separate_heads(v, self.num_heads)
 
         # Attention
-        # EDIT MD
-        _, _, _, _, c_per_head = q.shape
-        attn = q @ k.permute(0, 1, 2, 4, 3)  # B x np x N_heads x N_tokens x N_tokens
+        _, _, _, c_per_head = q.shape
+        attn = q @ k.permute(0, 1, 3, 2)  # B x N_heads x N_tokens x N_tokens
         attn = attn / math.sqrt(c_per_head)
         attn = torch.softmax(attn, dim=-1)
 
