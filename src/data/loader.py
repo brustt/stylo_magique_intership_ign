@@ -14,7 +14,6 @@ import warnings
 
 from src.data.process import generate_prompt
 from commons.utils_io import make_path
-from src.models.segment_any_change.config_run import ExperimentParams
 from src.commons.utils import extract_number, load_img
 
 warnings.filterwarnings("ignore")
@@ -49,7 +48,7 @@ class BiTemporalDataset(Dataset):
         dtype: str = "train",
         transform: Any = None,
         seed: int = SEED,
-        params: Union[DictConfig, ExperimentParams] = None,
+        params: Union[DictConfig, Any] = None,
     ) -> None:
 
         if name is None:

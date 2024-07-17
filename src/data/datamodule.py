@@ -1,14 +1,14 @@
+from typing import Any
 import numpy as np
 import lightning.pytorch as pl
 import torch
 from torch.utils import data
 from .loader import BiTemporalDataset
 from .process import DefaultTransform
-from src.models.segment_any_change.config_run import ExperimentParams
 
 
 class CDDataModule(pl.LightningDataModule):
-    def __init__(self, name, params: ExperimentParams) -> None:
+    def __init__(self, name, params: Any) -> None:
         super().__init__()
 
         if name == "second":

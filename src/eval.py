@@ -6,7 +6,6 @@ from commons.instantiators import instantiate_callbacks
 from commons.utils import flush_memory
 import hydra
 from pytorch_lightning import Callback
-import rootutils
 from lightning.pytorch import (
     LightningDataModule,
     LightningModule,
@@ -23,7 +22,6 @@ from src.commons import (
     log_hyperparameters,
     task_wrapper,
 )
-
 log = RankedLogger(__name__, rank_zero_only=True)
 
 
