@@ -5,7 +5,7 @@ defaults:
   - sam_type: ??
   - experiment: ??
   - metrics: default
-  - callbacks: default
+  - callbacks: segany
   - logger: tensorboard 
   - trainer: default
   - paths: default
@@ -15,8 +15,6 @@ defaults:
   - optional local: default # optional local config for machine/user specific settings
   - debug: null # debugging config (enable through command line, e.g. `python train.py debug=default)
   - _self_
-
-task_name: "segany_rpr_matching"
 
 tags: ["dev"]
 # data_dir: ${paths.data_dir}/${dataset.name}/

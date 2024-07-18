@@ -14,3 +14,4 @@ model:
   instance:
     model: 
       n_points_grid: 30
+

@@ -22,7 +22,7 @@ class MagicPenModule(pl.LightningModule):
         super().__init__()
         self.params = params
         self.model = network
-        self.load_weights(params.get("sam_ckpt_path"))
+        # self.load_weights(params.get("sam_ckpt_path"))
         self.freeze_weigts()
         self.loss = nn.BCEWithLogitsLoss()
         self.train_metrics = MetricCollection( [
@@ -83,20 +83,22 @@ class MagicPenModule(pl.LightningModule):
             on_step=True,
             on_epoch=True,
         )
-        if batch_idx % 5 == 0:
-            bs = preds.shape[0]
-            for b_i in range(bs):
-                fig = show_prediction_sample((outputs|dict(batch=batch)), idx=b_i)
-                self.logger.experiment.add_figure(
-                        f"sample_{self.current_epoch}_{batch_idx}",
-                        fig,
-                    )
         if self.current_epoch % 5 == 0:
-            sm= nn.Sigmoid()
-            self.logger.experiment.add_histogram(
-                    f"hist_preds_{self.current_epoch}",
-                    sm(preds[0].flatten()),
-                )
+            if batch_idx % 2 == 0:
+                bs = preds.shape[0]
+                for b_i in range(bs):
+                    fig = show_prediction_sample((outputs|dict(batch=batch)), idx=b_i)
+                    self.logger.experiment.add_figure(
+                            f"sample_{self.current_epoch}_{batch_idx}",
+                            fig,
+                        )
+        if self.current_epoch % 5 == 0:
+            if batch_idx % 12 == 0:
+                sm= nn.Sigmoid()
+                self.logger.experiment.add_histogram(
+                        f"hist_preds_{self.current_epoch}",
+                        sm(preds[0].flatten()),
+                    )
 
     def on_validation_batch_end(self, outputs, batch, batch_idx):
         loss, preds = outputs["loss"], outputs["pred"]
