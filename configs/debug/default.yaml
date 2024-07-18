@@ -30,10 +30,10 @@ trainer:
   max_epochs: 1
   accelerator: cpu # debuggers don't like gpus
   devices: 1 # debuggers don't like multiprocessing
-  detect_anomaly: true # raise exception if NaN or +/-inf is detected in any tensor
+  # detect_anomaly: true # raise exception if NaN or +/-inf is detected in any tensor
 
 data:
   params:
-    num_workers: 0 # debuggers don't like multiprocessing
+    num_worker: 0 # debuggers don't like multiprocessing
     pin_memory: False # disable gpu memory pin
     ds_sample: 1

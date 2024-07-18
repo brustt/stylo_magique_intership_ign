@@ -1,5 +1,6 @@
 import enum
 from typing import Dict, List, Tuple, Union
+from deprecated import deprecated
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -172,13 +173,13 @@ def extract_object_from_batch(masks: torch.Tensor) -> torch.Tensor:
     ]
 
     if masks.shape[1] == 0:
-        # no object found in batch : masks => B x 0 x H x W
+        # no object found in batch
         # return B x 1 x H x W zeros masks
         return torch.zeros(masks.shape[0], 1, *masks.shape[-2:])
 
     return masks
 
-
+@deprecated
 def extract_individual_object_from_mask(masks: torch.Tensor) -> torch.Tensor:
     assert masks.ndim == 3  # assert batch
     # extract normalization somewhere else
@@ -196,7 +197,7 @@ def extract_individual_object_from_mask(masks: torch.Tensor) -> torch.Tensor:
     batch_masks = pad_sequence(batch_masks).permute(1, 0, 2, 3)
     return batch_masks
 
-
+@deprecated
 def _extract_obj(tensor: torch.Tensor) -> torch.Tensor:
     """
     Create individual binary mask from one array with annotated shapes

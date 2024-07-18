@@ -1,6 +1,6 @@
 # @package _global_
 
-defaults:
+defaults:  
   - override /data: ??
   - override /model: diff_naive
   - _self_
@@ -15,7 +15,5 @@ data:
     loc: "center"
     batch_size: 2
     num_worker: 8 # link to trainer
-
-
-
+    pin_memory: True
 

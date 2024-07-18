@@ -208,7 +208,9 @@ def show_prediction_sample(output: Dict, idx: int = None):
         prompts = prompts[idx].squeeze(0)            
     if masks.ndim == 3:
         masks = torch.sum(masks, dim=0)
-
+    
+    # shift range for vizu
+    masks = shift_range_values(masks)
     imgs = [img_A, img_B, label, masks]
     names = ["img_A", "img_B w prompts", "label", "predicted changes"]
 
@@ -556,3 +558,8 @@ def get_mask_with_prompt(img: Union[np.ndarray, torch.Tensor], coord_points: Uni
     fig=plt.gcf()
     plt.close()
     return fig2arr(fig)
+
+
+
+def select_highest_confident_mask(masks, ious) -> Tuple[torch.Tensor, torch.Tensor]:
+    pass

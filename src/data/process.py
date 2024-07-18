@@ -1,9 +1,11 @@
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from deprecated import deprecated
 from omegaconf import DictConfig
 import torch
 import numpy as np
 import torch.nn.functional as F
+from torch.nn.utils.rnn import pad_sequence
+from torch.utils import data
 
 from commons.constants import DEVICE, IMG_SIZE
 from src.models.commons.mask_process import binarize_mask, extract_object_from_batch
@@ -12,10 +14,25 @@ from src.models.segment_anything.utils.transforms import ResizeLongestSide
 from src.models.segment_anything.utils.amg import build_point_grid
 from src.commons.utils import apply_histogram
 
-
 def generate_grid_prompt(n_points, img_size: int = IMG_SIZE) -> np.ndarray:
     return build_point_grid(n_points) * img_size
 
+def collate_align_prompt(input: List[Any]):
+    """Stack tensors with different size (prompts) before create batch - used in dataloader"""
+
+    prompt_pts = [d["point_coords"] for d in input]
+    prompt_labels = [d["point_labels"] for d in input]
+
+    # we set torch.inf as value to ignore prompt
+    batch_pts = pad_sequence(prompt_pts, batch_first=True, padding_value=torch.inf)
+    # negative prompt : 0 is ignore - (same as positive prompt btw)
+    batch_labels = pad_sequence(prompt_labels, batch_first=True, padding_value=0)
+
+    for i in range(len(input)):
+        input[i]["point_coords"] = batch_pts[i]
+        input[i]["point_labels"] = batch_labels[i]
+
+    return data._utils.collate.default_collate(input)
 
 # TODO : refacto generate_prompt() inputs cleaner
 def generate_prompt(
@@ -45,6 +62,7 @@ class PointSampler:
     
     Each generated points is under coordinates format (X,Y) in pixels.
     """
+    MIN_AREA = 25
     
     def __init__(self):
         self._register_sample_method = {
@@ -83,17 +101,23 @@ class PointSampler:
         # track id shapes if we a subset of shapes
         id_selected_shapes = None
         
-        # extract shapes from mask
+        # extract shapes from mask - squeeze batch dimension
         shapes = extract_object_from_batch(mask).squeeze(0)
-        print("FIND SHAPES", shapes.shape[0])
+        # print("FIND SHAPES", shapes.shape[0])
         # if (n_shape is not None) and (n_shape != shapes.shape[0]):
         #     raise NotImplementedError("Sample of shapes is not implemented yet")
+
+        # filter on areas
+        areas = torch.sum(shapes, dim=(1, 2))
+        indices = torch.where(areas > self.MIN_AREA)[0]
+        shapes = shapes[indices,:,:]
 
         # empty return
         n = n_shape if (n_shape) and (n_shape <= shapes.shape[0]) else shapes.shape[0]
         sample_coords = torch.zeros((n*n_point_per_shape, 2), dtype=torch.float32)
 
-        # check if there is some shapes extracted - check sum for no-shapes return - check > 1 first for speed in case of shapes
+        # check if there is some shapes extracted - check sum for no-shapes return
+        # check > 1 first for speed in case of shapes - return no shapes :  (1 x) 1 x H x W
         if shapes.shape[0] > 1 or torch.sum(shapes):
             # set for all shapes if not specify
             if n_shape is not None:

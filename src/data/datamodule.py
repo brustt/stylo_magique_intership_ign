@@ -4,7 +4,7 @@ import lightning.pytorch as pl
 import torch
 from torch.utils import data
 from .loader import BiTemporalDataset
-from .process import DefaultTransform
+from .process import DefaultTransform, collate_align_prompt
 
 
 class CDDataModule(pl.LightningDataModule):
@@ -15,8 +15,6 @@ class CDDataModule(pl.LightningDataModule):
             raise NotImplementedError('Please implement validation set before')
         
         self.name = name
-        self.batch_size = params.batch_size
-        self.num_worker = 0 #params.num_worker # compute this parameter instead
         self.params = params
 
     def prepare_data(self):
@@ -67,27 +65,36 @@ class CDDataModule(pl.LightningDataModule):
         ds = self.check_dataset_mode("train")
         return data.DataLoader(
             ds,
-            batch_size=self.batch_size,
+            batch_size=self.params.get("batch_size"),
             shuffle=False,
-            num_workers=self.num_worker,
+            num_workers=self.params.get("num_worker"),
+            pin_memory=self.params.get("pin_memory"),
+            collate_fn=collate_align_prompt
+
         )
 
     def val_dataloader(self):
         ds = self.check_dataset_mode("val")
         return data.DataLoader(
             ds,
-            batch_size=self.batch_size,
+            batch_size=self.params.get("batch_size"),
             shuffle=False,
-            num_workers=self.num_worker,
+            num_workers=self.params.get("num_worker"),
+            pin_memory=self.params.get("pin_memory"),
+            collate_fn=collate_align_prompt
+
         )
 
     def test_dataloader(self):
         ds = self.check_dataset_mode("test")
         return data.DataLoader(
             ds,  
-            batch_size=self.batch_size,
+            batch_size=self.params.get("batch_size"),
             shuffle=False,
-            num_workers=self.num_worker,
+            num_workers=self.params.get("num_worker"),
+            pin_memory=self.params.get("pin_memory"),
+            collate_fn=collate_align_prompt
+
             # sampler=data.SequentialSampler(subset),
         )
 

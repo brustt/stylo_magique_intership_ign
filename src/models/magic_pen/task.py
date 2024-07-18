@@ -22,6 +22,7 @@ class MagicPenModule(pl.LightningModule):
         super().__init__()
         self.params = params
         self.model = network
+        self.load_weights(params.get("sam_ckpt_path"))
         self.freeze_weigts()
         self.loss = nn.BCEWithLogitsLoss()
         self.train_metrics = MetricCollection( [
@@ -35,6 +36,9 @@ class MagicPenModule(pl.LightningModule):
         self.test_metrics =  MetricCollection( [
                 BinaryJaccardIndex(),
             ], prefix="test")
+    
+    def load_weights(self, checkpoint):
+        self.model.load_state_dict(torch.load(checkpoint))
 
     def freeze_weigts(self):
         """
@@ -44,18 +48,17 @@ class MagicPenModule(pl.LightningModule):
         self.model.prompt_encoder.requires_grad_(False)
 
     def forward(self, x):
-        return self.model(x, multimask_output=self.multimask_output)
+        # try with multimask_output == True and select best one
+        preds, ious =  self.model(x, multimask_output=self.multimask_output)
+        # remove nan for no-prompt values in the prompt dimension
+        preds = torch.nan_to_num(preds, nan=0.)
+        return preds, ious
     
     def _step(self, batch):
-        y = batch["label"].to(torch.float)
         preds, ious  = self.forward(batch)
-        # sum masks and binarize
-        preds = torch.sum(preds, dim=1).float()
-        #print(pd.Series(preds.flatten()).describe())
-        # save_pickle(preds.detach(), "tmp_preds.pkl")
-        # print(torch.unique(y.flatten()))
-        # save_pickle(y, "tmp_preds.pkl")
-        loss = self.loss(preds, y)
+        # sum logits over all masks
+        preds = torch.sum(preds, dim=1)
+        loss = self.loss(preds, batch["label"])
         return preds, loss
 
     def training_step(self, batch, batch_idx):
@@ -80,12 +83,15 @@ class MagicPenModule(pl.LightningModule):
             on_step=True,
             on_epoch=True,
         )
+        if batch_idx % 5 == 0:
+            bs = preds.shape[0]
+            for b_i in range(bs):
+                fig = show_prediction_sample((outputs|dict(batch=batch)), idx=b_i)
+                self.logger.experiment.add_figure(
+                        f"sample_{self.current_epoch}_{batch_idx}",
+                        fig,
+                    )
         if self.current_epoch % 5 == 0:
-            fig = show_prediction_sample((outputs|dict(batch=batch)), idx=0)
-            self.logger.experiment.add_figure(
-                    f"sample_{self.current_epoch}",
-                    fig,
-                )
             sm= nn.Sigmoid()
             self.logger.experiment.add_histogram(
                     f"hist_preds_{self.current_epoch}",

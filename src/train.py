@@ -81,7 +81,7 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     #trainer.test(model=module, datamodule=datamodule)
     if cfg.get("train"):
             log.info("Starting training!")
-            trainer.fit(model=module, datamodule=datamodule, ckpt_path=cfg.get("sam_ckpt_path"))
+            trainer.fit(model=module, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path", None))
 
     train_metrics = trainer.callback_metrics
 
