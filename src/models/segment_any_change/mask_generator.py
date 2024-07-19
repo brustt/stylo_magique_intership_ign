@@ -80,6 +80,8 @@ class SegAnyMaskGenerator:
 
         # for param in self.model.parameters():
         #     print(param.dtype)
+
+        # we need to filter out the multimask outputs ! => seemns to be kept to True in sam demo
         outputs = self.model(
             batched_input=batched_input, multimask_output=True, return_logits=True
         )
@@ -87,7 +89,7 @@ class SegAnyMaskGenerator:
 
         masks, iou_predictions = outputs.values()
 
-        # print(f"OUT MODEL : {masks.shape}")
+        print(f"OUT MODEL : {masks.shape}")
 
         for i, i_masks, i_iou_predictions in zip(
             range(len(masks)), masks, iou_predictions

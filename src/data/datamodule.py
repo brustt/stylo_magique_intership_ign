@@ -11,9 +11,6 @@ class CDDataModule(pl.LightningDataModule):
     def __init__(self, name, params: Any) -> None:
         super().__init__()
 
-        if name == "second":
-            raise NotImplementedError('Please implement validation set before')
-        
         self.name = name
         self.params = params
 
@@ -25,18 +22,23 @@ class CDDataModule(pl.LightningDataModule):
     def setup(self, stage):
         # make assignments here (val/train/test split)
         # called on every process in DDP
+
+        self.val = None
+
         self.train = BiTemporalDataset(
             name=self.name,
             dtype="train",
             transform=DefaultTransform(),
             params=self.params,
         )
-        self.val = BiTemporalDataset(
-            name=self.name,
-            dtype="train",
-            transform=DefaultTransform(),
-            params=self.params,
-        ) 
+        # workaround tmp
+        if self.name != "second":
+            self.val = BiTemporalDataset(
+                name=self.name,
+                dtype="train",
+                transform=DefaultTransform(),
+                params=self.params,
+            ) 
 
         self.test = BiTemporalDataset(
             name=self.name,
@@ -69,20 +71,23 @@ class CDDataModule(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.params.get("num_worker"),
             pin_memory=self.params.get("pin_memory"),
-            collate_fn=collate_align_prompt
-
         )
 
     def val_dataloader(self):
-        ds = self.check_dataset_mode("val")
+
+        # workaround tmp to prevent eval failure for second
+        if self.name != "second":
+            sub_name = "val"
+        else:
+            sub_name="test"
+
+        ds = self.check_dataset_mode(sub_name)
         return data.DataLoader(
             ds,
             batch_size=self.params.get("batch_size"),
             shuffle=False,
             num_workers=self.params.get("num_worker"),
             pin_memory=self.params.get("pin_memory"),
-            collate_fn=collate_align_prompt
-
         )
 
     def test_dataloader(self):
@@ -93,8 +98,6 @@ class CDDataModule(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.params.get("num_worker"),
             pin_memory=self.params.get("pin_memory"),
-            collate_fn=collate_align_prompt
-
             # sampler=data.SequentialSampler(subset),
         )
 

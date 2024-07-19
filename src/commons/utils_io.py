@@ -1,6 +1,10 @@
 import os
 import pickle
-from typing import Dict, Any, Union
+from typing import Dict, Any, List, Union
+
+import hydra
+from hydra.core.global_hydra import GlobalHydra
+from omegaconf import DictConfig
 from src.models.segment_anything.build_sam_dev import sam_model_registry
 from src.models.segment_anything.build_sam import (
     sam_model_registry as sam_model_registry_v0,
@@ -62,3 +66,12 @@ def load_img(img_path):
     return img
 
 
+
+def load_config(list_args: List[str]) -> DictConfig:
+    GlobalHydra.instance().clear()
+    # Initialize the Hydra configuration
+    hydra.initialize(config_path="../../configs", version_base=None)
+    # Compose the configuration with the desired environment override
+    cfg = hydra.compose(config_name="train", overrides=list_args)
+    
+    return cfg

@@ -44,6 +44,8 @@ class SegAnyPrompt:
 
     def __call__(self, batch: Dict[str, torch.Tensor]):
 
+        # prevent apply model on no-positive label sample (cannot sample prompt)
+
         grid_params = deepcopy(self.params)
         grid_batch = batch.copy()
 

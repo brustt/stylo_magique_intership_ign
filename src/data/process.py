@@ -17,6 +17,7 @@ from src.commons.utils import apply_histogram
 def generate_grid_prompt(n_points, img_size: int = IMG_SIZE) -> np.ndarray:
     return build_point_grid(n_points) * img_size
 
+@deprecated
 def collate_align_prompt(input: List[Any]):
     """Stack tensors with different size (prompts) before create batch - used in dataloader"""
 
@@ -113,8 +114,8 @@ class PointSampler:
         shapes = shapes[indices,:,:]
 
         # empty return
-        n = n_shape if (n_shape) and (n_shape <= shapes.shape[0]) else shapes.shape[0]
-        sample_coords = torch.zeros((n*n_point_per_shape, 2), dtype=torch.float32)
+        # not sure if it is the best choice for no label instance - maybe just ignore them
+        sample_coords = torch.zeros((n_shape*n_point_per_shape, 2), dtype=torch.float32) - 1000
 
         # check if there is some shapes extracted - check sum for no-shapes return
         # check > 1 first for speed in case of shapes - return no shapes :  (1 x) 1 x H x W
@@ -186,27 +187,25 @@ class DefaultTransform:
 
         img_A = apply_histogram(img_A, img_B, blend_ratio=0.5)
 
-        img_A = self.process(img_A, set_grad=True)
-        img_B = self.process(img_B, set_grad=True)
-        label = binarize_mask(self.process(sample["label"], set_grad=False), th=0.)
+        img_A = self.process(img_A)
+        img_B = self.process(img_B)
+        label = binarize_mask(self.process(sample["label"]), th=0.)
 
         new_sample = sample | dict(img_A=img_A, img_B=img_B, label=label)
         return new_sample
 
-    def process(self, input: np.ndarray, set_grad: bool) -> torch.Tensor:
+    def process(self, input: np.ndarray) -> torch.Tensor:
 
-        input_tensor = self.to_tensor(input, set_grad)
+        input_tensor = self.to_tensor(input)
         input_tensor = self.pad_tensor(input_tensor)
 
         if self.precision:
             input_tensor = input_tensor.half()
         return input_tensor
 
-    def to_tensor(self, img: np.ndarray, set_grad: bool) -> torch.Tensor:
-        if set_grad:
-            input_image_torch = torch.tensor(img, dtype=torch.float32, requires_grad=True)
-        else:
-            input_image_torch = torch.tensor(img, dtype=torch.float32)
+    def to_tensor(self, img: np.ndarray) -> torch.Tensor:
+
+        input_image_torch = torch.tensor(img, dtype=torch.float32)
 
         if input_image_torch.ndim > 2:
             input_image_torch = input_image_torch.permute(2, 0, 1).contiguous()
