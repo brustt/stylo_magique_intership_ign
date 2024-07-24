@@ -140,7 +140,10 @@ class PointSampler:
         # simulate point type (foreground / background) - foreground default
         labels_points = torch.ones(len(sample_coords))
 
+<<<<<<< HEAD
         # TODO: clean and rearrange the code - quick and dirty for bisam_diff with one mask for all prompt
+=======
+>>>>>>> b7183b13e6c617488c4c022b1a1181068b7214b6
         # if id_selected_shapes is not None:
         #     new_label = binarize_mask(torch.sum(shapes[id_selected_shapes], dim=0), th=0)
 
