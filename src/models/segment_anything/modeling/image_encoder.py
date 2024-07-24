@@ -105,6 +105,7 @@ class ImageEncoderViT(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.patch_embed(x)
+        print("patch embed :", x.shape)
         if self.pos_embed is not None:
             x = x + self.pos_embed
 
@@ -165,6 +166,8 @@ class Block(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         shortcut = x
+        print("In attn block :", x.shape)
+
         x = self.norm1(x)
         # Window partition
         if self.window_size > 0:
