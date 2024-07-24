@@ -71,7 +71,6 @@ class BiSam2(nn.Module):
         # )
         # self.register_buffer("pixel_std", torch.tensor([58.395, 57.12, 57.375]).view(-1, 1, 1), False)
 
-    @torch.no_grad()
     def forward(
         self,
         batched_input: Dict[str, torch.Tensor],

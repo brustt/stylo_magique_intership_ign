@@ -49,15 +49,13 @@ class MagicPenModule(pl.LightningModule):
 
     def forward(self, x):
         # try with multimask_output == True and select best one
+        # bisam_diff modified dirt and quick
         preds, ious =  self.model(x, multimask_output=self.multimask_output)
-        # remove nan for no-prompt values in the prompt dimension
-        preds = torch.nan_to_num(preds, nan=0.)
-        return preds, ious
+        # to be updated : current out : B x 1 x 1 x 1024 x 1024
+        return preds.squeeze(), ious
     
     def _step(self, batch):
         preds, ious  = self.forward(batch)
-        # sum logits over all masks
-        preds = torch.sum(preds, dim=1)
         loss = self.loss(preds, batch["label"])
         return preds, loss
 

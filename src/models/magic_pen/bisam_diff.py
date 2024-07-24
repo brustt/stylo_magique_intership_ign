@@ -63,17 +63,18 @@ class BiSamDiff(nn.Module):
         )
         self.register_buffer(
             "pixel_std", torch.tensor([58.395, 57.12, 57.375]).view(-1, 1, 1), False)
-
+    @torch.no_grad()
     def forward(
         self,
         batched_input: Dict[str, torch.Tensor],
         multimask_output: bool,
+        return_logits: bool = False,
     ) -> List[Dict[str, torch.Tensor]]:
         """
         SAM implementation for bi-input and batch inference.
         TO DO :
-        - Manage logits vs binarization
-        - warning with fixed IMG_SIZE
+        - add multi size prompts
+        - force lightning associated device through python class wrapper
 
         Args:
             batched_input (List[Dict[str, Any]]): images batch with associated prompts (points)
@@ -82,6 +83,79 @@ class BiSamDiff(nn.Module):
 
         Returns:
             List[Dict[str, torch.Tensor]]: dict return as prediction batch tensor
+        """
+        batch_size = batched_input[next(iter(batched_input))].shape[0]
+        # print(f"Mode : {mode}"
+
+        # print("device input B:", batched_input["img_B"].detach().clone().device)
+        # print("device input pts coords :", batched_input["point_coords"].detach().clone().device)
+        # print("device input pts labels:", batched_input["point_labels"].detach().clone().device)
+
+        point_coords = (
+            batched_input["point_coords"].clone()
+        )
+        point_labels = (
+            batched_input["point_labels"].clone()
+        )
+
+        self.image_embeddings_A = self.image_encoder(self.preprocess(batched_input["img_A"]))
+        self.image_embeddings_B = self.image_encoder(self.preprocess(batched_input["img_B"]))
+
+        # simple diff
+        self.image_embeddings = self.image_embeddings_A - self.image_embeddings_B
+       
+        outputs = []
+        for i, curr_embedding in enumerate(self.image_embeddings):
+
+            point_coords = batched_input["point_coords"][i]
+            # remove padding points
+            point_coords = point_coords[torch.sum(point_coords, dim=1) > 0]
+            # remove padding points
+            point_labels = batched_input["point_labels"][i]
+            point_labels = point_labels[:point_coords.shape[0]]  
+
+            # if we add batch dim, why it could not works with batch ?
+            points = point_coords[None, :, :], point_labels[None, :]
+
+            sparse_embeddings, dense_embeddings = self.prompt_encoder(
+                points=points,
+                boxes=None,
+                masks=None,
+            )
+            low_res_masks, iou_predictions = self.mask_decoder(
+                image_embeddings=curr_embedding.unsqueeze(0),
+                image_pe=self.prompt_encoder.get_dense_pe(),
+                sparse_prompt_embeddings=sparse_embeddings,
+                dense_prompt_embeddings=dense_embeddings,
+                multimask_output=multimask_output,
+            )            
+            # masks = self.upscale_masks(low_res_masks, original_size)
+
+            # if not return_logits:
+            #     masks = low_res_masks > self.mask_threshold
+
+            outputs.append(
+                {
+                    "masks": low_res_masks,
+                    "iou_predictions": iou_predictions,
+                    #"low_res_logits": low_res_masks,
+                }
+            )
+        
+        masks = torch.stack([out["masks"] for out in outputs])
+        iou_predictions = torch.stack([out["iou_predictions"] for out in outputs])
+
+        masks = self.upscale_masks(masks, IMG_SIZE)
+
+        return masks, iou_predictions
+    
+    def forward_(
+        self,
+        batched_input: Dict[str, torch.Tensor],
+        multimask_output: bool,
+    ) -> List[Dict[str, torch.Tensor]]:
+        """
+            One mask per prompt - batched version
         """
 
         point_coords = (

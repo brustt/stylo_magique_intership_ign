@@ -1,7 +1,7 @@
 defaults:
   - image_encoder: ??
-  - prompt_encoder: sam_prompt_encoder
-  - mask_decoder: sam_mask_decoder
+  - prompt_encoder: default
+  - mask_decoder: default
   - _self_
 
 _target_: src.models.magic_pen.bisam_diff.BiSamDiff
