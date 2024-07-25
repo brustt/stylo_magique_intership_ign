@@ -8,7 +8,7 @@ from src.models.segment_any_change.config_run import ExperimentParams
 from src.models.segment_any_change.matching import BitemporalMatching
 from src.models.segment_any_change.query_prompt import SegAnyPrompt
 
-from .model import BiSam
+from ..segment_any_change.model import BiSam
 
 
 def choose_model(params: ExperimentParams):

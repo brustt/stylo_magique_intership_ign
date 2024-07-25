@@ -24,7 +24,7 @@ from torchmetrics.classification import (
     BinaryJaccardIndex,
     BinaryConfusionMatrix,
 )
-from models.commons.model import BiSam
+from models.segment_any_change.model import BiSam
 from commons.utils_io import check_dir
 
 

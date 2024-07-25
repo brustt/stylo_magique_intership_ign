@@ -19,7 +19,7 @@ from src.models.commons.mask_process import (
     MaskData,
 )
 from torch.profiler import profile, record_function, ProfilerActivity
-from models.commons.model import BiSam
+from models.segment_any_change.model import BiSam
 from src.models.segment_anything.modeling import Sam
 from src.models.segment_anything import SamAutomaticMaskGenerator
 from src.models.segment_anything.utils.amg import (

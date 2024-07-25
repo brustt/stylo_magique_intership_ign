@@ -13,7 +13,7 @@ from models.segment_any_change.embedding import (
 )
 from src.models.commons.mask_items import FilteringType, thresholding, MaskData
 
-from models.commons.model import BiSam, SamModeInference
+from models.segment_any_change.model import BiSam, SamModeInference
 
 from src.commons.utils import to_degre, timeit, to_degre_torch
 import logging
