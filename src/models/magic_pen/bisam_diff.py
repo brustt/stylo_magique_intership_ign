@@ -63,139 +63,59 @@ class BiSamDiff(nn.Module):
         )
         self.register_buffer(
             "pixel_std", torch.tensor([58.395, 57.12, 57.375]).view(-1, 1, 1), False)
-    @torch.no_grad()
+
     def forward(
         self,
         batched_input: Dict[str, torch.Tensor],
         multimask_output: bool,
-        return_logits: bool = False,
+        one_mask_for_all: bool = True,
     ) -> List[Dict[str, torch.Tensor]]:
         """
         SAM implementation for bi-input and batch inference.
-        TO DO :
-        - add multi size prompts
-        - force lightning associated device through python class wrapper
-
         Args:
             batched_input (List[Dict[str, Any]]): images batch with associated prompts (points)
             multimask_output (bool): multi_mask return
-            return_logits (bool, optional): logits return. Defaults to False.
+            one_mask_for_all (bool, optional): mask compute mode : per mask or for all mask
 
         Returns:
             List[Dict[str, torch.Tensor]]: dict return as prediction batch tensor
         """
-        batch_size = batched_input[next(iter(batched_input))].shape[0]
-        # print(f"Mode : {mode}"
-
-        # print("device input B:", batched_input["img_B"].detach().clone().device)
-        # print("device input pts coords :", batched_input["point_coords"].detach().clone().device)
-        # print("device input pts labels:", batched_input["point_labels"].detach().clone().device)
-
-        point_coords = (
-            batched_input["point_coords"].clone()
-        )
-        point_labels = (
-            batched_input["point_labels"].clone()
-        )
 
         self.image_embeddings_A = self.image_encoder(self.preprocess(batched_input["img_A"]))
         self.image_embeddings_B = self.image_encoder(self.preprocess(batched_input["img_B"]))
 
         # simple diff
         self.image_embeddings = self.image_embeddings_A - self.image_embeddings_B
-       
-        outputs = []
-        for i, curr_embedding in enumerate(self.image_embeddings):
 
-            point_coords = batched_input["point_coords"][i]
-            # remove padding points
-            point_coords = point_coords[torch.sum(point_coords, dim=1) > 0]
-            # remove padding points
-            point_labels = batched_input["point_labels"][i]
-            point_labels = point_labels[:point_coords.shape[0]]  
+        if one_mask_for_all:
+            # one inference for all points => unique mask(s)
+            points = batched_input["point_coords"][:, None,...], batched_input["point_labels"][:, None,...]
+        else:
+            # one inference per point => mask(s) by point
+            points = batched_input["point_coords"][:, :, None, :], batched_input["point_labels"][..., None]
 
-            # if we add batch dim, why it could not works with batch ?
-            points = point_coords[None, :, :], point_labels[None, :]
-
-            sparse_embeddings, dense_embeddings = self.prompt_encoder(
-                points=points,
-                boxes=None,
-                masks=None,
-            )
-            low_res_masks, iou_predictions = self.mask_decoder(
-                image_embeddings=curr_embedding.unsqueeze(0),
-                image_pe=self.prompt_encoder.get_dense_pe(),
-                sparse_prompt_embeddings=sparse_embeddings,
-                dense_prompt_embeddings=dense_embeddings,
-                multimask_output=multimask_output,
-            )            
-            # masks = self.upscale_masks(low_res_masks, original_size)
-
-            # if not return_logits:
-            #     masks = low_res_masks > self.mask_threshold
-
-            outputs.append(
-                {
-                    "masks": low_res_masks,
-                    "iou_predictions": iou_predictions,
-                    #"low_res_logits": low_res_masks,
-                }
-            )
-        
-        masks = torch.stack([out["masks"] for out in outputs])
-        iou_predictions = torch.stack([out["iou_predictions"] for out in outputs])
-
-        masks = self.upscale_masks(masks, IMG_SIZE)
-
-        return masks, iou_predictions
-    
-    def forward_(
-        self,
-        batched_input: Dict[str, torch.Tensor],
-        multimask_output: bool,
-    ) -> List[Dict[str, torch.Tensor]]:
-        """
-            One mask per prompt - batched version
-        """
-
-        point_coords = (
-            batched_input["point_coords"].clone()
-        )
-        point_labels = (
-            batched_input["point_labels"].clone()
-        )
-
-        self.image_embeddings_A = self.image_encoder(self.preprocess(batched_input["img_A"]))
-        self.image_embeddings_B = self.image_encoder(self.preprocess(batched_input["img_B"]))
-
-        # simple diff
-        self.image_embeddings = self.image_embeddings_A - self.image_embeddings_B
 
         sparse_embeddings, dense_embeddings = self.prompt_encoder(
-            points=(
-                point_coords[:, :, None, :],
-                point_labels[..., None],
-            ),
+            points=points,
             boxes=None,
             masks=None,
         )
-        # print(f"sparse_embeddings: {sparse_embeddings.shape}")
-        # print(f"dense_embeddings: {dense_embeddings.shape}")
+        # low_res_mask : B x N x M x 256 x 256
+        # N : number of prompt or 1 (one_mask_for_all)
+        # M : number of mask per prompt (multimask output - 3 or 1)
+        low_res_masks, iou_predictions = self.mask_decoder(
+            image_embeddings=self.image_embeddings,
+            image_pe=self.prompt_encoder.get_dense_pe(),
+            sparse_prompt_embeddings=sparse_embeddings,
+            dense_prompt_embeddings=dense_embeddings,
+            multimask_output=multimask_output,
+        )            
 
-        low_res_masks, iou_predictions = self.mask_decoder.predict_masks_batch(
-            image_embeddings=self.image_embeddings,  # (B, 256, 64, 64)
-            image_pe=self.prompt_encoder.get_dense_pe(),  # (1, 256, 64, 64)
-            sparse_prompt_embeddings=sparse_embeddings,  # (B, N, 2, 256)
-            dense_prompt_embeddings=dense_embeddings,  # (B, N, 256, 64, 64)
-        )
-
-        
         masks = self.upscale_masks(low_res_masks, IMG_SIZE)
 
         masks, iou_predictions = self.select_masks(
             masks, iou_predictions, multimask_output
-        )
-        
+        )        
         return masks, iou_predictions
     
     def select_masks(

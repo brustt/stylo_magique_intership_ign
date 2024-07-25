@@ -6,6 +6,7 @@ defaults:
   - _self_
 
 tags: ["diff_naive"]
+task_name: "train_test"
 
 data:
   params:

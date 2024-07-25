@@ -1,3 +1,6 @@
+"""
+Original SAM implementation with bi-temporal inputs modification. (no batched)
+"""
 from copy import deepcopy
 from enum import Enum
 from commons.constants import DEVICE_MAP

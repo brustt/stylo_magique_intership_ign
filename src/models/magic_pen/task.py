@@ -52,10 +52,13 @@ class MagicPenModule(pl.LightningModule):
         # bisam_diff modified dirt and quick
         preds, ious =  self.model(x, multimask_output=self.multimask_output)
         # to be updated : current out : B x 1 x 1 x 1024 x 1024
-        return preds.squeeze(), ious
+        return preds, ious
     
     def _step(self, batch):
         preds, ious  = self.forward(batch)
+        preds = preds.squeeze()
+        # align dim - case batch 1
+        preds = preds.expand(*batch["label"].shape)
         loss = self.loss(preds, batch["label"])
         return preds, loss
 

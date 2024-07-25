@@ -15,8 +15,6 @@ defaults:
   - debug: null # debugging config (enable through command line, e.g. `python train.py debug=default)
   - _self_
 
-task_name: "overfit_sample"
-
 tags: ["dev"]
 
 # set False to skip model training
@@ -26,5 +24,6 @@ train: True
 # lightning chooses best weights based on the metric specified in checkpoint callback
 test: True
 
+# lightning module ckpt
 ckpt_path: null
 seed: 66
