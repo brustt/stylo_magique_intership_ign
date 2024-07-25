@@ -223,7 +223,7 @@ def show_prediction_sample(output: Dict, idx: int = None):
 
         else:
             img = to_numpy(img, transpose=False)
-            axs[0, i].imshow(img, cmap="grey")
+            axs[0, i].imshow(img, cmap="Greys_r")
 
         axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
         axs[0, i].set_title(name)
