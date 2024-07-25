@@ -4,5 +4,5 @@ defaults:
   - mask_decoder: sam_mask_decoder
   - _self_
 
-_target_: src.models.commons.model.BiSam
+_target_: src.models.segment_any_change.model.BiSam
 device: ${trainer.accelerator}

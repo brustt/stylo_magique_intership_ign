@@ -80,16 +80,13 @@ class BiSam(nn.Module):
         mode: SamModeInference = SamModeInference.AUTO,
     ) -> List[Dict[str, torch.Tensor]]:
         """
-        SAM implementation for bi-input and batch inference.
-        TO DO :
-        - add multi size prompts
-        - force lightning associated device through python class wrapper
+        SAM implementation for bi-input and batch inference for SegmentAnyChange
 
         Args:
             batched_input (List[Dict[str, Any]]): images batch with associated prompts (points)
             multimask_output (bool): multi_mask return
             return_logits (bool, optional): logits return. Defaults to False.
-
+            mode : select input (bitemporal or img_B)
         Returns:
             List[Dict[str, torch.Tensor]]: dict return as prediction batch tensor
         """

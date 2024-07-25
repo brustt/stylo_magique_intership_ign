@@ -1,5 +1,5 @@
 defaults:
-  - network: bisam
+  - network: bisam_seganychange
   - _self_
 
 instance:
