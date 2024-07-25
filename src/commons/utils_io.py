@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Union
 import hydra
 from hydra.core.global_hydra import GlobalHydra
 from omegaconf import DictConfig
+import torch
 from src.models.segment_anything.build_sam_dev import sam_model_registry
 from src.models.segment_anything.build_sam import (
     sam_model_registry as sam_model_registry_v0,
@@ -36,7 +37,7 @@ def load_pickle(path):
 
 
 def load_sam(
-    model_type: str, model_cls: Any = None, version: str = "dev", device: str = DEVICE
+    model_type: str, model_cls: Any = None, version: str = "dev", device: str = DEVICE, is_strict: bool=True
 ):
 
     sam = None
@@ -44,15 +45,15 @@ def load_sam(
     match version:
         case "dev2":
             sam = sam_model_registry_v2[model_type](
-                checkpoint=SAM_DICT_CHECKPOINT[model_type], model=model_cls
+                checkpoint=SAM_DICT_CHECKPOINT[model_type], model=model_cls, is_strict=is_strict
             ).to(device=device)
         case "dev":
             sam = sam_model_registry[model_type](
-                checkpoint=SAM_DICT_CHECKPOINT[model_type], model=model_cls
+                checkpoint=SAM_DICT_CHECKPOINT[model_type], model=model_cls, is_strict=is_strict
             ).to(device=device)
         case "raw":
             sam = sam_model_registry_v0[model_type](
-                checkpoint=SAM_DICT_CHECKPOINT[model_type]
+                checkpoint=SAM_DICT_CHECKPOINT[model_type], is_strict=is_strict
             ).to(device=device)
         case _:
             raise ValueError(
@@ -75,3 +76,10 @@ def load_config(list_args: List[str]) -> DictConfig:
     cfg = hydra.compose(config_name="train", overrides=list_args)
     
     return cfg
+
+def load_ckpt_sam(sam, checkpoint=None):
+    if checkpoint is not None:
+        with open(checkpoint, "rb") as f:
+            state_dict = torch.load(f)
+        sam.load_state_dict(state_dict)
+    return sam

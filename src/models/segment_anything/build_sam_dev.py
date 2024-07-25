@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def build_sam_vit_h(checkpoint=None, model=Sam):
+def build_sam_vit_h(checkpoint=None, model=Sam, is_strict: bool=True):
 
     logger.info(f"build vit_h {model.__name__}")
 
@@ -34,10 +34,12 @@ def build_sam_vit_h(checkpoint=None, model=Sam):
         encoder_global_attn_indexes=[7, 15, 23, 31],
         checkpoint=checkpoint,
         model=model,
+        is_strict=is_strict
+
     )
 
 
-def build_sam_vit_l(checkpoint=None, model=Sam):
+def build_sam_vit_l(checkpoint=None, model=Sam, is_strict: bool=True):
 
     logger.info(f"build vit_l {model.__name__}")
 
@@ -48,10 +50,12 @@ def build_sam_vit_l(checkpoint=None, model=Sam):
         encoder_global_attn_indexes=[5, 11, 17, 23],
         checkpoint=checkpoint,
         model=model,
+        is_strict=is_strict
+
     )
 
 
-def build_sam_vit_b(checkpoint=None, model=Sam):
+def build_sam_vit_b(checkpoint=None, model=Sam, is_strict:bool = True):
 
     logger.info(f"build vit_b {model.__name__}")
 
@@ -62,6 +66,7 @@ def build_sam_vit_b(checkpoint=None, model=Sam):
         encoder_global_attn_indexes=[2, 5, 8, 11],
         checkpoint=checkpoint,
         model=model,
+        is_strict=is_strict
     )
 
 
@@ -82,6 +87,7 @@ def _build_sam(
     encoder_global_attn_indexes,
     model: Any = Sam,
     checkpoint=None,
+    is_strict=True
 ):
     """Load sam variant model"""
 
@@ -122,12 +128,12 @@ def _build_sam(
             iou_head_depth=3,
             iou_head_hidden_dim=256,
         ),
-        pixel_mean=[123.675, 116.28, 103.53],
-        pixel_std=[58.395, 57.12, 57.375],
+        # pixel_mean=[123.675, 116.28, 103.53],
+        # pixel_std=[58.395, 57.12, 57.375],
     )
     sam.eval()
     if checkpoint is not None:
         with open(checkpoint, "rb") as f:
             state_dict = torch.load(f)
-        sam.load_state_dict(state_dict)
+        sam.load_state_dict(state_dict, strict=is_strict)
     return sam

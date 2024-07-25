@@ -2,6 +2,7 @@ from copy import deepcopy
 from enum import Enum
 from commons.constants import DEVICE_MAP, IMG_SIZE
 from models.commons.mask_items import ImgType
+from models.segment_anything.modeling.common import MLPBlock
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -23,7 +24,8 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-class BiSamDiff(nn.Module):
+
+class BiSamConcat(nn.Module):
     mask_threshold: float = 0.0
 
     def __init__(
@@ -31,6 +33,7 @@ class BiSamDiff(nn.Module):
         image_encoder: ImageEncoderViT,
         prompt_encoder: PromptEncoder,
         mask_decoder: MaskDecoder,
+        embedding_dim: int = 512*64*64
     ) -> None:
         """
         SAM predicts object masks from an batch of images and prompts
@@ -50,6 +53,11 @@ class BiSamDiff(nn.Module):
         self.image_encoder = image_encoder
         self.prompt_encoder = prompt_encoder
         self.mask_decoder = mask_decoder
+        self.proj_layer = nn.Sequential(
+            nn.Linear(embedding_dim, embedding_dim // 2),
+            nn.GELU(),
+            nn.Linear(embedding_dim // 2, embedding_dim // 2),
+        )
         self.image_embeddings = None
 
         self.register_buffer(
@@ -74,12 +82,16 @@ class BiSamDiff(nn.Module):
         Returns:
             List[Dict[str, torch.Tensor]]: dict return as prediction batch tensor
         """
+        batch_size = batched_input[next(iter(batched_input))].shape[0]
 
-        self.image_embeddings_A = self.image_encoder(self.preprocess(batched_input["img_A"]))
-        self.image_embeddings_B = self.image_encoder(self.preprocess(batched_input["img_B"]))
+        self.image_embeddings = self.image_encoder(
+            self.preprocess(torch.cat([batched_input["img_A"], batched_input["img_B"]], dim=0))
+            )
+        # concatenation channel wise : B x 512 x 64 x 64
+        self.image_embeddings = torch.cat([self.image_embeddings[:batch_size], self.image_embeddings[batch_size:]], axis=1)
 
-        # simple diff
-        self.image_embeddings = self.image_embeddings_A - self.image_embeddings_B
+        # projection into => B x 256 x 64 x 64
+        self.image_embeddings = self.proj_layer(self.image_embeddings.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
 
         if one_mask_for_all:
             # one inference for all points => unique mask(s)
@@ -87,7 +99,6 @@ class BiSamDiff(nn.Module):
         else:
             # one inference per point => mask(s) by point
             points = batched_input["point_coords"][:, :, None, :], batched_input["point_labels"][..., None]
-
 
         sparse_embeddings, dense_embeddings = self.prompt_encoder(
             points=points,
