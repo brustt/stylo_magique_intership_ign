@@ -12,7 +12,7 @@
 
 #SBATCH --output=../job_logs/output_train_diff_fusion_cd_%j.out # nom du fichier de sortie 
 #SBATCH --error=../job_logs/error_train_diff_fusion_cd_%j.out # nom du fichier d'erreur 
-#SBATCH --time=3:00:00 # temps maximum d'execution demande (HH:MM:SS) 
+#SBATCH --time=20:00:00 # temps maximum d'execution demande (HH:MM:SS) 
 
 # nettoyage des modules charges en interactif et herites par defaut
 module purge
