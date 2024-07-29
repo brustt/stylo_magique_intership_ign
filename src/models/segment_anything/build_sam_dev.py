@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def build_sam_vit_h(checkpoint=None, model=Sam, is_strict: bool=True):
+def build_sam_vit_h(checkpoint=None, model=Sam, is_strict: bool=True, embed_dim: int=256):
 
     logger.info(f"build vit_h {model.__name__}")
 
@@ -34,12 +34,13 @@ def build_sam_vit_h(checkpoint=None, model=Sam, is_strict: bool=True):
         encoder_global_attn_indexes=[7, 15, 23, 31],
         checkpoint=checkpoint,
         model=model,
-        is_strict=is_strict
+        is_strict=is_strict,
+        prompt_embed_dim = embed_dim
 
     )
 
 
-def build_sam_vit_l(checkpoint=None, model=Sam, is_strict: bool=True):
+def build_sam_vit_l(checkpoint=None, model=Sam, is_strict: bool=True, embed_dim: int=256):
 
     logger.info(f"build vit_l {model.__name__}")
 
@@ -50,12 +51,13 @@ def build_sam_vit_l(checkpoint=None, model=Sam, is_strict: bool=True):
         encoder_global_attn_indexes=[5, 11, 17, 23],
         checkpoint=checkpoint,
         model=model,
-        is_strict=is_strict
+        is_strict=is_strict,
+        prompt_embed_dim = embed_dim
 
     )
 
 
-def build_sam_vit_b(checkpoint=None, model=Sam, is_strict:bool = True):
+def build_sam_vit_b(checkpoint=None, model=Sam, is_strict:bool = True, embed_dim: int=256):
 
     logger.info(f"build vit_b {model.__name__}")
 
@@ -66,7 +68,9 @@ def build_sam_vit_b(checkpoint=None, model=Sam, is_strict:bool = True):
         encoder_global_attn_indexes=[2, 5, 8, 11],
         checkpoint=checkpoint,
         model=model,
-        is_strict=is_strict
+        is_strict=is_strict,
+        prompt_embed_dim = embed_dim
+
     )
 
 
@@ -87,11 +91,12 @@ def _build_sam(
     encoder_global_attn_indexes,
     model: Any = Sam,
     checkpoint=None,
-    is_strict=True
+    is_strict=True,
+    prompt_embed_dim = 256
+
 ):
     """Load sam variant model"""
 
-    prompt_embed_dim = 256
     image_size = 1024
     vit_patch_size = 16
     image_embedding_size = image_size // vit_patch_size

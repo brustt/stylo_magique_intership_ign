@@ -10,9 +10,13 @@ from torchmetrics import MetricCollection
 from .config_run import ExperimentParams
 import torch.nn as nn
 from torchmetrics.classification import BinaryF1Score, BinaryJaccardIndex, BinaryRecall, BinaryPrecision
-"""
-implement simpler metrics logger
-"""
+
+import logging
+
+# TO DO : define globally
+logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class MagicPenModule(pl.LightningModule):
     multimask_output = False
@@ -22,7 +26,7 @@ class MagicPenModule(pl.LightningModule):
         super().__init__()
         self.params = params
         self.model = network
-        # self.load_weights(params.get("sam_ckpt_path"))
+        self.load_weights(params.get("sam_ckpt_path"), params.get("use_weights"))
         self.freeze_weigts()
         self.loss = nn.BCEWithLogitsLoss()
         self.train_metrics = MetricCollection( [
@@ -37,15 +41,26 @@ class MagicPenModule(pl.LightningModule):
                 BinaryJaccardIndex(),
             ], prefix="test")
     
-    def load_weights(self, checkpoint):
-        self.model.load_state_dict(torch.load(checkpoint))
+    def load_weights(self, checkpoint: str, use_weights: Union[Any, List]) ->None:
+        pretrained_weights = torch.load(checkpoint)
+        if use_weights is None:
+            # we use all weights
+            self.model.load_state_dict(pretrained_weights)
+        else:
+            # we select weights to load
+            model_dict = self.model.state_dict()
+            pretrained_weights = {k: v for k, v in pretrained_weights.items() if any([k.startswith(m) for m in use_weights])}
+            model_dict.update(pretrained_weights)
+            # let default values for decoder init 
+            self.model.load_state_dict(model_dict)
+            logger.info(f"Weights loaded for : {use_weights}")
 
     def freeze_weigts(self):
         """
         # TODO: freeze layer on key layer selection / name
         """
         self.model.image_encoder.requires_grad_(False)
-        self.model.prompt_encoder.requires_grad_(False)
+        # self.model.prompt_encoder.requires_grad_(False)
 
     def forward(self, x):
         # try with multimask_output == True and select best one
