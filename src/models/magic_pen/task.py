@@ -44,6 +44,9 @@ class MagicPenModule(pl.LightningModule):
         self.test_metrics =  MetricCollection( [
                 BinaryJaccardIndex(),
             ], prefix="test")
+        
+        self.train_loss = []
+        self.val_loss = []
     
     def load_weights(self, checkpoint: str, use_weights: Union[Any, List]) ->None:
         pretrained_weights = torch.load(checkpoint)
@@ -81,6 +84,8 @@ class MagicPenModule(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         preds, loss = self._step(batch)
+        # loss, preds = outputs["loss"], outputs["pred"]
+        self.train_metrics.update(preds, batch["label"])
         return {"pred": preds, "loss": loss}
 
     def validation_step(self, batch, batch_idx):
@@ -93,16 +98,11 @@ class MagicPenModule(pl.LightningModule):
 
     def on_train_batch_end(self, outputs, batch, batch_idx):
         loss, preds = outputs["loss"], outputs["pred"]
+        self.train_loss.append(loss)
         self.train_metrics.update(preds, batch["label"])
-        self.log(
-            f"train/loss",
-            loss,
-            sync_dist=True,
-            on_step=True,
-            on_epoch=True,
-        )
+
         if self.current_epoch % 5 == 0:
-            if batch_idx % 2 == 0:
+            if batch_idx % 10 == 0:
                 bs = preds.shape[0]
                 for b_i in range(bs):
                     fig = show_prediction_sample((outputs|dict(batch=batch)), idx=b_i)
@@ -111,7 +111,7 @@ class MagicPenModule(pl.LightningModule):
                             fig,
                         )
         if self.current_epoch % 5 == 0:
-            if batch_idx % 12 == 0:
+            if batch_idx == 0:
                 sm= nn.Sigmoid()
                 self.logger.experiment.add_histogram(
                         f"hist_preds_{self.current_epoch}",
@@ -121,13 +121,7 @@ class MagicPenModule(pl.LightningModule):
     def on_validation_batch_end(self, outputs, batch, batch_idx):
         loss, preds = outputs["loss"], outputs["pred"]
         self.val_metrics.update(preds, batch["label"])
-        self.log(
-            f"val/loss",
-            loss,
-            sync_dist=True,
-            on_step=True,
-            on_epoch=True,
-        )
+        self.val_loss.append(loss)
 
     def on_test_batch_end(self, outputs, batch, batch_idx):
         loss, preds = outputs["loss"], outputs["pred"]
@@ -143,7 +137,14 @@ class MagicPenModule(pl.LightningModule):
                 sync_dist=True,
                 on_step=False,
                 on_epoch=True,
+                prog_bar=True
             )
+        
+        epoch_mean = torch.stack(self.val_loss).mean()
+        self.log("val/loss", epoch_mean, sync_dist=True)
+        # free up the memory
+        self.val_loss.clear()
+        
 
     def on_train_epoch_end(self):
         metrics = self.train_metrics.compute()
@@ -154,7 +155,13 @@ class MagicPenModule(pl.LightningModule):
                 sync_dist=True,
                 on_step=False,
                 on_epoch=True,
+                prog_bar=True        
             )
+
+        epoch_mean = torch.stack(self.train_loss).mean()
+        self.log("train/loss", epoch_mean, sync_dist=True, logger=True)
+        # free up the memory
+        self.train_loss.clear()
         
         
 
