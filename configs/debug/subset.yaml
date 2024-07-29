@@ -4,7 +4,7 @@ defaults:
   - override /data: ??
 
 trainer:
-  max_epochs: 5
+  max_epochs: 3
   accelerator: cpu # debuggers don't like gpus
 
 data:

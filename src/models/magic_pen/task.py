@@ -26,6 +26,10 @@ class MagicPenModule(pl.LightningModule):
         super().__init__()
         self.params = params
         self.model = network
+        # let's prevent checkpoint forgetting
+        if not params.get("sam_ckpt_path", None):
+            raise ValueError("Please provide sam checkpoint")
+        
         self.load_weights(params.get("sam_ckpt_path"), params.get("use_weights"))
         self.freeze_weigts()
         self.loss = nn.BCEWithLogitsLoss()
@@ -59,7 +63,6 @@ class MagicPenModule(pl.LightningModule):
         # TODO: freeze layer on key layer selection / name
         """
         self.model.image_encoder.requires_grad_(False)
-        # self.model.prompt_encoder.requires_grad_(False)
 
     def forward(self, x):
         # try with multimask_output == True and select best one
@@ -129,13 +132,7 @@ class MagicPenModule(pl.LightningModule):
     def on_test_batch_end(self, outputs, batch, batch_idx):
         loss, preds = outputs["loss"], outputs["pred"]
         self.test_metrics.update(preds, batch["label"])
-        self.log(
-            f"test/loss",
-            loss,
-            sync_dist=True,
-            on_step=True,
-            on_epoch=True,
-        )
+
 
     def on_validation_epoch_end(self):
         metrics = self.val_metrics.compute()
@@ -174,6 +171,6 @@ class MagicPenModule(pl.LightningModule):
 
     def configure_optimizers(self):
 
-        optimizer = torch.optim.Adam(self.parameters())
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
         
         return {"optimizer": optimizer}

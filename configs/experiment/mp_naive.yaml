@@ -2,11 +2,11 @@
 
 defaults:  
   - override /data: ??
-  - override /model: concat_naive
+  - override /model: diff_naive
   - _self_
 
 tags: ["diff_naive"]
-task_name: "train_test"
+task_name: "train_naive"
 
 data:
   params:
