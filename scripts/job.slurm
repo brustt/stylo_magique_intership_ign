@@ -36,11 +36,4 @@ mkdir -p ${LOGS_PATH}
 mkdir -p ${LOGS_JOB}
 
 
-
-##SBATCH --partition=preproc
-##SBATCH --nodes=4 # on demande un noeud 
-##SBATCH --ntasks-per-node=1 # avec une tache par noeud (= nombre de GPU ici) 
-##SBATCH --cpus-per-task=4 # nombre de coeurs CPU par tache (1/4 du noeud 4-GPU) 
-
-
 srun python $PROJECT_PATH/src/train.py experiment=mp_naive sam_type=small data=levir-cd trainer=ddp

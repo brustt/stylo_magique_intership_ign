@@ -17,4 +17,3 @@ data:
     batch_size: 2
     num_worker: 2 # link to trainer
     pin_memory: False
-

@@ -47,11 +47,10 @@ class MagicPenModule(pl.LightningModule):
             # we use all weights
             self.model.load_state_dict(pretrained_weights)
         else:
-            # we select weights to load
+            # we select weights to load 
             model_dict = self.model.state_dict()
             pretrained_weights = {k: v for k, v in pretrained_weights.items() if any([k.startswith(m) for m in use_weights])}
             model_dict.update(pretrained_weights)
-            # let default values for decoder init 
             self.model.load_state_dict(model_dict)
             logger.info(f"Weights loaded for : {use_weights}")
 
