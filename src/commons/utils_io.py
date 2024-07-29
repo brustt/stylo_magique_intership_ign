@@ -37,23 +37,32 @@ def load_pickle(path):
 
 
 def load_sam(
-    model_type: str, model_cls: Any = None, version: str = "dev", device: str = DEVICE, is_strict: bool=True
+    model_type: str, 
+    model_cls: Any = None, 
+    version: str = "dev", 
+    device: str = DEVICE, 
+    is_strict: bool=True,
+    init_ckpt: bool=True,
+    embed_dim: int=256,
 ):
 
     sam = None
+    ckpt = None
+    if init_ckpt:
+        ckpt = SAM_DICT_CHECKPOINT[model_type]
 
     match version:
         case "dev2":
             sam = sam_model_registry_v2[model_type](
-                checkpoint=SAM_DICT_CHECKPOINT[model_type], model=model_cls, is_strict=is_strict
+                checkpoint=ckpt, model=model_cls, is_strict=is_strict, embed_dim=embed_dim
             ).to(device=device)
         case "dev":
             sam = sam_model_registry[model_type](
-                checkpoint=SAM_DICT_CHECKPOINT[model_type], model=model_cls, is_strict=is_strict
+                checkpoint=ckpt, model=model_cls, is_strict=is_strict,  embed_dim=embed_dim
             ).to(device=device)
         case "raw":
             sam = sam_model_registry_v0[model_type](
-                checkpoint=SAM_DICT_CHECKPOINT[model_type], is_strict=is_strict
+                checkpoint=ckpt, is_strict=is_strict
             ).to(device=device)
         case _:
             raise ValueError(

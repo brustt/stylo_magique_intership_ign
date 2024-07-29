@@ -2,7 +2,7 @@
 
 defaults:  
   - override /data: ??
-  - override /model: diff_naive
+  - override /model: concat_naive
   - _self_
 
 tags: ["diff_naive"]

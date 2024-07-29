@@ -53,11 +53,6 @@ class BiSamConcat(nn.Module):
         self.image_encoder = image_encoder
         self.prompt_encoder = prompt_encoder
         self.mask_decoder = mask_decoder
-        self.proj_layer = nn.Sequential(
-            nn.Linear(embedding_dim, embedding_dim // 2),
-            nn.GELU(),
-            nn.Linear(embedding_dim // 2, embedding_dim // 2),
-        )
         self.image_embeddings = None
 
         self.register_buffer(
@@ -89,9 +84,6 @@ class BiSamConcat(nn.Module):
             )
         # concatenation channel wise : B x 512 x 64 x 64
         self.image_embeddings = torch.cat([self.image_embeddings[:batch_size], self.image_embeddings[batch_size:]], axis=1)
-
-        # projection into => B x 256 x 64 x 64
-        self.image_embeddings = self.proj_layer(self.image_embeddings.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
 
         if one_mask_for_all:
             # one inference for all points => unique mask(s)
