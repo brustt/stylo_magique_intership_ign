@@ -10,6 +10,7 @@ from torchmetrics import MetricCollection
 from .config_run import ExperimentParams
 import torch.nn as nn
 from torchmetrics.classification import BinaryF1Score, BinaryJaccardIndex, BinaryRecall, BinaryPrecision
+import re
 
 import logging
 
@@ -31,7 +32,7 @@ class MagicPenModule(pl.LightningModule):
             raise ValueError("Please provide sam checkpoint")
         
         self.load_weights(params.get("sam_ckpt_path"), params.get("use_weights"))
-        self.freeze_weigts()
+        self.freeze_weigts(params.get("ft_mode"))
         self.loss = nn.BCEWithLogitsLoss()
         self.train_metrics = MetricCollection( [
                 BinaryJaccardIndex(),
@@ -61,11 +62,22 @@ class MagicPenModule(pl.LightningModule):
             self.model.load_state_dict(model_dict)
             logger.info(f"Weights loaded for : {use_weights}")
 
-    def freeze_weigts(self):
+    def freeze_weigts(self, ft_mode: str):
         """
-        # TODO: freeze layer on key layer selection / name
+        # TODO: 
+        #  - freeze layer on key layer selection / name
+            - set init weights based on known distrib
         """
-        self.model.image_encoder.requires_grad_(False)
+        def is_trainable_layer(trainable_name: str, layer_name: str) -> bool:
+            return bool(re.search(trainable_name, layer_name))
+        
+        if ft_mode == "probing":
+            self.model.image_encoder.requires_grad_(False)
+
+        elif ft_mode == "adapter":
+            for name, l in self.model.image_encoder.named_parameters():
+                if not is_trainable_layer(ft_mode, name):
+                    l.requires_grad = False
 
     def forward(self, x):
         # try with multimask_output == True and select best one
@@ -101,7 +113,7 @@ class MagicPenModule(pl.LightningModule):
         self.train_loss.append(loss)
         self.train_metrics.update(preds, batch["label"])
 
-        if self.current_epoch % 5 == 0:
+        if self.current_epoch % 10 == 0:
             if batch_idx % 10 == 0:
                 bs = preds.shape[0]
                 for b_i in range(bs):
@@ -110,7 +122,7 @@ class MagicPenModule(pl.LightningModule):
                             f"sample_{self.current_epoch}_{batch_idx}",
                             fig,
                         )
-        if self.current_epoch % 5 == 0:
+        if self.current_epoch % 10 == 0:
             if batch_idx == 0:
                 sm= nn.Sigmoid()
                 self.logger.experiment.add_histogram(
@@ -141,7 +153,14 @@ class MagicPenModule(pl.LightningModule):
             )
         
         epoch_mean = torch.stack(self.val_loss).mean()
-        self.log("val/loss", epoch_mean, sync_dist=True)
+        self.log(
+            "val/loss", 
+            epoch_mean, 
+            on_step=False, 
+            on_epoch=True, 
+            sync_dist=True, 
+            logger=True
+        )
         # free up the memory
         self.val_loss.clear()
         
@@ -159,7 +178,14 @@ class MagicPenModule(pl.LightningModule):
             )
 
         epoch_mean = torch.stack(self.train_loss).mean()
-        self.log("train/loss", epoch_mean, sync_dist=True, logger=True)
+        self.log(
+            "train/loss", 
+            epoch_mean, 
+            on_step=False, 
+            on_epoch=True, 
+            sync_dist=True, 
+            logger=True
+            )
         # free up the memory
         self.train_loss.clear()
         

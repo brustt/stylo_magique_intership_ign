@@ -92,7 +92,7 @@ class BiTemporalDataset(Dataset):
             label = (
                 np.any(label_A != SECOND_NO_CHANGE_RGB, axis=-1).astype(np.uint8) * 255
             )
-            print(row["label_A"])
+            # print(row["label_A"])
             label_path = row["label_A"]
 
         sample = {
