@@ -82,7 +82,7 @@ class BiTemporalDataset(Dataset):
             label = load_img(row["label"])
 
             label_path = row["label"]
-            print(row["label"])
+            #print(row["label"])
 
         elif self.name == NamedDataset.SECOND.value:
             img_A = load_img(row["A"])
@@ -105,14 +105,14 @@ class BiTemporalDataset(Dataset):
         if self.transform:
             sample = self.transform(sample)
 
-        prompt_coords, prompt_labels, new_label = generate_prompt(
+        prompt_coords, prompt_labels = generate_prompt(
             sample["label"], self.params.prompt_type, self.params.n_prompt, self.params
         )
         #print("LABEL", torch.unique(new_label.flatten()))
         # check if we need to process labels
         # note : point coords are computed on transformed img (may be resized)
         sample = sample | dict(
-            label=new_label, index=index, point_coords=prompt_coords, point_labels=prompt_labels
+            index=index, point_coords=prompt_coords, point_labels=prompt_labels
         )
         return sample
 

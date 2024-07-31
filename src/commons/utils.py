@@ -480,7 +480,7 @@ def create_grid_batch(preds, batch, tp, fp, fn) -> np.ndarray:
             .repeat(3, 1, 1)
             .to(torch.uint8)
         )
-        pred = shift_range_values(pred, new_bounds=[0, 255]).to(torch.uint8)
+        pred = shift_range_values(pred, new_bounds=[0, 1]).to(torch.uint8)
         row = torch.stack((img_A, img_B, label, pred, img_outcome_cls), dim=0)
         # combined stack as row
         row = make_grid(row, nrow=row.shape[0], padding=20, pad_value=1, normalize=True)

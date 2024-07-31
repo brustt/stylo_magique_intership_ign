@@ -52,9 +52,9 @@ def load_sam(
         ckpt = SAM_DICT_CHECKPOINT[model_type]
 
     match version:
-        case "dev2":
+        case "rawb":
             sam = sam_model_registry_v2[model_type](
-                checkpoint=ckpt, model=model_cls, is_strict=is_strict, embed_dim=embed_dim
+                checkpoint=ckpt, model=model_cls
             ).to(device=device)
         case "dev":
             sam = sam_model_registry[model_type](

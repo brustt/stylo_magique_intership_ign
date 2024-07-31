@@ -53,13 +53,13 @@ class MagicPenModule(pl.LightningModule):
         pretrained_weights = torch.load(checkpoint)
         if use_weights is None:
             # we use all weights
-            self.model.load_state_dict(pretrained_weights)
+            self.model.load_state_dict(pretrained_weights, strict=True)
         else:
             # we select weights to load 
             model_dict = self.model.state_dict()
             pretrained_weights = {k: v for k, v in pretrained_weights.items() if any([k.startswith(m) for m in use_weights])}
             model_dict.update(pretrained_weights)
-            self.model.load_state_dict(model_dict)
+            self.model.load_state_dict(model_dict, strict=False)
             logger.info(f"Weights loaded for : {use_weights}")
 
     def freeze_weigts(self, ft_mode: str):

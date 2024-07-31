@@ -2,7 +2,7 @@
 
 defaults:  
   - override /data: ??
-  - override /model: ??
+  - override /model: attn
   - _self_
 
 tags: ["train"]

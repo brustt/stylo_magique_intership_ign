@@ -51,12 +51,11 @@ def generate_prompt(
         case "sample":
             loc = kwargs.get('loc', "center")
             n_shape = kwargs.get('n_shape', None)
-            prompt, labels, mask = PointSampler().sample(mask=mask,  n_point_per_shape=n_point, loc=loc, n_shape=n_shape)
+            prompt, labels = PointSampler().sample(mask=mask,  n_point_per_shape=n_point, loc=loc, n_shape=n_shape)
         case _:
             raise ValueError("Please provide valid prompt builder name")
 
-    return prompt.to(torch.float32), labels.to(torch.int8), mask
-
+    return prompt.to(torch.float32), labels.to(torch.int8)
 
 class PointSampler:
     """Prompt sampler - restricted to points
@@ -85,7 +84,7 @@ class PointSampler:
         coords_candidates = torch.nonzero(shapes[id_candidates_shapes]).to(torch.float)
         return coords_candidates, id_candidates_shapes
         
-    def sample(self, mask: torch.Tensor,  n_point_per_shape: int, loc: str, n_shape: int=None):
+    def sample(self, mask: torch.Tensor,  n_point_per_shape: int, loc: str, n_shape: int):
         """
         Sample m points over n random shape
         Return new label if a subset of shapes (n_shape) is selected
@@ -95,8 +94,9 @@ class PointSampler:
             raise ValueError(
                 f"loc method not valid. Valid values for loc : {list(self._register_sample_method)}"
             )
-        
-        new_label = mask.clone()
+        if not n_shape:
+            raise ValueError("please provide n_shape to sample. One point per shape")
+            
         if mask.ndim < 3:
             mask = mask.unsqueeze(0)
         # track id shapes if we a subset of shapes
@@ -104,27 +104,16 @@ class PointSampler:
         
         # extract shapes from mask - squeeze batch dimension
         shapes = extract_object_from_batch(mask).squeeze(0)
-        # print("FIND SHAPES", shapes.shape[0])
-        # if (n_shape is not None) and (n_shape != shapes.shape[0]):
-        #     raise NotImplementedError("Sample of shapes is not implemented yet")
 
         # filter on areas
         areas = torch.sum(shapes, dim=(1, 2))
         indices = torch.where(areas > self.MIN_AREA)[0]
         shapes = shapes[indices,:,:]
 
-        # empty return
-        # not sure if it is the best choice for no label instance - maybe just ignore them
-        sample_coords = torch.zeros((n_shape*n_point_per_shape, 2), dtype=torch.float32) - 1000
-
         # check if there is some shapes extracted - check sum for no-shapes return
         # check > 1 first for speed in case of shapes - return no shapes :  (1 x) 1 x H x W
         if shapes.shape[0] > 1 or torch.sum(shapes):
-            # set for all shapes if not specify
-            if n_shape is not None:
-                coords_candidates, id_selected_shapes = self.sample_candidates_shapes(shapes, n_shape)
-            else:
-                coords_candidates = torch.nonzero(shapes).to(torch.float)
+            coords_candidates, id_selected_shapes = self.sample_candidates_shapes(shapes, n_shape)
             # first column of coords_candidates == index of shape
             # iterate over the shapes
             sample_coords = torch.cat(
@@ -137,13 +126,16 @@ class PointSampler:
                     for s in torch.unique(coords_candidates[:, 0])
                 ]
             )
-        # simulate point type (foreground / background) - foreground default
-        labels_points = torch.ones(len(sample_coords))
+            # simulate point type (foreground / background) - foreground default
+            labels_points = torch.ones(len(sample_coords))
+        else:
+            # empty return = sample random points
+            #sample_coords = torch.zeros((n_shape*n_point_per_shape, 2), dtype=torch.float32) - 1000
+            sample_coords = torch.as_tensor(np.random.randint(0, mask.shape[-1], size=(n_shape, 2)))
+            # label - 1
+            labels_points = torch.zeros(len(sample_coords)) - 1
 
-        # if id_selected_shapes is not None:
-        #     new_label = binarize_mask(torch.sum(shapes[id_selected_shapes], dim=0), th=0)
-
-        return sample_coords, labels_points, new_label
+        return sample_coords, labels_points
 
     def draw_random_point(self, shape, n_point):
         """draw one random point from shape"""
@@ -161,16 +153,17 @@ class PointSampler:
         # proxy for hard concave object
         visible_center = torch.mean(shape, dim=0).to(int)
         # euclidean distance
-        dist_center = torch.cdist(visible_center.unsqueeze(0).to(torch.float), shape, p=1.).view(-1)
+        dist_center = torch.cdist(visible_center.unsqueeze(0).to(torch.float), shape, p=2.).view(-1)
+        idx = torch.nonzero(dist_center).view(-1)
+        dist_center, shape = dist_center[idx], shape[idx,...]
         # sample point from inverse distance weighting => in favor of "closest center" point - take first 50 pts arbitrary
-        values, indices  = torch.topk(dist_center, min(50, dist_center.shape[0]), largest=False, sorted=True)
-        values, indices = values.view(-1), indices.view(-1)
+        # values, indices  = torch.topk(dist_center, min(50, dist_center.shape[0]), largest=False, sorted=True)
+        # values, indices = values.view(-1), indices.view(-1)
         idx = torch.multinomial(
-            values, num_samples=n_point
+            1/dist_center, num_samples=n_point
         )
         # flip to convert to (x, y) format
-        return torch.flip(shape[indices[idx]], dims=(1,))
-
+        return torch.flip(shape[idx], dims=(1,))
 
 
 class DefaultTransform:

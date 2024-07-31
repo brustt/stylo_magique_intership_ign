@@ -5,7 +5,7 @@
 
 ##SBATCH -C v100-32g
 #SBATCH --nodes=2
-#SBATCH --ntasks-per-node=4        # avec 2 tache par noeud (= nombre de GPU ici)
+#SBATCH --ntasks-per-node=1        # avec 2 tache par noeud (= nombre de GPU ici)
 #SBATCH --gres=gpu:4               # nbr of GPU per node
 #SBATCH --cpus-per-task=8          # num_worker
 #SBATCH --hint=nomultithread       # physical core

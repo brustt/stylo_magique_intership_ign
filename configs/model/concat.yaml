@@ -9,3 +9,4 @@ instance:
     sam_ckpt_path: ${sam_ckpt_path} # defined globally in sam_type
     use_weights:
       - image_encoder
+    ft_mode: ??
