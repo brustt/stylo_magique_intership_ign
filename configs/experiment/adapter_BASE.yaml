@@ -14,10 +14,7 @@ data:
     n_prompt: 1
     n_shape: 3
     loc: "center"
-    batch_size: 2
-    num_worker: 2 # link to trainer
-    pin_memory: False
-
+    
 # override vit-b for adapter
 model:
   network:

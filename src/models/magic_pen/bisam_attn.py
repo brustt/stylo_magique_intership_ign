@@ -57,7 +57,7 @@ class BiSamAttn(nn.Module):
         self.mask_decoder = mask_decoder
         self.fusion_module = CrossAttentionBlock(
             embedding_dim=embedding_dim,
-            num_heads=4,
+            num_heads=8,
             mlp_dim= 2048,
             activation=nn.ReLU
         )
@@ -160,7 +160,6 @@ class BiSamAttn(nn.Module):
         # Normalize colors
         x = (x - self.pixel_mean) / self.pixel_std
         return x
-
 
 class CrossAttentionBlock(nn.Module):
     def __init__(

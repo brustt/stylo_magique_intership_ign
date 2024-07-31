@@ -3,11 +3,11 @@
 #SBATCH --account=ofp@v100
 #SBATCH --job-name=train_diff_fusion_cd # nom du job 
 
-##SBATCH -C v100-32g
-#SBATCH --nodes=2
+#SBATCH -C v100-32g
+#SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1        # avec 2 tache par noeud (= nombre de GPU ici)
-#SBATCH --gres=gpu:4               # nbr of GPU per node
-#SBATCH --cpus-per-task=8          # num_worker
+#SBATCH --gres=gpu:1               # nbr of GPU per node
+#SBATCH --cpus-per-task=16          # num_worker
 #SBATCH --hint=nomultithread       # physical core
 
 #SBATCH --output=../job_logs/output_train_diff_fusion_cd_%j.out # nom du fichier de sortie 
