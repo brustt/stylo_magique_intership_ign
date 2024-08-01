@@ -22,8 +22,8 @@ module load pytorch-gpu/py3/2.0.0
 
 set -x 
 
-export PROJECT_PATH=$SCRATCH/projects/stage_stylo_magique_2024
-export DATA_PATH=$SCRATCH/data
+export PROJECT_PATH=$NEWSCRATCH/projects/stage_stylo_magique_2024
+export DATA_PATH=$ALL_CCFRNEWSCRATCH/datasets
 export CHECKPOINTS_PATH=$WORK/checkpoints
 export LOGS_PATH=$WORK/logs
 export LOGS_JOB=$WORK/job_logs
