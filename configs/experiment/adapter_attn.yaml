@@ -21,7 +21,7 @@ model:
   network:
     image_encoder:
       _target_: src.models.magic_pen.adapter.ImageEncoderViTAdapter
-      adapter_inter_dim: 16
+      adapter_inter_dim: 8
   instance:
     params:
       ft_mode: "adapter"

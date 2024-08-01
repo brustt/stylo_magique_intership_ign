@@ -132,7 +132,6 @@ class AdapterBlock(nn.Module):
         dim: int,
         num_heads: int,
         mlp_ratio: float = 4.0,
-        scale: float = 0.5,
         qkv_bias: bool = True,
         norm_layer: Type[nn.Module] = nn.LayerNorm,
         act_layer: Type[nn.Module] = nn.GELU,
@@ -200,6 +199,13 @@ class Adapter(nn.Module):
         self.act = act_layer()
         self.down_layer = nn.Linear(in_dim, inter_dim)
         self.up_layer = nn.Linear(inter_dim, in_dim)
+        self.apply(self._init_weights)
+
+    def _init_weights(self, m):
+        std = 0.01 # Houlsby init
+        if isinstance(m, nn.Linear):
+            nn.init.trunc_normal_(m.weight, mean=0, std=std, a=-2*std, b=2*std)
+            nn.init.constant_(m.bias, 0)
         
     def forward(self, x):
         # x is (BT, HW+1, D)
@@ -263,7 +269,7 @@ class Attention(nn.Module):
             attn = add_decomposed_rel_pos(
                 attn, q, self.rel_pos_h, self.rel_pos_w, (H, W), (H, W)
             )
-
+        # print("attn", attn.shape)
         attn = attn.softmax(dim=-1)
         x = (
             (attn @ v)

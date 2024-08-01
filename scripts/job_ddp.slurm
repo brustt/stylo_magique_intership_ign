@@ -1,18 +1,18 @@
 #!/bin/bash 
 
 #SBATCH --account=ofp@v100
-#SBATCH --job-name=train_diff_fusion_cd # nom du job 
+#SBATCH --job-name=train_bisam # nom du job 
 
-#SBATCH -C v100-32g
+##SBATCH -C v100-32g
 #SBATCH --nodes=2
 #SBATCH --ntasks-per-node=1        # avec 2 tache par noeud (= nombre de GPU ici)
 #SBATCH --gres=gpu:4               # nbr of GPU per node
 #SBATCH --cpus-per-task=16          # num_worker
 #SBATCH --hint=nomultithread       # physical core
 
-#SBATCH --output=../job_logs/output_train_diff_fusion_cd_%j.out # nom du fichier de sortie 
-#SBATCH --error=../job_logs/error_train_diff_fusion_cd_%j.out # nom du fichier d'erreur 
-#SBATCH --time=20:00:00 # temps maximum d'execution demande (HH:MM:SS) 
+#SBATCH --output=/gpfswork/rech/ofp/urz33hl/job_logs/output_train_bisam_%j.out # nom du fichier de sortie 
+#SBATCH --error=/gpfswork/rech/ofp/urz33hl/job_logs/error_train_bisam_cd_%j.out # nom du fichier d'erreur 
+#SBATCH --time=10:00:00 # temps maximum d'execution demande (HH:MM:SS) 
 
 # nettoyage des modules charges en interactif et herites par defaut
 module purge
