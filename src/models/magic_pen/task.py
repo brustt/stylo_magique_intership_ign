@@ -19,6 +19,20 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
+_register_layer_not_used = [
+    "model.prompt_encoder.point_embeddings.2.weight",
+    "model.prompt_encoder.point_embeddings.3.weight"
+    "model.mask_decoder.iou_prediction_head.layers.0.weight",
+    "model.mask_decoder.iou_prediction_head.layers.0.bias", 
+    "model.mask_decoder.iou_prediction_head.layers.1.weight",
+    "model.mask_decoder.iou_prediction_head.layers.1.bias", 
+    "model.mask_decoder.iou_prediction_head.layers.2.weight", 
+    "model.mask_decoder.iou_prediction_head.layers.2.bias"
+]
+    
+
+
 class MagicPenModule(pl.LightningModule):
     multimask_output = False
 
@@ -27,9 +41,14 @@ class MagicPenModule(pl.LightningModule):
         super().__init__()
         self.params = params
         self.model = network
+
         # let's prevent checkpoint forgetting
         if not params.get("sam_ckpt_path", None):
             raise ValueError("Please provide sam checkpoint")
+        
+        if not params.get("ft_mode", None):
+            raise ValueError("Please provide ft mode")
+        
         
         self.load_weights(params.get("sam_ckpt_path"), params.get("use_weights"))
         self.freeze_weigts(params.get("ft_mode"))
@@ -72,12 +91,30 @@ class MagicPenModule(pl.LightningModule):
             return bool(re.search(trainable_name, layer_name))
         
         if ft_mode == "probing":
-            self.model.image_encoder.requires_grad_(False)
+            #self.model.image_encoder.requires_grad_(False)
+            for param in self.model.image_encoder.parameters():
+                param.requires_grad = False
 
         elif ft_mode == "adapter":
+            #  ImageEncoderAdapterVit has adapter layer
             for name, l in self.model.image_encoder.named_parameters():
                 if not is_trainable_layer(ft_mode, name):
                     l.requires_grad = False
+
+        # freeze layer not contributing to backpropagation
+        for name, l in self.model.named_parameters():
+            if name in _register_layer_not_used:
+                l.requires_grad = False
+
+    def on_before_backward(self, loss):
+        # for name, param in self.named_parameters():
+            # print(f'on before backward, param name: {name}, grad status: {param.grad.shape if param.grad is not None else None}')
+            pass
+
+    def on_after_backward(self):
+        # for name, param in self.named_parameters():
+            # print(f'on after backward, param name: {name}, grad status: {param.grad.shape if param.grad is not None else None}')
+            pass
 
     def forward(self, x):
         # try with multimask_output == True and select best one
@@ -95,8 +132,8 @@ class MagicPenModule(pl.LightningModule):
         return preds, loss
 
     def training_step(self, batch, batch_idx):
+        print(f"{self.current_epoch }/{batch_idx}")
         preds, loss = self._step(batch)
-        # loss, preds = outputs["loss"], outputs["pred"]
         self.train_metrics.update(preds, batch["label"])
         return {"pred": preds, "loss": loss}
 

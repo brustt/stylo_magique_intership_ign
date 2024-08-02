@@ -36,4 +36,4 @@ mkdir -p ${LOGS_PATH}
 mkdir -p ${LOGS_JOB}
 
 
-srun python $PROJECT_PATH/src/train.py experiment=mp_naive sam_type=small data=levir-cd trainer=ddp
+srun python $PROJECT_PATH/src/train.py experiment=probing_diff sam_type=small data=levir-cd trainer=ddp task_name=freeze_test
