@@ -95,7 +95,7 @@ class BiSamAttn(nn.Module):
         emb_B = self.image_encoder(self.preprocess(batched_input["img_B"]))
 
         # B x C x H x W
-        self.fusion_embeddings = self.fusion_module(queries=emb_A, keys=emb_B) 
+        fusion_embeddings = self.fusion_module(queries=emb_A, keys=emb_B) 
 
         # print(self.fusion_embeddings.shape)
 
@@ -118,7 +118,7 @@ class BiSamAttn(nn.Module):
         # N : number of prompt or 1 (one_mask_for_all)
         # M : number of mask per prompt (multimask output - 3 or 1)
         low_res_masks, iou_predictions = self.mask_decoder(
-            image_embeddings=self.fusion_embeddings,
+            image_embeddings=fusion_embeddings,
             image_pe=self.prompt_encoder.get_dense_pe(),
             sparse_prompt_embeddings=sparse_embeddings,
             dense_prompt_embeddings=dense_embeddings,
@@ -177,7 +177,6 @@ class CrossAttentionBlock(nn.Module):
         self.cross_attn = Attention(embedding_dim, num_heads)
         self.norm1 = nn.LayerNorm(embedding_dim)
         self.norm2 = nn.LayerNorm(embedding_dim)
-        self.norm3 = nn.LayerNorm(embedding_dim)
         self.mlp = MLPBlock(embedding_dim, mlp_dim, activation)
 
     def forward(self, queries, keys):
