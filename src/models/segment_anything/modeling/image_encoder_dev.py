@@ -60,6 +60,8 @@ class ImageEncoderViT(nn.Module):
             global_attn_indexes (list): Indexes for blocks using global attention.
         """
         super().__init__()
+        print("INIT VIT")
+
         self.img_size = img_size
         if not norm_layer:
             norm_layer = partial(torch.nn.LayerNorm, eps=1e-6)

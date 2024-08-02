@@ -3,6 +3,7 @@
 defaults:  
   - override /data: ??
   - override /model: ??
+  - override /model/network/image_encoder: vit-b_adapter # not best way w.r.t small type
   - _self_
 
 tags: ["train"]
@@ -14,13 +15,10 @@ data:
     n_prompt: 1
     n_shape: 3
     loc: "center"
-    
+
+
 # override vit-b for adapter
 model:
-  network:
-    image_encoder:
-      _target_: src.models.magic_pen.adapter.ImageEncoderViTAdapter
-      adapter_inter_dim: 16
   instance:
     params:
       ft_mode: "adapter"

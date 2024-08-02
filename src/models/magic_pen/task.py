@@ -113,12 +113,12 @@ class MagicPenModule(pl.LightningModule):
     def on_before_backward(self, loss):
         for name, param in self.named_parameters():
             print(f'on before backward, param name: {name}, grad status: {param.grad.shape if param.grad is not None else None}, grad require: {param.requires_grad}')
-            pass
+        pass
 
     def on_after_backward(self):
         for name, param in self.named_parameters():
             print(f'on after backward, param name: {name}, grad status: {param.grad.shape if param.grad is not None else None}, grad require: {param.requires_grad}')
-            pass
+        pass
 
     def forward(self, x):
         # try with multimask_output == True and select best one
@@ -136,7 +136,7 @@ class MagicPenModule(pl.LightningModule):
         return preds, loss
 
     def training_step(self, batch, batch_idx):
-        print(f"{self.current_epoch }/{batch_idx}")
+        # print(f"{self.current_epoch }/{batch_idx}") # batch_idx is wrong in ddp 
         preds, loss = self._step(batch)
         self.train_metrics.update(preds, batch["label"])
         return {"pred": preds, "loss": loss}
