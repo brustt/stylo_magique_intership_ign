@@ -1,7 +1,7 @@
 defaults:
   - model_checkpoint
-  # - early_stopping
-  # - model_summary
+  - early_stopping
+  - model_summary
   # - tensorboard
   - rich_progress_bar
   - _self_

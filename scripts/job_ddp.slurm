@@ -3,7 +3,7 @@
 #SBATCH --account=ofp@v100
 #SBATCH --job-name=train_bisam # nom du job 
 
-##SBATCH -C v100-32g
+#SBATCH -C v100-32g
 #SBATCH --nodes=2
 #SBATCH --ntasks-per-node=1        # avec 2 tache par noeud (= nombre de GPU ici)
 #SBATCH --gres=gpu:4               # nbr of GPU per node

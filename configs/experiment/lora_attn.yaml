@@ -2,12 +2,12 @@
 
 defaults:  
   - override /data: ??
-  - override /model: concat
+  - override /model: attn
   - override /model/network/image_encoder: vit-b_lora # not best way w.r.t small type
   - _self_
 
 tags: ["train"]
-task_name: "train_lora_concat"
+task_name: "train_lora_attn"
 
 data:
   params:

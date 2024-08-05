@@ -1,5 +1,0 @@
-defaults:  
-  - image_encoder: vit-b # Not working
-
-_target_: src.models.magic_pen.lora.ImageEncoderViTLoRA
-rank: ??

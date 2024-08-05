@@ -238,7 +238,8 @@ class Attention(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         B, H, W, _ = x.shape
-        # qkv with shape (3, B, nHead, H * W, C)
+        # qkv out : (B, H, W, dim*3) - W,H == 64
+        # qkv reshape : (B, H * W, 3, self.num_heads, -1)
         qkv = (
             self.qkv(x).reshape(B, H * W, 3, self.num_heads, -1).permute(2, 0, 3, 1, 4)
         )

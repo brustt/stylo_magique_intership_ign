@@ -92,14 +92,21 @@ class MagicPenModule(pl.LightningModule):
         
         if ft_mode == "probing":
             #self.model.image_encoder.requires_grad_(False)
-            for param in self.model.image_encoder.parameters():
-                param.requires_grad_(False)
+            for l in self.model.image_encoder.parameters():
+                l.requires_grad_(False)
 
         elif ft_mode == "adapter":
             #  ImageEncoderAdapterVit has adapter layer
             for name, l in self.model.image_encoder.named_parameters():
                 if not match_name(ft_mode, name):
                     l.requires_grad_(False)
+
+        elif ft_mode == "lora":
+            for l in self.model.image_encoder.parameters():
+                l.requires_grad_(False)
+
+            self.model.image_encoder.init_lora_layers()
+
 
         # freeze layer not contributing to backpropagation
         for name, l in self.model.named_parameters():
@@ -111,13 +118,13 @@ class MagicPenModule(pl.LightningModule):
             self.model.prompt_encoder.point_embeddings[3].requires_grad_(False)
 
     def on_before_backward(self, loss):
-        for name, param in self.named_parameters():
-            print(f'on before backward, param name: {name}, grad status: {param.grad.shape if param.grad is not None else None}, grad require: {param.requires_grad}')
+        # for name, param in self.named_parameters():
+            # print(f'on before backward, param name: {name}, grad status: {param.grad.shape if param.grad is not None else None}, grad require: {param.requires_grad}')
         pass
 
     def on_after_backward(self):
-        for name, param in self.named_parameters():
-            print(f'on after backward, param name: {name}, grad status: {param.grad.shape if param.grad is not None else None}, grad require: {param.requires_grad}')
+        # for name, param in self.named_parameters():
+            # print(f'on after backward, param name: {name}, grad status: {param.grad.shape if param.grad is not None else None}, grad require: {param.requires_grad}')
         pass
 
     def forward(self, x):
@@ -155,7 +162,7 @@ class MagicPenModule(pl.LightningModule):
         self.train_metrics.update(preds, batch["label"])
 
         if self.current_epoch % 10 == 0:
-            if batch_idx % 10 == 0:
+            if batch_idx % 50 == 0:
                 bs = preds.shape[0]
                 for b_i in range(bs):
                     fig = show_prediction_sample((outputs|dict(batch=batch)), idx=b_i)

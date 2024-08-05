@@ -40,12 +40,14 @@ class LoRA_qkv(nn.Module):
         self.linear_a_v = linear_a_v
         self.linear_b_v = linear_b_v
         self.d_model = qkv.in_features
-        self.w_identity = torch.eye(qkv.in_features)
 
     def forward(self, x: Tensor):
+        # apply frozen weights
         qkv = self.qkv(x)
+        # apply lora weights learnable
         q_ba = self.linear_b_q(self.linear_a_q(x))
         v_ba = self.linear_b_v(self.linear_a_v(x))
+        # merge weights : qkv : (B, head_dim, head_dim, dim*3) - dim == 768 (vit-b)
         qkv[:, :, :, :self.d_model] += q_ba #q part
         qkv[:, :, :, -self.d_model:] += v_ba #v part
 
@@ -73,18 +75,30 @@ class ImageEncoderViTLoRA(nn.Module):
                  ):
         super().__init__()
         self.rank = rank
+        self.vit_model = vit_model
         assert rank > 0
         # base_vit_dim = sam_model.image_encoder.patch_embed.proj.out_channels
 
-     
-        self.lora_layer = list(range(len(vit_model.blocks)))
+        print("INIT LORA VIT")
+
+        self.lora_layer = list(range(len(self.vit_model.blocks)))
         
         self.A_weights = []
         self.B_weights = []
 
+    def init_lora_layers(self):
+        """
+        Freeze qkv weights beforehand
+        """
         # apply on each layer
-        for i, blk in enumerate(vit_model.blocks):
+        for i, blk in enumerate(self.vit_model.blocks):
 
+            # check encoder weights are frozen
+
+            if blk.attn.qkv.weight.requires_grad:
+                raise RuntimeError(f"Attention weights should be frozen - find requires_grad == True layer {i}")
+            
+            # get frozen weights matrices
             w_qkv_linear = blk.attn.qkv
             self.d_model = w_qkv_linear.in_features
 
@@ -109,12 +123,16 @@ class ImageEncoderViTLoRA(nn.Module):
 
         self.reset_parameters()
 
+    
+    def forward(self, x):
+        return self.vit_model(x)
+
 
     def reset_parameters(self):
         """
-        Initialize the LoRA A and B matrices like in the paper
+        Initialize the LoRA A and B matrices as described in the paper
         """
-        # Initalisation like in the paper
+        # Initalisation in the paper : gaussian (nlp). Search for CV training
         for w_A in self.A_weights:
             nn.init.kaiming_uniform_(w_A.weight, a=np.sqrt(5))
         for w_B in self.B_weights:
