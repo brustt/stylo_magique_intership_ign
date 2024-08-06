@@ -18,10 +18,9 @@ data:
 
 model:
   instance:
-    params:
-      ft_mode: "lora"
     network:
       image_encoder:
         rank: 8
-
-    
+      params:
+        sam_ckpt_path: ${sam_ckpt_path} 
+        ft_mode: "lora"

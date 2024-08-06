@@ -5,8 +5,3 @@ defaults:
 instance:
   _target_: src.models.magic_pen.task.MagicPenModule
   network: ${model.network} # try to merge instead with @_here_
-  params:
-    sam_ckpt_path: ${sam_ckpt_path} # defined globally in sam_type
-    use_weights:
-      - image_encoder
-    ft_mode: ??

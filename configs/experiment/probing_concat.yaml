@@ -17,5 +17,7 @@ data:
 
 model:
   instance:
-    params:
-      ft_mode: "probing"
+    network:
+      params:
+        sam_ckpt_path: ${sam_ckpt_path} 
+        ft_mode: "probing"

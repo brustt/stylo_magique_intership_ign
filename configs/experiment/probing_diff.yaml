@@ -1,8 +1,8 @@
 # @package _global_
 
 defaults:  
-  - override /data: ??
   - override /model: diff
+  - override /data: ??
   - _self_
 
 tags: ["train"]
@@ -17,5 +17,8 @@ data:
 
 model:
   instance:
-    params:
-      ft_mode: "probing"
+    task_name: ${task_name}
+    network:
+      params:
+        sam_ckpt_path: ${sam_ckpt_path} 
+        ft_mode: "probing"

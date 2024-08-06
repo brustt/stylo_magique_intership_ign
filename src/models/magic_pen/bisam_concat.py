@@ -2,7 +2,9 @@ from copy import deepcopy
 from enum import Enum
 from commons.constants import DEVICE_MAP, IMG_SIZE
 from models.commons.mask_items import ImgType
+from models.magic_pen.bisam_abc import BiSamGeneric
 from models.segment_anything.modeling.common import MLPBlock
+from omegaconf import DictConfig
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -15,7 +17,7 @@ from src.models.segment_anything.modeling.prompt_encoder_dev import (
     PromptEncoder,
 )  # edited
 
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Union
 
 import logging
 
@@ -25,7 +27,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-class BiSamConcat(nn.Module):
+class BiSamConcat(BiSamGeneric):
     mask_threshold: float = 0.0
 
     def __init__(
@@ -33,7 +35,7 @@ class BiSamConcat(nn.Module):
         image_encoder: ImageEncoderViT,
         prompt_encoder: PromptEncoder,
         mask_decoder: MaskDecoder,
-        embedding_dim: int = 512*64*64
+        params: Union[Dict, DictConfig],
     ) -> None:
         """
         SAM predicts object masks from an batch of images and prompts
@@ -47,20 +49,8 @@ class BiSamConcat(nn.Module):
           pixel_mean (list(float)): Mean values for normalizing pixels in the input image.
           pixel_std (list(float)): Std values for normalizing pixels in the input image.
         """
-        super().__init__()
-
-        # self.device = DEVICE_MAP[device]
-        self.image_encoder = image_encoder
-        self.prompt_encoder = prompt_encoder
-        self.mask_decoder = mask_decoder
-        self.image_embeddings = None
-
-        self.register_buffer(
-            "pixel_mean", torch.tensor([123.675, 116.28, 103.53]).view(-1, 1, 1), False
-        )
-        self.register_buffer(
-            "pixel_std", torch.tensor([58.395, 57.12, 57.375]).view(-1, 1, 1), False)
-
+        super().__init__(image_encoder, prompt_encoder, mask_decoder, params)
+        
     def forward(
         self,
         batched_input: Dict[str, torch.Tensor],

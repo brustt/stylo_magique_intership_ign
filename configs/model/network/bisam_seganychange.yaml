@@ -1,7 +1,5 @@
 defaults:
-  - image_encoder: ??
-  - prompt_encoder: sam_prompt_encoder
-  - mask_decoder: sam_mask_decoder
+  - default
   - _self_
 
 _target_: src.models.segment_any_change.model.BiSam

@@ -36,22 +36,16 @@ _register_layer_not_used = [
 class MagicPenModule(pl.LightningModule):
     multimask_output = False
 
-    def __init__(self, network, params):
+    def __init__(self, network, task_name: str):
 
         super().__init__()
-        self.params = params
-        self.model = network
 
-        # let's prevent checkpoint forgetting
-        if not params.get("sam_ckpt_path", None):
-            raise ValueError("Please provide sam checkpoint")
+        self.model = network
+        self.task_name = task_name
+
+        # save all parameters with Lightning for checkpoints : access with Module.hparams
+        # self.save_hyperparameters() # throw error
         
-        if not params.get("ft_mode", None):
-            raise ValueError("Please provide ft mode")
-        
-        
-        self.load_weights(params.get("sam_ckpt_path"), params.get("use_weights"))
-        self.freeze_weigts(params.get("ft_mode"))
         self.loss = nn.BCEWithLogitsLoss()
         self.train_metrics = MetricCollection( [
                 BinaryJaccardIndex(),
@@ -67,55 +61,8 @@ class MagicPenModule(pl.LightningModule):
         
         self.train_loss = []
         self.val_loss = []
-    
-    def load_weights(self, checkpoint: str, use_weights: Union[Any, List]) ->None:
-        pretrained_weights = torch.load(checkpoint)
-        if use_weights is None:
-            # we use all weights
-            self.model.load_state_dict(pretrained_weights, strict=True)
-        else:
-            # we select weights to load 
-            model_dict = self.model.state_dict()
-            pretrained_weights = {k: v for k, v in pretrained_weights.items() if any([k.startswith(m) for m in use_weights])}
-            model_dict.update(pretrained_weights)
-            self.model.load_state_dict(model_dict, strict=False)
-            logger.info(f"Weights loaded for : {use_weights}")
-
-    def freeze_weigts(self, ft_mode: str):
-        """
-        # TODO: 
-        #  - freeze layer on key layer selection / name
-            - set init weights based on known distrib
-        """
-        def match_name(trainable_name: str, layer_name: str) -> bool:
-            return bool(re.search(trainable_name, layer_name))
-        
-        if ft_mode == "probing":
-            #self.model.image_encoder.requires_grad_(False)
-            for l in self.model.image_encoder.parameters():
-                l.requires_grad_(False)
-
-        elif ft_mode == "adapter":
-            #  ImageEncoderAdapterVit has adapter layer
-            for name, l in self.model.image_encoder.named_parameters():
-                if not match_name(ft_mode, name):
-                    l.requires_grad_(False)
-
-        elif ft_mode == "lora":
-            for l in self.model.image_encoder.parameters():
-                l.requires_grad_(False)
-
-            self.model.image_encoder.init_lora_layers()
-
-
-        # freeze layer not contributing to backpropagation
-        for name, l in self.model.named_parameters():
-            if match_name("iou_prediction_head", name):
-                l.requires_grad_(False)
-            if match_name("prompt_encoder.mask_downscaling", name):
-                l.requires_grad_(False)
-            self.model.prompt_encoder.point_embeddings[2].requires_grad_(False)
-            self.model.prompt_encoder.point_embeddings[3].requires_grad_(False)
+        self.train_epoch_mean = None
+        self.val_epoch_mean = None
 
     def on_before_backward(self, loss):
         # for name, param in self.named_parameters():
@@ -167,7 +114,7 @@ class MagicPenModule(pl.LightningModule):
                 for b_i in range(bs):
                     fig = show_prediction_sample((outputs|dict(batch=batch)), idx=b_i)
                     self.logger.experiment.add_figure(
-                            f"sample_{self.current_epoch}_{batch_idx}",
+                            f"sample_{self.current_epoch}_{batch_idx}_{b_i}",
                             fig,
                         )
         if self.current_epoch % 10 == 0:
@@ -200,10 +147,10 @@ class MagicPenModule(pl.LightningModule):
                 prog_bar=True
             )
         
-        epoch_mean = torch.stack(self.val_loss).mean()
+        self.val_epoch_mean = torch.stack(self.val_loss).mean()
         self.log(
             "val/loss", 
-            epoch_mean, 
+            self.val_epoch_mean, 
             on_step=False, 
             on_epoch=True, 
             sync_dist=True, 
@@ -225,10 +172,10 @@ class MagicPenModule(pl.LightningModule):
                 prog_bar=True        
             )
 
-        epoch_mean = torch.stack(self.train_loss).mean()
+        self.train_epoch_mean = torch.stack(self.train_loss).mean()
         self.log(
             "train/loss", 
-            epoch_mean, 
+            self.train_epoch_mean, 
             on_step=False, 
             on_epoch=True, 
             sync_dist=True, 
@@ -249,6 +196,21 @@ class MagicPenModule(pl.LightningModule):
                 on_step=False,
                 on_epoch=True,
             )
+
+    def on_train_end(self):
+        test_values = self.test_metrics.compute()
+        val_values = self.val_metrics.compute()
+        train_values = self.train_metrics.compute()
+
+        scores = train_values | val_values | test_values
+        final_losses = dict(train_loss=self.train_epoch_mean, val_loss=self.val_epoch_mean)
+
+        self.logger.log_hyperparams(
+            params={
+                "task_name": self.task_name,
+            },
+            metrics= scores | final_losses
+        )
 
     def configure_optimizers(self):
 

@@ -27,3 +27,4 @@ test: True
 # lightning module ckpt
 ckpt_path: null
 seed: 66
+compile: null # doesn't work - cryptic error messages

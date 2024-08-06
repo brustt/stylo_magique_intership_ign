@@ -20,5 +20,7 @@ data:
 # override vit-b for adapter
 model:
   instance:
-    params:
-      ft_mode: "adapter"
+    network:
+      params:
+        sam_ckpt_path: ${sam_ckpt_path} 
+        ft_mode: "adapter"

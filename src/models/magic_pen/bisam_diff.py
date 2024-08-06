@@ -1,12 +1,14 @@
 from copy import deepcopy
 from enum import Enum
 from commons.constants import DEVICE_MAP, IMG_SIZE
-from models.commons.mask_items import ImgType
+from omegaconf import DictConfig
+from src.models.commons.mask_items import ImgType
+from src.models.magic_pen.bisam_abc import BiSamGeneric
 import torch
 from torch import nn
 from torch.nn import functional as F
 
-from models.segment_anything.modeling.image_encoder_dev import (
+from src.models.segment_anything.modeling.image_encoder_dev import (
     ImageEncoderViT,
 )  # edited
 from src.models.segment_anything.modeling.mask_decoder_dev import MaskDecoder  # edited
@@ -14,7 +16,7 @@ from src.models.segment_anything.modeling.prompt_encoder_dev import (
     PromptEncoder,
 )  # edited
 
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Union
 
 import logging
 
@@ -23,7 +25,7 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-class BiSamDiff(nn.Module):
+class BiSamDiff(BiSamGeneric):
     mask_threshold: float = 0.0
 
     def __init__(
@@ -31,6 +33,7 @@ class BiSamDiff(nn.Module):
         image_encoder: ImageEncoderViT,
         prompt_encoder: PromptEncoder,
         mask_decoder: MaskDecoder,
+        params: Union[Dict, DictConfig],
     ) -> None:
         """
         SAM predicts object masks from an batch of images and prompts
@@ -44,20 +47,7 @@ class BiSamDiff(nn.Module):
           pixel_mean (list(float)): Mean values for normalizing pixels in the input image.
           pixel_std (list(float)): Std values for normalizing pixels in the input image.
         """
-        super().__init__()
-
-        # self.device = DEVICE_MAP[device]
-        self.image_encoder = image_encoder
-        self.prompt_encoder = prompt_encoder
-        self.mask_decoder = mask_decoder
-        self.image_embeddings = None
-
-        self.register_buffer(
-            "pixel_mean", torch.tensor([123.675, 116.28, 103.53]).view(-1, 1, 1), False
-        )
-        self.register_buffer(
-            "pixel_std", torch.tensor([58.395, 57.12, 57.375]).view(-1, 1, 1), False)
-        
+        super().__init__(image_encoder, prompt_encoder, mask_decoder, params)
 
     def forward(
         self,

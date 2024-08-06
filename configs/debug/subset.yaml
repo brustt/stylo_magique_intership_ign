@@ -6,8 +6,8 @@ defaults:
 trainer:
   max_epochs: 3
   accelerator: cpu # debuggers don't like gpus
-
+  precision: 32 # fp16 won't work on cpu
 data:
   params:
-    ds_sample: 6
+    ds_sample: 10
     num_worker: 0

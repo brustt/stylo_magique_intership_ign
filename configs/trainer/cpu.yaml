@@ -3,3 +3,4 @@ defaults:
 
 accelerator: cpu
 devices: 1
+precision: 32 # fp16 won't work on cpu

@@ -6,6 +6,7 @@ import hydra
 from hydra.core.global_hydra import GlobalHydra
 from omegaconf import DictConfig
 import torch
+import yaml
 from src.models.segment_anything.build_sam_dev import sam_model_registry
 from src.models.segment_anything.build_sam import (
     sam_model_registry as sam_model_registry_v0,
@@ -92,3 +93,8 @@ def load_ckpt_sam(sam, checkpoint=None):
             state_dict = torch.load(f)
         sam.load_state_dict(state_dict)
     return sam
+
+
+def load_yaml(path):
+    with open(path, 'r') as fp:
+        return yaml.safe_load(fp) 

@@ -26,7 +26,6 @@ from src.commons import (
 
 log = RankedLogger(__name__, rank_zero_only=True)
 
-
 @task_wrapper
 def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Trains the model. Can additionally evaluate on a testset, using best weights obtained during
@@ -74,7 +73,7 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     # not used
     if cfg.get("compile"):
         log.info("Compiling model!")
-        model = torch.compile(model)
+        module = torch.compile(module)
 
     log.info("Starting testing!")
     # ckpt is provide in BitemporalMatching for SegmentAnyChange models otherwise it sould be mention here
