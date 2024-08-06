@@ -18,6 +18,7 @@ data:
 
 model:
   instance:
+    task_name: ${task_name}
     network:
       image_encoder:
         rank: 8

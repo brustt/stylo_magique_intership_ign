@@ -20,6 +20,7 @@ data:
 # override vit-b for adapter
 model:
   instance:
+    task_name: ${task_name}
     network:
       params:
         sam_ckpt_path: ${sam_ckpt_path} 
