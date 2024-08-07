@@ -69,10 +69,6 @@ class BiSamConcat(BiSamGeneric):
         """
         batch_size = batched_input[next(iter(batched_input))].shape[0]
 
-        self.image_embeddings = self.image_encoder(
-            self.preprocess(torch.cat([batched_input["img_A"], batched_input["img_B"]], dim=0))
-            )
-        
         emb_A = self.image_encoder(self.preprocess(batched_input["img_A"]))
         emb_B = self.image_encoder(self.preprocess(batched_input["img_B"]))
 
