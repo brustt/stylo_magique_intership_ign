@@ -72,8 +72,12 @@ class BiSamConcat(BiSamGeneric):
         self.image_embeddings = self.image_encoder(
             self.preprocess(torch.cat([batched_input["img_A"], batched_input["img_B"]], dim=0))
             )
+        
+        emb_A = self.image_encoder(self.preprocess(batched_input["img_A"]))
+        emb_B = self.image_encoder(self.preprocess(batched_input["img_B"]))
+
         # concatenation channel wise : B x 512 x 64 x 64
-        self.image_embeddings = torch.cat([self.image_embeddings[:batch_size], self.image_embeddings[batch_size:]], axis=1)
+        self.image_embeddings = torch.cat([emb_A, emb_B], axis=1)
 
         if one_mask_for_all:
             # one inference for all points => unique mask(s)

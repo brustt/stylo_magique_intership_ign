@@ -6,7 +6,7 @@ defaults:
   - _self_
 
 tags: ["train"]
-task_name: ??
+task_name: "train_probing_attn"
 
 data:
   params:
