@@ -4,7 +4,7 @@
 #SBATCH --job-name=train_bisam # nom du job 
 
 #SBATCH -C v100-32g
-#SBATCH --nodes=2
+#SBATCH --nodes=4
 #SBATCH --ntasks-per-node=1        # avec 2 tache par noeud (= nombre de GPU ici)
 #SBATCH --gres=gpu:4               # nbr of GPU per node
 #SBATCH --cpus-per-task=16          # num_worker
@@ -36,4 +36,4 @@ mkdir -p ${LOGS_PATH}
 mkdir -p ${LOGS_JOB}
 
 
-srun python $PROJECT_PATH/src/train.py experiment=probing_diff sam_type=small data=levir-cd trainer=ddp task_name=freeze_test
+srun python $PROJECT_PATH/src/train.py experiment=probing_diff sam_type=small data=levir-cd trainer=ddp
