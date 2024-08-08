@@ -1,0 +1,7 @@
+# https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html
+_target_: torch.optim.lr_scheduler.CosineAnnealingLR
+_partial_: true # partial https://hydra.cc/docs/advanced/instantiate_objects/overview/
+T_max: 1500, # Maximum number of iterations.
+eta_min: 1e-6
+
+# initial lr define in optimizer

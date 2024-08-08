@@ -36,12 +36,14 @@ _register_layer_not_used = [
 class MagicPenModule(pl.LightningModule):
     multimask_output = False
 
-    def __init__(self, network, task_name: str):
+    def __init__(self, network, optimizer, scheduler, task_name: str):
 
         super().__init__()
 
         self.model = network
         self.task_name = task_name
+        self.optimizer = optimizer
+        self.scheduler = scheduler
 
         # save all parameters with Lightning for checkpoints : access with Module.hparams
         # self.save_hyperparameters() # throw error
@@ -214,6 +216,16 @@ class MagicPenModule(pl.LightningModule):
 
     def configure_optimizers(self):
 
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
-        
+        optimizer = self.optimizer(params=self.parameters())
+        if self.scheduler is not None:
+            scheduler = self.scheduler(optimizer=optimizer)
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {
+                    "scheduler": scheduler,
+                    "monitor": "val/loss",
+                    "interval": "epoch",
+                    "frequency": 1,
+                },
+            }
         return {"optimizer": optimizer}

@@ -4,6 +4,7 @@ defaults:
   - model_summary
   # - tensorboard
   - rich_progress_bar
+  - lr_monitor
   - _self_
 
 model_checkpoint:

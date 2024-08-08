@@ -1,0 +1,5 @@
+_target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+_partial_: true # partial https://hydra.cc/docs/advanced/instantiate_objects/overview/
+mode: min
+factor: 0.3
+patience: 10
