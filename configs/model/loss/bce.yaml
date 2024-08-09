@@ -1,0 +1,7 @@
+_target_: src.models.commons.losses.Losses
+losses: {
+  BCE : {
+    params: {},
+    weight: 1.0
+  }
+}

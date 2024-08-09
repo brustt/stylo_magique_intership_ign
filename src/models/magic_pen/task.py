@@ -36,7 +36,7 @@ _register_layer_not_used = [
 class MagicPenModule(pl.LightningModule):
     multimask_output = False
 
-    def __init__(self, network, optimizer, scheduler, task_name: str):
+    def __init__(self, network, optimizer, scheduler, loss, task_name: str):
 
         super().__init__()
 
@@ -44,11 +44,11 @@ class MagicPenModule(pl.LightningModule):
         self.task_name = task_name
         self.optimizer = optimizer
         self.scheduler = scheduler
+        self.loss = loss
 
         # save all parameters with Lightning for checkpoints : access with Module.hparams
         # self.save_hyperparameters() # throw error
         
-        self.loss = nn.BCEWithLogitsLoss()
         self.train_metrics = MetricCollection( [
                 BinaryJaccardIndex(),
             ], prefix="train")
@@ -119,13 +119,13 @@ class MagicPenModule(pl.LightningModule):
                             f"sample_{self.current_epoch}_{batch_idx}_{b_i}",
                             fig,
                         )
-        if self.current_epoch % 10 == 0:
-            if batch_idx == 0:
-                sm= nn.Sigmoid()
-                self.logger.experiment.add_histogram(
-                        f"hist_preds_{self.current_epoch}",
-                        sm(preds[0].flatten()),
-                    )
+        # if self.current_epoch % 10 == 0:
+        #     if batch_idx == 0:
+        #         sm= nn.Sigmoid()
+        #         self.logger.experiment.add_histogram(
+        #                 f"hist_preds_{self.current_epoch}",
+        #                 sm(preds[0].flatten()),
+        #             )
 
     def on_validation_batch_end(self, outputs, batch, batch_idx):
         loss, preds = outputs["loss"], outputs["pred"]

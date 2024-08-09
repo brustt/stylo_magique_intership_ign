@@ -1,7 +1,8 @@
 defaults:
   - network: bisam_concat
-  - optimizer: adam
-  - scheduler: cosinewarm
+  - optimizer: null
+  - scheduler:  null
+  - loss: null
   - _self_
 
 instance:

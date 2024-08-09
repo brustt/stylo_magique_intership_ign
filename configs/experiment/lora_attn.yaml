@@ -1,9 +1,12 @@
 # @package _global_
 
 defaults:  
-  - override /data: ??
   - override /model: attn
   - override /model/network/image_encoder: vit-b_lora # not best way w.r.t small type
+  - override /model/loss: focal
+  - override /model/optimizer: adam
+  - override /model/scheduler: reduce_plateau
+  - override /data: ??
   - _self_
 
 tags: ["train"]

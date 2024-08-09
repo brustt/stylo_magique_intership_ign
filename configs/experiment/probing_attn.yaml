@@ -1,8 +1,11 @@
 # @package _global_
 
 defaults:  
-  - override /data: ??
   - override /model: attn
+  - override /model/loss: focal
+  - override /model/optimizer: adam
+  - override /model/scheduler: reduce_plateau
+  - override /data: ??
   - _self_
 
 tags: ["train"]

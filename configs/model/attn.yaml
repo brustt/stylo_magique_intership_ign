@@ -1,7 +1,8 @@
 defaults:
   - network: bisam_attn
-  - optimizer: adam
-  - scheduler: reduce_plateau
+  - optimizer: null
+  - scheduler:  null
+  - loss: null
   - _self_
 
 instance:
