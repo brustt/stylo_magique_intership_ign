@@ -90,15 +90,6 @@ def load_img_cv2(path: str):
     return image
 
 
-def show_pair_img(img_A: Union[str, np.ndarray], img_B: Union[str, np.ndarray]):
-    if isinstance(img_A, str):
-        img_A = load_img(img_A)
-    if isinstance(img_B, str):
-        img_B = load_img(img_B)
-    pair = np.hstack((img_A, img_B))
-    show_img(pair)
-
-
 def batch_to_list(batch: Dict[str, Any]) -> List[Dict[str, Any]]:
     batch_size = next(iter(batch.values())).size(0)
     batch_list = []
@@ -182,6 +173,38 @@ def show_points(coords, labels, ax, marker_size=25):
         linewidth=1.25,
     )
 
+def show_sample_from_batch(batch, idx=0):
+    img_A = batch["img_A"][idx].squeeze(0).cpu()
+    img_B = batch["img_B"][idx].squeeze(0).cpu()
+    label = batch["label"][idx].squeeze(0).cpu()
+    prompts = batch["point_coords"][idx].squeeze(0).cpu()
+    
+    # shift range for vizu
+    imgs = [img_A, img_B, label]
+    names = ["img_A", "img_B w prompts", "label"]
+
+    fig, axs = plt.subplots(ncols=len(imgs), squeeze=False, figsize=(15, 15))
+    for i, sample in enumerate(zip(imgs, names)):
+        img, name = sample
+        if name.startswith("im"):
+            img = to_numpy(img, transpose=True) / 255
+            axs[0, i].imshow(img)
+
+        else:
+            img = to_numpy(img, transpose=False)
+            axs[0, i].imshow(img, cmap="Greys_r")
+
+        axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+        axs[0, i].set_title(name)
+        if name == "img_B w prompts":
+            if prompts.shape[0] < 100:  # prevent showing grid
+                colors = [
+                    np.random.choice(range(256), size=3) / 255
+                    for _ in range(len(prompts))
+                ]
+                for pt, c in zip(prompts, colors):
+                    axs[0, i].scatter(*pt, color=c, marker="*", s=40)
+                    
 
 def show_prediction_sample(output: Dict, idx: int = None):
     """Show sample of given batch in a row plot :

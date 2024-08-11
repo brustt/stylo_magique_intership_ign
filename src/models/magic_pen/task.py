@@ -80,7 +80,7 @@ class MagicPenModule(pl.LightningModule):
         # try with multimask_output == True and select best one
         # bisam_diff modified dirt and quick
         preds, ious =  self.model(x, multimask_output=self.multimask_output)
-        # to be updated : current out : B x 1 x 1 x 1024 x 1024
+        # to be updated : current out : B x 1 x 1024 x 1024
         return preds, ious
     
     def _step(self, batch):

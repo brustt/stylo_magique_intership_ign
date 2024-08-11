@@ -13,6 +13,7 @@ class CDDataModule(pl.LightningDataModule):
 
         self.name = name
         self.params = params
+        self.ds_dict_type = None
 
     def prepare_data(self):
         # download, IO, etc. Useful with shared filesystems

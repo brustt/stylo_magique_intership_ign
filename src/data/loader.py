@@ -116,6 +116,22 @@ class BiTemporalDataset(Dataset):
         )
         return sample
 
+    def get_from_name(self, fname: str, return_sample: bool=False):
+
+        fpath = make_path(fname, Path(next(iter(self.items.A))).parent)
+
+        try:
+            idx =  int(np.where(self.items["A"] == fpath)[0])
+        except:
+            raise ValueError(f"file name not found in dataset {self.name}")
+        if return_sample:
+            return self.__getitem__(idx)
+        return idx
+        
+
+        
+
+
 
 def load_second_sample(
     size: Union[int, float, Any] = None, data_type="train", seed=SEED
