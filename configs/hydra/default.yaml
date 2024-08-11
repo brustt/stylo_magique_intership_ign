@@ -7,9 +7,9 @@ defaults:
 
 # output directory, generated dynamically on each run
 run:
-  dir: ${paths.log_dir}/${task_name}/${data.name}/${sam_enc_arch}/${now:%Y-%m-%d}_${now:%H-%M-%S}
+  dir: ${paths.log_dir}/${task_name}/${data.name}/${sam_enc_arch}/${oc.env:SLURM_JOB_ID}
 sweep:
-  dir: ${paths.log_dir}/${task_name}/${data.name}/${sam_enc_arch}/${now:%Y-%m-%d}_${now:%H-%M-%S}
+  dir: ${paths.log_dir}/${task_name}/${data.name}/${sam_enc_arch}/${oc.env:SLURM_JOB_ID}
   subdir: ${hydra.job.num}
 
 job_logging:

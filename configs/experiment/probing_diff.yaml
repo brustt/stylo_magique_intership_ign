@@ -2,7 +2,7 @@
 
 defaults:  
   - override /model: diff
-  - override /model/loss: focal_dice
+  - override /model/loss: focal
   - override /model/optimizer: adam
   - override /model/scheduler: reduce_plateau
   - override /data: ??

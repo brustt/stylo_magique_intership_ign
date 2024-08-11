@@ -204,6 +204,8 @@ class MagicPenModule(pl.LightningModule):
         val_values = self.val_metrics.compute()
         train_values = self.train_metrics.compute()
 
+        print(test_values)
+
         scores = train_values | val_values | test_values
         final_losses = dict(train_loss=self.train_epoch_mean, val_loss=self.val_epoch_mean)
 
