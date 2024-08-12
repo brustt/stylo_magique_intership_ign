@@ -217,8 +217,12 @@ class MagicPenModule(pl.LightningModule):
         )
 
     def configure_optimizers(self):
+        if optimizer is not None:
+            optimizer = self.optimizer(params=self.parameters())
+        else:
+            # ensure old runs working
+            optimizer = load_default_opt(self)
 
-        optimizer = self.optimizer(params=self.parameters())
         if self.scheduler is not None:
             scheduler = self.scheduler(optimizer=optimizer)
             return {
@@ -231,3 +235,7 @@ class MagicPenModule(pl.LightningModule):
                 },
             }
         return {"optimizer": optimizer}
+
+
+def load_default_opt(task):
+    return torch.optim.Adam(params=task.parameters(), lr=1e-4)
