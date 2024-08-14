@@ -72,6 +72,7 @@ class MagicPenModule(pl.LightningModule):
         self.val_loss = []
         self.train_epoch_mean = None
         self.val_epoch_mean = None
+        self.sgmd = nn.Sigmoid()
     
     def on_train_start(self):
         if self.compile:
@@ -88,10 +89,8 @@ class MagicPenModule(pl.LightningModule):
         pass
 
     def forward(self, x):
-        # try with multimask_output == True and select best one
-        # bisam_diff modified dirt and quick
         preds, ious =  self.model(x, multimask_output=self.multimask_output)
-        # to be updated : current out : B x 1 x 1024 x 1024
+        # current out : B x 1 x 1024 x 1024
         return preds, ious
     
     def _step(self, batch):
@@ -103,9 +102,7 @@ class MagicPenModule(pl.LightningModule):
         return preds, loss
 
     def training_step(self, batch, batch_idx):
-        # print(f"{self.current_epoch }/{batch_idx}") # batch_idx is wrong in ddp 
         preds, loss = self._step(batch)
-        self.train_metrics.update(preds, batch["label"])
         return {"pred": preds, "loss": loss}
 
     def validation_step(self, batch, batch_idx):
@@ -119,7 +116,7 @@ class MagicPenModule(pl.LightningModule):
     def on_train_batch_end(self, outputs, batch, batch_idx):
         loss, preds = outputs["loss"], outputs["pred"]
         self.train_loss.append(loss)
-        self.train_metrics.update(preds, batch["label"])
+        self.train_metrics.update(self.sgmd(preds), batch["label"])
 
         if self.current_epoch % 10 == 0:
             if batch_idx % 50 == 0:
@@ -140,12 +137,12 @@ class MagicPenModule(pl.LightningModule):
 
     def on_validation_batch_end(self, outputs, batch, batch_idx):
         loss, preds = outputs["loss"], outputs["pred"]
-        self.val_metrics.update(preds, batch["label"])
+        self.val_metrics.update(self.sgmd(preds), batch["label"])
         self.val_loss.append(loss)
 
     def on_test_batch_end(self, outputs, batch, batch_idx):
         loss, preds = outputs["loss"], outputs["pred"]
-        self.test_metrics.update(preds, batch["label"])
+        self.test_metrics.update(self.sgmd(preds), batch["label"])
 
 
     def on_validation_epoch_end(self):
@@ -214,8 +211,6 @@ class MagicPenModule(pl.LightningModule):
         test_values = self.test_metrics.compute()
         val_values = self.val_metrics.compute()
         train_values = self.train_metrics.compute()
-
-        print(test_values)
 
         scores = train_values | val_values | test_values
         final_losses = dict(train_loss=self.train_epoch_mean, val_loss=self.val_epoch_mean)
