@@ -3,6 +3,7 @@ from copy import deepcopy
 from enum import Enum
 from commons.constants import DEVICE_MAP, IMG_SIZE
 from models.commons.mask_items import ImgType
+from models.commons.rpe.cross_rpe_attention import CrossRPEBlock
 from models.magic_pen.bisam_abc import BiSamGeneric
 from models.segment_anything.modeling.common import MLPBlock
 from omegaconf import DictConfig
@@ -55,11 +56,20 @@ class BiSamAttn(BiSamGeneric):
         """
         super().__init__(image_encoder, prompt_encoder, mask_decoder, params)
 
-        self.fusion_module = CrossAttentionBlock(
-            embedding_dim=embedding_dim,
-            num_heads=num_heads,
-            mlp_dim= 2048,
-            activation=nn.ReLU
+        self.fusion_module = CrossRPEBlock(
+
+            embedding_dim, 
+            num_heads, 
+            mlp_ratio=4., # could be 8 == 2048
+            qkv_bias=False, 
+            qk_scale=None, 
+            drop=0., 
+            attn_drop=0.,
+            drop_path=0., 
+            act_layer=nn.GELU, 
+            norm_layer=nn.LayerNorm, 
+            num_patches=64, # 64 x 64 == 1024 
+            modalities=[], 
         )
 
     def forward(

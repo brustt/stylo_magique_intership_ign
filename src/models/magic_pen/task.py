@@ -36,7 +36,13 @@ _register_layer_not_used = [
 class MagicPenModule(pl.LightningModule):
     multimask_output = False
 
-    def __init__(self, network, optimizer, scheduler, loss, task_name: str):
+    def __init__(self, 
+                 network, 
+                 optimizer, 
+                 scheduler, 
+                 loss, 
+                 task_name: str,
+                 compile: bool=True):
 
         super().__init__()
 
@@ -45,6 +51,7 @@ class MagicPenModule(pl.LightningModule):
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.loss = loss
+        self.compile = compile
 
         # save all parameters with Lightning for checkpoints : access with Module.hparams
         # self.save_hyperparameters() # throw error
@@ -65,7 +72,11 @@ class MagicPenModule(pl.LightningModule):
         self.val_loss = []
         self.train_epoch_mean = None
         self.val_epoch_mean = None
-
+    
+    def on_train_start(self):
+        if self.compile:
+            self.model = torch.compile(self.model)
+    
     def on_before_backward(self, loss):
         # for name, param in self.named_parameters():
             # print(f'on before backward, param name: {name}, grad status: {param.grad.shape if param.grad is not None else None}, grad require: {param.requires_grad}')
@@ -217,7 +228,7 @@ class MagicPenModule(pl.LightningModule):
         )
 
     def configure_optimizers(self):
-        if optimizer is not None:
+        if self.optimizer is not None:
             optimizer = self.optimizer(params=self.parameters())
         else:
             # ensure old runs working

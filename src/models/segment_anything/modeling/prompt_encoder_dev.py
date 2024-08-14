@@ -94,10 +94,15 @@ class PromptEncoder(nn.Module):
             points, self.input_image_size
         )
 
-        point_embedding[labels == -1] = 0.0
-        point_embedding[labels == -1] += self.not_a_point_embed.weight
-        point_embedding[labels == 0] += self.point_embeddings[0].weight
-        point_embedding[labels == 1] += self.point_embeddings[1].weight
+        point_embedding = torch.where((labels == -1).unsqueeze(-1).expand_as(point_embedding),
+                                      torch.zeros_like(point_embedding) + self.not_a_point_embed.weight,
+                                      point_embedding)
+        point_embedding = torch.where((labels == 0).unsqueeze(-1).expand_as(point_embedding),
+                                      point_embedding + self.point_embeddings[0].weight,
+                                      point_embedding)
+        point_embedding = torch.where((labels == 1).unsqueeze(-1).expand_as(point_embedding),
+                                      point_embedding + self.point_embeddings[1].weight,
+                                      point_embedding)
         return point_embedding
 
     def _embed_boxes(self, boxes: torch.Tensor) -> torch.Tensor:
@@ -226,7 +231,6 @@ class PositionEmbeddingRandom(nn.Module):
         self, coords_input: torch.Tensor, image_size: Tuple[int, int]
     ) -> torch.Tensor:
         """Positionally encode points that are not normalized to [0,1]."""
-        coords = coords_input.clone()
-        coords[:, :, :, 0] = coords[:, :, :, 0] / image_size[1]
-        coords[:, :, :, 1] = coords[:, :, :, 1] / image_size[0]
-        return self._pe_encoding(coords.to(torch.float))  # B x N x C
+        # Take advantage of square image size to simplify normalization
+        assert image_size[1] == image_size[0]
+        return self._pe_encoding(coords_input / image_size[1])  # B x N x C

@@ -11,6 +11,7 @@ instance:
   optimizer: ${model.optimizer}
   scheduler: ${model.scheduler}
   loss: ${model.loss}
+  compile: False
   task_name: ??
 
    
