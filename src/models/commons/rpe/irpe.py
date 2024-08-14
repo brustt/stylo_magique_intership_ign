@@ -570,6 +570,8 @@ class iRPE(nn.Module):
                                                    skip=skip, alpha=config.alpha,
                                                    beta=config.beta, gamma=config.gamma,
                                                    dtype=dtype, device=device)
+        # print(num_buckets)
+        # print(self.num_buckets)
         assert num_buckets == self.num_buckets
 
         # transposed contextual

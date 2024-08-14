@@ -1,5 +1,5 @@
 defaults:
-  - network: bisam_diff
+  - network: bisam_attnconc
   - optimizer: null
   - scheduler:  null
   - loss: null
@@ -13,5 +13,3 @@ instance:
   loss: ${model.loss}
   compile: ${compile}
   task_name: ??
-
-   

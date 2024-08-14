@@ -3,6 +3,7 @@ from copy import deepcopy
 from enum import Enum
 from commons.constants import DEVICE_MAP, IMG_SIZE
 from models.commons.mask_items import ImgType
+from models.commons.rpe.cross_rpe_attention import CrossRPEBlock
 from models.magic_pen.bisam_abc import BiSamGeneric
 from models.segment_anything.modeling.common import MLPBlock
 from omegaconf import DictConfig
@@ -40,6 +41,8 @@ class BiSamAttn(BiSamGeneric):
         params: Union[Dict, DictConfig],
         embedding_dim: int = 256,
         num_heads: int = 8,
+        num_patches: int = 4096,
+        n_modalities: int = 2,
     ) -> None:
         """
         SAM predicts object masks from an batch of images and prompts
@@ -55,11 +58,19 @@ class BiSamAttn(BiSamGeneric):
         """
         super().__init__(image_encoder, prompt_encoder, mask_decoder, params)
 
-        self.fusion_module = CrossAttentionBlock(
-            embedding_dim=embedding_dim,
-            num_heads=num_heads,
-            mlp_dim= 2048,
-            activation=nn.ReLU
+        self.fusion_module = CrossRPEBlock(
+            embedding_dim*n_modalities, # entries are concatenated
+            num_heads, 
+            mlp_ratio=4., # could be 8 == 2048
+            qkv_bias=False, 
+            qk_scale=None, 
+            drop=0., 
+            attn_drop=0.,
+            drop_path=0., 
+            act_layer=nn.GELU, 
+            norm_layer=nn.LayerNorm, 
+            num_patches=num_patches, # 64 x 64 == 4096 
+            n_modalities=n_modalities,
         )
 
     def forward(
@@ -83,10 +94,11 @@ class BiSamAttn(BiSamGeneric):
         emb_A = self.image_encoder(self.preprocess(batched_input["img_A"]))
         emb_B = self.image_encoder(self.preprocess(batched_input["img_B"]))
 
-        # B x C x H x W
-        fusion_embeddings = self.fusion_module(queries=emb_A, keys=emb_B) 
+        # concatenation channel wise : B x 512 x 64 x 64
+        self.image_embeddings = torch.cat([emb_A, emb_B], axis=1)
 
-        # print(self.fusion_embeddings.shape)
+        # B x C x H x W
+        fusion_embeddings = self.fusion_module(self.image_embeddings) 
 
         if one_mask_for_all:
             # one inference for all points => unique mask(s)
@@ -149,42 +161,3 @@ class BiSamAttn(BiSamGeneric):
         # Normalize colors
         x = (x - self.pixel_mean) / self.pixel_std
         return x
-
-class CrossAttentionBlock(nn.Module):
-    def __init__(
-            self, 
-            embedding_dim: int, 
-            num_heads: int, 
-            mlp_dim: int = 2048,
-            activation: Type[nn.Module] = nn.ReLU,
-
-        ) -> None:
-        """
-        Implement cross-attention for two inputs embeddings
-        """
-        super().__init__()
-        self.cross_attn = Attention(embedding_dim, num_heads)
-        self.norm1 = nn.LayerNorm(embedding_dim)
-        self.norm2 = nn.LayerNorm(embedding_dim)
-        self.mlp = MLPBlock(embedding_dim, mlp_dim, activation)
-
-    def forward(self, queries, keys):
-        """
-        Queries attend to keys
-        queries :  b x c x h x w
-        
-        queries x1, keys: x2 == queries attending to keys, i.e context of x1 towards x2
-        """
-        b, c, h, w = queries.shape
-        # set channel as last dim and flat spatial dim
-        queries = queries.permute(0, 2, 3, 1).view(b, -1, c)
-        keys = keys.permute(0, 2, 3, 1).view(b, -1, c)
-
-        q = self.norm1(queries)
-        k = self.norm2(keys)
-        attn_out = self.cross_attn(q=q, k=k, v=k)
-        q = q + attn_out
-        q = self.norm2(q)
-        out = self.mlp(q) + q
-        # => b x c x h x w
-        return out.view(b, h, w, c).permute(0, 3, 1, 2)

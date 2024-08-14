@@ -4,10 +4,10 @@
 #SBATCH --job-name=train_bisam # nom du job 
 
 #SBATCH -C v100-32g
-#SBATCH --nodes=4
-#SBATCH --ntasks-per-node=1        # avec 2 tache par noeud (= nombre de GPU ici)
-#SBATCH --gres=gpu:4               # nbr of GPU per node
-#SBATCH --cpus-per-task=16          # num_worker
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=8        # avec 2 tache par noeud (= nombre de GPU ici)
+#SBATCH --gres=gpu:8               # nbr of GPU per node
+#SBATCH --cpus-per-task=4         # num_worker
 #SBATCH --hint=nomultithread       # physical core
 
 #SBATCH --output=/gpfswork/rech/ofp/urz33hl/job_logs/output_train_bisam_%j.out # nom du fichier de sortie 

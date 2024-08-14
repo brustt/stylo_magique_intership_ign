@@ -45,3 +45,6 @@ def _attention_rel_h_rel_w(q_, k_, v_, rel_h_, rel_w_):
     attn_bias = (rel_h_ + rel_w_).view(q_.size(0), q_.size(1),
                                        rel_h_.size(2), rel_h_.size(3) * rel_w_.size(4))
     return torch.nn.functional.scaled_dot_product_attention(q_, k_, v_, attn_mask=attn_bias)
+
+
+
