@@ -1,6 +1,5 @@
 #!/bin/bash 
 
-#SBATCH --account=ofp@v100
 #SBATCH --job-name=train_diff_fusion_cd # nom du job 
 
 #SBATCH -C v100-32g

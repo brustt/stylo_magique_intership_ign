@@ -111,19 +111,25 @@ class MagicPenModule(pl.LightningModule):
             self.model.prompt_encoder.point_embeddings[3].requires_grad_(False)
 
     def on_before_backward(self, loss):
+        """
         for name, param in self.named_parameters():
             print(f'on before backward, param name: {name}, grad status: {param.grad.shape if param.grad is not None else None}, grad require: {param.requires_grad}')
         pass
+        """
+        ...
 
     def on_after_backward(self):
+        """
         for name, param in self.named_parameters():
             print(f'on after backward, param name: {name}, grad status: {param.grad.shape if param.grad is not None else None}, grad require: {param.requires_grad}')
         pass
+        """
+        ...
 
     def forward(self, x):
         # try with multimask_output == True and select best one
         # bisam_diff modified dirt and quick
-        preds, ious =  self.model(x, multimask_output=self.multimask_output)
+        preds, ious = self.model(x, multimask_output=self.multimask_output)
         # to be updated : current out : B x 1 x 1 x 1024 x 1024
         return preds, ious
     

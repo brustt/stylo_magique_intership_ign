@@ -168,7 +168,6 @@ class CrossAttentionBlock(nn.Module):
             num_heads: int, 
             mlp_dim: int = 2048,
             activation: Type[nn.Module] = nn.ReLU,
-
         ) -> None:
         """
         Implement cross-attention for two inputs embeddings

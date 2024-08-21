@@ -1,6 +1,7 @@
 import os
 import pickle
 from typing import Dict, Any, List, Union
+import pathlib
 
 import hydra
 from hydra.core.global_hydra import GlobalHydra
@@ -92,3 +93,19 @@ def load_ckpt_sam(sam, checkpoint=None):
             state_dict = torch.load(f)
         sam.load_state_dict(state_dict)
     return sam
+
+def create_folder(path: str,
+                  parents: bool = True,
+                  exist_ok: bool = True):
+    """create folder with the whole hierarchy if required
+
+    Parameters
+    ----------
+    path complete path of the folder
+
+    Returns
+    -------
+
+    """
+    pathlib.Path(path).mkdir(parents=parents,
+                             exist_ok=exist_ok)

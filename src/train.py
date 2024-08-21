@@ -1,20 +1,21 @@
 import os
 from typing import Any, Dict, List, Tuple
 
-from commons.constants import SEED
-from commons.instantiators import instantiate_callbacks
-from commons.utils import flush_memory
 import hydra
 from pytorch_lightning import Callback
 from lightning.pytorch import (
     LightningDataModule,
     LightningModule,
     Trainer,
-    seed_everything,
-)
+    seed_everything)
+from lightning.pytorch.profilers import AdvancedProfiler, PyTorchProfiler
 from lightning.pytorch.loggers import Logger
+from lightning.pytorch.strategies import DDPStrategy
+from torch.distributed.algorithms.ddp_comm_hooks import (
+    default_hooks as default,
+    powerSGD_hook as powerSGD,
+)
 from omegaconf import DictConfig
-import torch
 
 from src.commons import (
     RankedLogger,
@@ -23,8 +24,12 @@ from src.commons import (
     log_hyperparameters,
     task_wrapper,
 )
+from src.commons.instantiators import instantiate_callbacks
+from src.commons.utils import flush_memory
+from src.commons.utils_io import create_folder
 
 log = RankedLogger(__name__, rank_zero_only=True)
+
 
 
 @task_wrapper
@@ -55,9 +60,23 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     callbacks: List[Callback] = instantiate_callbacks(cfg.callbacks)
 
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
+    if cfg.get("extras.use_profiler"):
+        create_folder(cfg.extras.profiler_path)
+        profiler = AdvancedProfiler(dirpath=cfg.extras.profiler_path,
+                                    filename='advanced_profiler') if cfg.extras.profiler == 'advanced'\
+            else PyTorchProfiler(dirpath=str(cfg.extras.profiler_path),
+                                 filename='pytorch_profiler',
+                                 export_to_chrome=True,
+                                 row_limit=int(cfg.extras.profiler_row_limit),
+                                 )
+
+    else:
+        profiler = None
+    if cfg.get("extras.use_custom_ddp"):
+
+
     trainer: Trainer = hydra.utils.instantiate(
-        cfg.trainer, logger=logger, callbacks=callbacks
-    )
+        cfg.trainer, logger=logger, callbacks=callbacks, profiler=profiler)
 
     object_dict = {
         "cfg": cfg,
@@ -72,9 +91,9 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         log_hyperparameters(object_dict)
 
     # not used
-    if cfg.get("compile"):
-        log.info("Compiling model!")
-        model = torch.compile(model)
+    # if cfg.get("compile"):
+        # log.info("Compiling model!")
+        # model = torch.compile(model)
 
     log.info("Starting testing!")
     # ckpt is provide in BitemporalMatching for SegmentAnyChange models otherwise it sould be mention here

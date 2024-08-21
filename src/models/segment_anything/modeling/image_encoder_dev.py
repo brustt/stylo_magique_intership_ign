@@ -175,9 +175,7 @@ class Block(nn.Module):
         self.mlp = MLPBlock(
             embedding_dim=dim, mlp_dim=int(dim * mlp_ratio), act=act_layer
         )
-
         self.window_size = window_size
-
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         shortcut = x
         x = self.norm1(x)
@@ -185,21 +183,17 @@ class Block(nn.Module):
         if self.window_size > 0:
             H, W = x.shape[1], x.shape[2]
             x, pad_hw = window_partition(x, self.window_size)
-
         x = self.attn(x)
         # Reverse window partition
         if self.window_size > 0:
             x = window_unpartition(x, self.window_size, pad_hw, (H, W))
-
         x = shortcut + x
         x = x + self.mlp(self.norm2(x))
-
         return x
 
 
 class Attention(nn.Module):
     """Multi-head Attention block with relative position embeddings."""
-
     def __init__(
         self,
         dim: int,
@@ -223,10 +217,8 @@ class Attention(nn.Module):
         self.num_heads = num_heads
         head_dim = dim // num_heads
         self.scale = head_dim**-0.5
-
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.proj = nn.Linear(dim, dim)
-
         self.use_rel_pos = use_rel_pos
         if self.use_rel_pos:
             assert (

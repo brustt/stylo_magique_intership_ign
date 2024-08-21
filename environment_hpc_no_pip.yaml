@@ -1,0 +1,32 @@
+name: mp_2
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+dependencies:
+  - python=3.10
+  - cudatoolkit
+  - pytorch=2.4.0=py3.10_cuda11.8_cudnn9.1.0_0
+  - torchvision=0.15
+  - ca-certificates
+  - openssl
+  - jupyterlab-lsp
+  - jupyterlab[version='>=4.1.0,<5.0.0a0']
+  - jupyter-lsp-python
+  - certifi
+  - gh
+  - pandas
+  - rasterio
+  - matplotlib
+  - scikit-image
+  - black
+  - ipykernel
+  - kornia
+  - tensorboard
+  - seaborn
+  - pytorch-lightning
+  - lightning
+  - torchmetrics
+  - tqdm
+  - hydra-core
+  - rich=13.*
