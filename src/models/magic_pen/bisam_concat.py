@@ -1,15 +1,15 @@
 from copy import deepcopy
 from enum import Enum
-from commons.constants import DEVICE_MAP, IMG_SIZE
-from models.commons.mask_items import ImgType
-from models.magic_pen.bisam_abc import BiSamGeneric
-from models.segment_anything.modeling.common import MLPBlock
+from src.commons.constants import DEVICE_MAP, IMG_SIZE
+from src.models.commons.mask_items import ImgType
+from src.models.magic_pen.bisam_abc import BiSamGeneric
+from src.models.segment_anything.modeling.common import MLPBlock
 from omegaconf import DictConfig
 import torch
 from torch import nn
 from torch.nn import functional as F
 
-from models.segment_anything.modeling.image_encoder_dev import (
+from src.models.segment_anything.modeling.image_encoder_dev import (
     ImageEncoderViT,
 )  # edited
 from src.models.segment_anything.modeling.mask_decoder_dev import MaskDecoder  # edited

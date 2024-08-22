@@ -9,7 +9,7 @@ Modified parts from https://github.com/pytorch-labs/segment-anything-fast/blob/m
 """
 
 from functools import partial, wraps
-from models.commons.scale_attention import _attention_rel_h_rel_w
+from src.models.commons.scale_attention import _attention_rel_h_rel_w
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

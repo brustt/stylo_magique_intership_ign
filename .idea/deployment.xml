@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="dl" remoteFilesAllowedToDisappearOnAutoupload="false" confirmBeforeUploading="false">
+    <option name="confirmBeforeUploading" value="false" />
+    <serverData>
+      <paths name="jean-zay">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/projects/stage_stylo_magique_2024" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="jean-zellou">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/mnt/common/hdd/home/SKhelifi/stage_stylo_magique_2024" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="mgpu">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/stage_stylo_magique_2024" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig authType="PASSWORD" host="jean-zay.idris.fr" id="f3200ee7-9107-4156-bf48-2f5d846fea89" port="22" nameFormat="DESCRIPTIVE" username="ujw88rt" useOpenSSHConfig="true" />
+      <sshConfig authType="PASSWORD" host="SMLPSLURMMFT1.ign.fr" id="97a102d4-bf90-4712-ac5a-c4c2fdfc0d3c" port="22" nameFormat="DESCRIPTIVE" username="SKhelifi" useOpenSSHConfig="true" />
+    </configs>
+  </component>
+</project>

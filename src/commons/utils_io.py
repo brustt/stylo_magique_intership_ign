@@ -13,7 +13,7 @@ from src.models.segment_anything.build_sam import (
 )
 from src.models.segment_anything.build_sam_v2 import sam_model_registry as sam_model_registry_v2
 
-from commons.constants import DEVICE, SAM_DICT_CHECKPOINT
+from src.commons.constants import DEVICE, SAM_DICT_CHECKPOINT
 import skimage.io as io
 
 

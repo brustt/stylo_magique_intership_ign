@@ -6,9 +6,9 @@ import numpy as np
 import skimage.io as io
 import matplotlib.pyplot as plt
 import cv2
-from commons.utils_io import load_img
 
-from commons.constants import DEVICE
+from src.commons.utils_io import load_img
+from src.commons.constants import DEVICE
 import time
 from collections.abc import Iterable
 import logging

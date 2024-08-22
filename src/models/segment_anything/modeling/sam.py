@@ -10,7 +10,7 @@ from torch.nn import functional as F
 
 from typing import Any, Dict, List, Tuple
 
-from commons.constants import IMG_SIZE
+from src.commons.constants import IMG_SIZE
 from src.models.segment_anything.utils.amg import postprocess_filters
 
 from .image_encoder_dev import ImageEncoderViT

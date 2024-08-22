@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils import data
 
-from commons.constants import DEVICE, IMG_SIZE
+from src.commons.constants import DEVICE, IMG_SIZE
 from src.models.commons.mask_process import binarize_mask, extract_object_from_batch
 from src.models.segment_anything.utils.transforms import ResizeLongestSide
 

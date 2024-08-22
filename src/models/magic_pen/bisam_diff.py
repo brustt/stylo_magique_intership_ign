@@ -1,6 +1,6 @@
 from copy import deepcopy
 from enum import Enum
-from commons.constants import DEVICE_MAP, IMG_SIZE
+from src.commons.constants import DEVICE_MAP, IMG_SIZE
 from omegaconf import DictConfig
 from src.models.commons.mask_items import ImgType
 from src.models.magic_pen.bisam_abc import BiSamGeneric

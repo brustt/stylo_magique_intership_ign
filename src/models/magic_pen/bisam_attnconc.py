@@ -1,11 +1,11 @@
 
 from copy import deepcopy
 from enum import Enum
-from commons.constants import DEVICE_MAP, IMG_SIZE
-from models.commons.mask_items import ImgType
-from models.commons.rpe.cross_rpe_attention import CrossRPEBlock
-from models.magic_pen.bisam_abc import BiSamGeneric
-from models.segment_anything.modeling.common import MLPBlock
+from src.commons.constants import DEVICE_MAP, IMG_SIZE
+from src.models.commons.mask_items import ImgType
+from src.models.commons.rpe.cross_rpe_attention import CrossRPEBlock
+from src.models.magic_pen.bisam_abc import BiSamGeneric
+from src.models.segment_anything.modeling.common import MLPBlock
 from omegaconf import DictConfig
 import torch
 from torch import nn

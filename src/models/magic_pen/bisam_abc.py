@@ -2,14 +2,14 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from enum import Enum
 import re
-from commons.constants import DEVICE_MAP, IMG_SIZE
-from models.commons.mask_items import ImgType
+from src.commons.constants import DEVICE_MAP, IMG_SIZE
+from src.models.commons.mask_items import ImgType
 from omegaconf import DictConfig
 import torch
 from torch import nn
 from torch.nn import functional as F
 
-from models.segment_anything.modeling.image_encoder_dev import (
+from src.models.segment_anything.modeling.image_encoder_dev import (
     ImageEncoderViT,
 )  # edited
 from src.models.segment_anything.modeling.mask_decoder_dev import MaskDecoder  # edited
