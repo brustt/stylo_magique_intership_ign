@@ -27,6 +27,7 @@ dependencies:
   - tqdm
   - hydra-core
   - rich=13.*
+  - scikit-learn
   - pip:
     - deprecated
     - torch_tb_profiler

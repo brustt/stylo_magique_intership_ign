@@ -104,7 +104,7 @@ class PointSampler:
         
         # extract shapes from mask - squeeze batch dimension
         shapes = extract_object_from_batch(mask).squeeze(0)
-
+        print("shape", shapes.shape)
         # filter on areas
         areas = torch.sum(shapes, dim=(1, 2))
         indices = torch.where(areas > self.MIN_AREA)[0]
@@ -113,6 +113,8 @@ class PointSampler:
         # check if there is some shapes extracted - check sum for no-shapes return
         # check > 1 first for speed in case of shapes - return no shapes :  (1 x) 1 x H x W
         if shapes.shape[0] > 1 or torch.sum(shapes):
+            # extract all shapes (max of batch) if there are not enough shapes
+            n_shape = min(n_shape,  shapes.shape[0])
             coords_candidates, id_selected_shapes = self.sample_candidates_shapes(shapes, n_shape)
             # first column of coords_candidates == index of shape
             # iterate over the shapes
