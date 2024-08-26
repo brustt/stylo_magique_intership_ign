@@ -25,8 +25,8 @@ model:
       model_type: ${sam_enc_arch}
       batch_size: ${data.params.batch_size}
       th_change_proposals: ${model.instance.model.matching_engine.th_change_proposals}
-      pred_iou_thresh: 0.8
-      stability_score_thresh: 0.8
+      pred_iou_thresh: 0.7
+      stability_score_thresh: 0.7
       stability_score_offset: 1.
       box_nms_thresh: 0.7
       min_mask_region_area: 0
@@ -35,7 +35,7 @@ model:
       _target_: src.models.segment_any_change.query_prompt.SegAnyPrompt
       n_points_grid: 1024
       batch_size: ${data.params.batch_size}
-      th_sim: 0.9
+      th_sim: 0.6
 
       matching_engine:
         _target_: src.models.segment_any_change.matching.BitemporalMatching

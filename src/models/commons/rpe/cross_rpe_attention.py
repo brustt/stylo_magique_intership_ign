@@ -2,7 +2,7 @@ import math
 
 import torch
 import torch.nn as nn
-from timm.layers import Mlp, DropPath
+from timm.models.layers import Mlp, DropPath
 
 from .irpe import build_rpe, get_rpe_config
 
