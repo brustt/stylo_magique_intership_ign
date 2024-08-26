@@ -557,8 +557,10 @@ class iRPE(nn.Module):
 
         if self._rp_bucket_buf[0] == key:
             return self._rp_bucket_buf[1:3]
-
+        print("x irpe", x.shape)
+        print("L", L)
         skip = L - height * width
+        print("skip", skip)
         config = self.rpe_config
         if RPEIndexFunction is not None and self.mode == 'contextual' and self.transposed:
             # RPEIndexFunction uses int32 index.

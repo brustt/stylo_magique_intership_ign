@@ -35,3 +35,4 @@ dependencies:
     - opencv-python-headless
     - hydra-colorlog
     - rootutils
+    - timm=0.6.12

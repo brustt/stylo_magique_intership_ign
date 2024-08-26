@@ -128,6 +128,7 @@ class ImageEncoderViT(nn.Module):
         # B x 64 x 64 x 768
         for blk in self.blocks:
             x = blk(x)
+        # print("x in neck", x.shape)
         x = self.neck(x.permute(0, 3, 1, 2))
         # B x 256 x 64 x 64
 
@@ -251,6 +252,10 @@ class Attention(nn.Module):
         # q, k, v with shape (B * nHead, H * W, C)
         q, k, v = qkv.reshape(3, B * self.num_heads, H * W, -1).unbind(0)
 
+        # print("===")
+        # print("x", x.shape)
+        # print("q k v in", q.shape, k.shape, v.shape)
+
         rel_h, rel_w = None, None
         if self.use_rel_pos:
             rel_h, rel_w = add_decomposed_rel_pos(q, self.rel_pos_h, self.rel_pos_w, (H, W), (H, W))
@@ -258,6 +263,9 @@ class Attention(nn.Module):
         q = q.view(B, self.num_heads, H * W, -1)
         k = k.view(B, self.num_heads, H * W, -1)
         v = v.view(B, self.num_heads, H * W, -1)
+
+        # print("q k v attn", q.shape, k.shape, v.shape)
+
 
         if self.use_rel_pos:
             rel_h = rel_h.view(B, self.num_heads, rel_h.size(1), rel_h.size(2), rel_h.size(3))
@@ -267,9 +275,13 @@ class Attention(nn.Module):
             x = _attention_rel_h_rel_w(q, k, v, rel_h, rel_w)
         else:
             x = torch.nn.functional.scaled_dot_product_attention(q, k, v)
+        # print("x attn out", x.shape)
 
         x = x.view(B, self.num_heads, H, W, -1).permute(0, 2, 3, 1, 4).reshape(B, H, W, -1)
+        # print("x in proj", x.shape)
+        # print(self.proj.weight.shape, "proj w")
         x = self.proj(x)
+        # print("x out", x.shape)
 
         return x
 
