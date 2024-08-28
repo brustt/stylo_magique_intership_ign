@@ -73,11 +73,8 @@ class MagicPenModule(pl.LightningModule):
         self.val_loss = []
         self.train_epoch_mean = None
         self.val_epoch_mean = None
-<<<<<<< HEAD
-        self.sgmd = nn.Sigmoid
-=======
->>>>>>> ecb0e3506488ace01dc17efff8fdf4afd6dbcebc
-    
+        self.sgmd = torch.Sigmoid()
+
     def on_train_start(self):
         if self.compile:
             self.model = torch.compile(self.model)
