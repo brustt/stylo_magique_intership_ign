@@ -52,6 +52,7 @@ class MagicPenModule(pl.LightningModule):
         self.scheduler = scheduler
         self.loss = loss
         self.compile = compile
+        self.sgmd = nn.Sigmoid
 
         # save all parameters with Lightning for checkpoints : access with Module.hparams
         # self.save_hyperparameters() # throw error
@@ -72,7 +73,7 @@ class MagicPenModule(pl.LightningModule):
         self.val_loss = []
         self.train_epoch_mean = None
         self.val_epoch_mean = None
-        self.sgmd = nn.Sigmoid()
+        self.sgmd = nn.Sigmoid
     
     def on_train_start(self):
         if self.compile:

@@ -104,7 +104,7 @@ class PointSampler:
         
         # extract shapes from mask - squeeze batch dimension
         shapes = extract_object_from_batch(mask).squeeze(0)
-        print("shape", shapes.shape)
+        # print("shape", shapes.shape)
         # filter on areas
         areas = torch.sum(shapes, dim=(1, 2))
         indices = torch.where(areas > self.MIN_AREA)[0]
@@ -169,7 +169,11 @@ class PointSampler:
 
 
 class DefaultTransform:
-    """Scale Img to square IMG_SIZE preserving original ratio and pad"""
+    """Apply Basic transformations
+    - normalized
+    - scale to square of IMG_SIZE and pad if necessary
+    - convert ot tensor
+    """
 
     def __init__(self, half_precision: bool = False) -> None:
         self.transform = ResizeLongestSide(IMG_SIZE[0])
