@@ -1,10 +1,15 @@
 import os
+from commons.utils_io import check_dir
+import hydra
+from lightning.pytorch.loggers import Logger
+from lightning.pytorch.profilers import AdvancedProfiler, PyTorchProfiler
+from omegaconf import DictConfig
 from typing import Any, Dict, List, Tuple
+import torch
 
 from commons.constants import SEED
 from commons.instantiators import instantiate_callbacks
 from commons.utils import flush_memory
-import hydra
 from pytorch_lightning import Callback
 from lightning.pytorch import (
     LightningDataModule,
@@ -12,9 +17,6 @@ from lightning.pytorch import (
     Trainer,
     seed_everything,
 )
-from lightning.pytorch.loggers import Logger
-from omegaconf import DictConfig
-import torch
 
 from src.commons import (
     RankedLogger,
@@ -52,11 +54,29 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     log.info("Instantiating callbacks...")
     callbacks: List[Callback] = instantiate_callbacks(cfg.callbacks)
+    log.info(f"Profiler path : {cfg.extras.profiler_path}")
+    log.info(f"Profiler path : {cfg.extras.use_profiler}")
 
-    log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
+    if True:
+            log.info(f"Profiler path : {cfg.extras.profiler_path}")
+            # check_dir(cfg.extras.profiler_path)
+            profiler = AdvancedProfiler(dirpath=None,#cfg.extras.profiler_path,
+                                        filename='advanced_profiler') if cfg.extras.profiler_type == 'advanced'\
+                else PyTorchProfiler(dirpath=None,#str(cfg.extras.profiler_path),
+                                    filename='pytorch_profiler',
+                                    export_to_chrome=True,
+                                    row_limit=int(cfg.extras.profiler_row_limit),
+                                    sort_by_key="self_cuda_memory_usage",
+                                    use_cuda=True,
+                                    )
+
+    else:
+        log.info('NOT PROFILED')
+        profiler = None
+
+    log.info(profiler)
     trainer: Trainer = hydra.utils.instantiate(
-        cfg.trainer, logger=logger, callbacks=callbacks
-    )
+        cfg.trainer, logger=logger, callbacks=callbacks, profiler=profiler)
 
     object_dict = {
         "cfg": cfg,
