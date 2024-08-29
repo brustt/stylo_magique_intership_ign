@@ -69,7 +69,7 @@ class CDDataModule(pl.LightningDataModule):
         return data.DataLoader(
             ds,
             batch_size=self.params.get("batch_size"),
-            shuffle=False,
+            shuffle=True,
             num_workers=self.params.get("num_worker"),
             pin_memory=self.params.get("pin_memory"),
         )
