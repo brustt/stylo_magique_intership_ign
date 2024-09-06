@@ -96,7 +96,7 @@ class BiSamAttn(BiSamGeneric):
         # B x C x H x W
         fusion_embeddings = self.fusion_module(self.image_embeddings)
         
-        print("fusion embeddings : ", fusion_embeddings.shape)
+        # print("fusion embeddings : ", fusion_embeddings.shape)
 
         if one_mask_for_all:
             # one inference for all points => unique mask(s)
