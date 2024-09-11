@@ -4,7 +4,6 @@ from typing import Any, List, Union
 import torch
 import torch.nn as nn
 from omegaconf import DictConfig
-from .strategies import FusionStrategyModule, TunerStrategyModule
 from .modules import *
 from .factories import *
 
@@ -12,17 +11,18 @@ from .factories import *
 logger = logging.getLogger(__name__)
 
 
-class BisamModel(nn.Module):
+class LeStyloNet(nn.Module):
     def __init__(self, config: DictConfig):
         super().__init__()
         
-        sam_components = create_sam_model(config)
+        # sam_components = create_sam_model(config)
         
-        self.stem = create_stem_module(config.stem)
-        self.tuner_strategy = create_tuner_strategy(config.tuner_strategy)
+        self.stem = create_stem_module(config)
+        self.tuner_strategy = create_tuner_strategy(config)
         # TODO: move to config
         if isinstance(self.tuner_strategy, LoraModule):
-            self.tuner_strategy.modules_to_tune = ['qkv', 'proj'] 
+            self.tuner_strategy.modules_to_tune = ['qkv'] 
+
         self.bitemporal_transformer_blocks = create_bitemporal_transformer_blocks(
             config.transformer_blocks,
             self.tuner_strategy
@@ -37,9 +37,10 @@ class BisamModel(nn.Module):
         self.iou_score_head = create_iou_score_head(config.iou_score_head)
         self.mask_head = create_mask_head(config.mask_head)
         
-        self.initialize_from_sam(sam_components)
+        # self.initialize_from_sam(sam_components)
 
     def forward(self, x):
+        """Encoder pass"""
         # Implement the forward pass using all the modules
         x = self.stem(x)
         # B x 64 x 64 x 768
@@ -48,9 +49,17 @@ class BisamModel(nn.Module):
         # print("x in neck", x.shape)
         x = self.neck(x.permute(0, 3, 1, 2))
         # B x 256 x 64 x 64
+        """Prompt Encoder"""
+        """Fusion Module"""
+        """Prompt-To-Image"""
+        """Mask-Head"""
+
         return x
     
-    def initialize_from_sam(self, checkpoint: str, use_weights: Union[Any, List]) -> None:
+    def initialize_from_sam(sam):
+        pass
+    
+    def load_weights(self, checkpoint: str, use_weights: Union[Any, List]) -> None:
         if not checkpoint:
             logger.info("No SAM checkpoint provided. Skipping weight initialization.")
             return

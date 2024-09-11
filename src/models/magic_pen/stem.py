@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Tuple, Type
+from typing import Optional, Tuple
 import torch
 import torch.nn as nn
-from omegaconf import DictConfig
 
 @dataclass
 class StemModule(nn.Module, ABC):
@@ -19,8 +18,8 @@ class StemModule(nn.Module, ABC):
         pass
 
 
-class BasicStemModule(StemModule):
-    def __init__(self, config: DictConfig):
+class SAMStem(StemModule):
+    def __init__(self):
         super().__init__()
         self.patch_embed = PatchEmbed(
             kernel_size=(self.patch_size, self.patch_size),
@@ -28,7 +27,6 @@ class BasicStemModule(StemModule):
             in_chans=self.in_chans,
             embed_dim=self.embed_dim,
         )
-
         self.pos_embed: Optional[nn.Parameter] = None
         if self.use_abs_pos:
             # Initialize absolute positional embedding with pretrain image size.

@@ -1,5 +1,19 @@
+from abc import ABC, abstractmethod
+
+import hydra
+from omegaconf import DictConfig
 from .strategies import FusionStrategyModule
 import torch.nn as nn
+
+class FusionStrategyModule(nn.Module, ABC):
+    @abstractmethod
+    def forward(self, x):
+        pass
+
+    @classmethod
+    def create(cls, config: DictConfig):
+        return hydra.utils.instantiate(config)
+
 
 class DiffFusionModule(FusionStrategyModule):
     def __init__(self, dim: int):

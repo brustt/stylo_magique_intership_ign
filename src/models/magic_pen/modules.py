@@ -1,15 +1,10 @@
+from typing import Optional, Tuple
+from models.commons.utils import window_partition, window_unpartition
+from models.magic_pen.factories import create_attention, create_mlp
+from models.magic_pen.strategies import TunerStrategyModule
 import torch.nn as nn
 from omegaconf import DictConfig
 
-class BitemporalTransformerBlocks(nn.Module):
-    def __init__(self, config: DictConfig, tuner_strategy: nn.Module):
-        super().__init__()
-        # Initialize transformer blocks with tuner strategy
-        self.tuner_strategy = tuner_strategy
-
-    def forward(self, x):
-        # Transformer blocks forward pass
-        pass
 
 class EncoderNeck(nn.Module):
     def __init__(self, config: DictConfig):

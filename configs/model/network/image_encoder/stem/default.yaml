@@ -1,0 +1,7 @@
+_target_: src.models.magic_pen.stem.SAMStem
+img_size: 1024
+patch_size: 16
+in_chans: 3
+embed_dim: 768
+use_abs_pos: True
+use_rel_pos: False
