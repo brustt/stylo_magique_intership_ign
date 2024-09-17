@@ -1,0 +1,5 @@
+_target_: src.models.lestylonet.fusion_embedding.LoRAFusionStrategy
+r: 32
+alpha: 1
+target_modules:
+  - qkv

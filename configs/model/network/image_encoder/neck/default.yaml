@@ -1,0 +1,4 @@
+_target_: src.models.lestylonet.neck.SamNeck
+in_channels: 768  # Adjust this value based on your image encoder output
+out_channels: 256  # Adjust this value based on your desired output size
+
