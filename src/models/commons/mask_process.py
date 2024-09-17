@@ -161,7 +161,7 @@ def extract_object_from_batch(masks: torch.Tensor) -> torch.Tensor:
     uniques = torch.unique(labels_masks)
     # Labels from K.connected_component are not 0-index based and sequential integers
     # Need a mapping for one-hot
-    remapping = uniques, torch.arange(end=len(uniques))
+    remapping = uniques, torch.arange(end=len(uniques), device=labels_masks.device)
     remapped_batch = remap_values(remapping, labels_masks)
     # B x H x W => B x N x H x W
     masks = F.one_hot(remapped_batch.long(), len(uniques)).permute(0, 3, 1, 2)

@@ -83,7 +83,8 @@ class PointSampler:
         # get the coord of the pixels shapes (M x 3) - M number of not zeros pixels
         coords_candidates = torch.nonzero(shapes[id_candidates_shapes]).to(torch.float)
         return coords_candidates, id_candidates_shapes
-        
+    
+
     def sample(self, mask: torch.Tensor,  n_point_per_shape: int, loc: str, n_shape: int):
         """
         Sample m points over n random shape
