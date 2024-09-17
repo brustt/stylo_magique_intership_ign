@@ -4,14 +4,22 @@ from typing import Optional, Tuple
 import torch
 import torch.nn as nn
 
-@dataclass
 class StemModule(nn.Module, ABC):
-    img_size: int = 1024
-    patch_size: int = 16
-    in_chans: int = 3
-    embed_dim: int = 768
-    use_abs_pos: bool = True
-    use_rel_pos: bool = False
+    def __init__(self,     
+            img_size: int = 1024,
+            patch_size: int = 16,
+            in_chans: int = 3,
+            embed_dim: int = 768,
+            use_abs_pos: bool = True,
+            use_rel_pos: bool = False
+        ) -> None:
+        super().__init__()  
+        self.img_size = img_size
+        self.patch_size = patch_size
+        self.in_chans = in_chans
+        self.embed_dim = embed_dim
+        self.use_abs_pos = use_abs_pos
+        self.use_rel_pos = use_rel_pos
     
     @abstractmethod
     def forward(self, x):

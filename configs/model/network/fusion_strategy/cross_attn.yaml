@@ -1,0 +1,7 @@
+_target_: src.models.lestylonet.fusion_embedding.CrossAttentionFusionModule
+dim: 768
+mlp_ratio: 4.
+qkv_bias: False
+drop: 0
+attn_drop: 0
+num_patches: 4096
