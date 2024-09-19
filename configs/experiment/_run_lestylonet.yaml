@@ -1,0 +1,30 @@
+# @package _global_
+
+defaults:  
+  - /model/network/image_encoder/stem: default
+  - /model/network/image_encoder/block: default # default : vit-b
+  - /model/network/image_encoder/neck: default 
+  - /model/network/prompt_encoder: default
+  - /model/network/bitemporal_embedding_fusion: default
+  - /model/network/bitemporal_embedding_fusion/strategy: diff
+  - /model/network/tuner_strategy: adapter
+  - /model/loss: bce
+  - /model/optimizer: adam
+  - /model/scheduler: null
+  - override /data: ??
+  - _self_
+
+tags: ["train"]
+task_name: "refacto"
+
+data:
+  params:
+    prompt_type: "sample"
+    n_prompt: 1
+    n_shape: 3
+    loc: "center"
+
+
+sam_ckpt_path: ${paths.sam_ckpt_dir}/sam_vit_b_01ec64.pth
+use_weights:
+  - image_encoder

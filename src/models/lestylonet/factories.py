@@ -1,17 +1,15 @@
-from typing import Optional, Tuple, Type
-from models.lestylonet.blocks import AdapterMLP, Attention, LoRA_Attention, MLPBlock
+from models.lestylonet.blocks import AdapterModule, TunerStrategyModule
 from models.lestylonet.fusion_strategies import BitemporalEmbeddingFusion, FusionStrategyModule
 from models.lestylonet.heads import IouPredHead, MaskHead
 from models.lestylonet.neck import NeckModule
 from models.lestylonet.prompt_encoder import PromptEncoder
 from models.lestylonet.prompt_to_image import PromptToImageFusion
-from models.lestylonet.tuner_strategies import AdapterModule, LoraModule, TunerStrategyModule
 
 from omegaconf import DictConfig
 import torch.nn as nn
 from omegaconf import DictConfig
 import hydra
-from typing import Any, Type
+from typing import Any, Optional, Type
 
 from .stem import StemModule
 
@@ -81,15 +79,4 @@ def create_fusion_strategy(config: DictConfig) -> FusionStrategyModule:
 def create_tuner_strategy(config: DictConfig) -> TunerStrategyModule:
     _config = config.model.network.tuner_strategy
     return TunerStrategyModule.create(_config)
-    
-def create_mlp(dim: int,  act_layer: Type[nn.Module], mlp_ratio: float, 
-               tuner_strategy: Optional[TunerStrategyModule] = None) -> nn.Module:
-    if isinstance(tuner_strategy, AdapterModule):
-        return AdapterMLP(
-                dim=dim,
-                mlp_ratio=mlp_ratio,
-                act_layer=act_layer,
-                adapter_module=tuner_strategy
-                ),
-    else:
-        return MLPBlock(embedding_dim=dim, mlp_dim=int(dim * mlp_ratio), act=act_layer)
+

@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Any, List, Union
+from typing import Any, List, Tuple, Union
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -40,6 +40,8 @@ class LeStyloNet(nn.Module):
         self.mask_head = create_mask_head(config)
         
         # self.initialize_from_sam(sam_components)
+        self.load_weights(config.get("sam_ckpt_path"), config.get("use_weights"))
+
 
     def forward(self, x, one_mask_for_all: bool = True, multimask_output: bool=True):
         (

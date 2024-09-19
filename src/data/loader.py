@@ -105,14 +105,15 @@ class BiTemporalDataset(Dataset):
         if self.transform:
             sample = self.transform(sample)
 
-        prompt_coords, prompt_labels = generate_prompt(
-            sample["label"], self.params.prompt_type, self.params.n_prompt, self.params
-        )
-        #print("LABEL", torch.unique(new_label.flatten()))
-        # check if we need to process labels
-        # note : point coords are computed on transformed img (may be resized)
-        sample = sample | dict(
-            index=index, point_coords=prompt_coords, point_labels=prompt_labels
+        if self.params.get("n_shape"):
+            prompt_coords, prompt_labels = generate_prompt(
+                sample["label"], self.params.prompt_type, self.params.n_prompt, self.params
+            )
+            #print("LABEL", torch.unique(new_label.flatten()))
+            # check if we need to process labels
+            # note : point coords are computed on transformed img (may be resized)
+            sample = sample | dict(
+                index=index, point_coords=prompt_coords, point_labels=prompt_labels
         )
         return sample
 

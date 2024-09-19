@@ -1,0 +1,4 @@
+defaults:  
+  - stem: default
+  - bitemporal_embedding_fusion: default
+  - neck: default

@@ -1,4 +1,4 @@
-_target_: src.models.lestylonet.fusion_embedding.LoRAFusionStrategy
+_target_: src.models.lestylonet.blocks.LoRAFusionStrategy
 r: 32
 alpha: 1
 target_modules:

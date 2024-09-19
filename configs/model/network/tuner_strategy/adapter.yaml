@@ -1,3 +1,3 @@
-_target_: src.models.lestylonet.fusion_embedding.AdapterModule
+_target_: src.models.lestylonet.blocks.AdapterModule
 dim: 768
 adapter_dim: 256

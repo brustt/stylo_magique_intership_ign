@@ -27,8 +27,14 @@ class StemModule(nn.Module, ABC):
 
 
 class SAMStem(StemModule):
-    def __init__(self):
-        super().__init__()
+    def __init__(self,
+            img_size: int = 1024,
+            patch_size: int = 16,
+            in_chans: int = 3,
+            embed_dim: int = 768,
+            use_abs_pos: bool = True,
+            use_rel_pos: bool = False):
+        super().__init__(img_size, patch_size, in_chans, embed_dim, use_abs_pos, use_rel_pos)
         self.patch_embed = PatchEmbed(
             kernel_size=(self.patch_size, self.patch_size),
             stride=(self.patch_size, self.patch_size),

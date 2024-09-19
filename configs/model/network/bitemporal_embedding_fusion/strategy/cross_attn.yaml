@@ -1,4 +1,5 @@
-_target_: src.models.lestylonet.fusion_embedding.CrossAttentionFusionModule
+
+_target_: src.models.lestylonet.fusion_strategies.CrossAttentionFusion
 dim: 768
 mlp_ratio: 4.
 qkv_bias: False

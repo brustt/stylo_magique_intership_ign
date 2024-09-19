@@ -12,7 +12,7 @@ from src.models.commons.mask_process import binarize_mask, extract_object_from_b
 from src.models.segment_anything.utils.transforms import ResizeLongestSide
 
 from src.models.segment_anything.utils.amg import build_point_grid
-from src.commons.utils import apply_histogram
+from src.commons.utils import apply_histogram, timeit
 
 def generate_grid_prompt(n_points, img_size: int = IMG_SIZE) -> np.ndarray:
     return build_point_grid(n_points) * img_size
@@ -70,6 +70,7 @@ class PointSampler:
             "center": self.draw_center_point,
         }
 
+    @timeit
     def sample_candidates_shapes(self, shapes: torch.Tensor, n_shape: int) -> Tuple[torch.Tensor, torch.Tensor]:
         # assign equals weights
         probs = torch.ones(shapes.shape[0]) / shapes.shape[0]
@@ -84,7 +85,7 @@ class PointSampler:
         coords_candidates = torch.nonzero(shapes[id_candidates_shapes]).to(torch.float)
         return coords_candidates, id_candidates_shapes
     
-
+    @timeit
     def sample(self, mask: torch.Tensor,  n_point_per_shape: int, loc: str, n_shape: int):
         """
         Sample m points over n random shape
@@ -148,6 +149,7 @@ class PointSampler:
         # invert pixels coords to (x, y) format
         return torch.flip(shape[idx], dims=(1,))
 
+    @timeit
     def draw_center_point(self, shape, n_point):
         """
         Sample approximation center. Proxy for hard concave object where "natural center" (simple average) doesn't belong to the shape.

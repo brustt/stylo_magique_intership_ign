@@ -1,0 +1,7 @@
+defaults:
+  - model: default
+  
+
+loss: focal
+optimizer: adam
+scheduler: null

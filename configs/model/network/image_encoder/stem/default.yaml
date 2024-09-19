@@ -1,4 +1,4 @@
-_target_: src.models.magic_pen.stem.SAMStem
+_target_: src.models.lestylonet.stem.SAMStem
 img_size: 1024
 patch_size: 16
 in_chans: 3

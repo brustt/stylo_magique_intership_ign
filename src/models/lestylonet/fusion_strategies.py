@@ -74,11 +74,11 @@ class CrossAttentionFusion(FusionStrategyModule):
         return x
 
 class BitemporalEmbeddingFusion(nn.Module):
-    def __init__(self, config: DictConfig, fusion_strategy: nn.Module):
+    def __init__(self, strategy: nn.Module):
         super().__init__()
-        self.fusion_strategy = fusion_strategy
+        self.strategy = strategy
 
     def forward(self, x):
         # Bitemporal embedding fusion forward pass
-        return self.fusion_strategy(x)
+        return self.strategy(x)
 

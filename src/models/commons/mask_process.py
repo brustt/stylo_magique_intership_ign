@@ -17,7 +17,7 @@ import kornia as K
 from torch.nn.utils.rnn import pad_sequence
 import logging
 
-from src.commons.utils import to_numpy
+from src.commons.utils import timeit, to_numpy
 
 # TO DO : define globally
 logging.basicConfig(format="%(asctime)s - %(levelname)s ::  %(message)s")
@@ -139,7 +139,7 @@ def filters_masks(
 
     return data
 
-
+@timeit
 def extract_object_from_batch(masks: torch.Tensor) -> torch.Tensor:
     """Extract individual mask objects from a batch of masks B x H x W
 
@@ -149,7 +149,7 @@ def extract_object_from_batch(masks: torch.Tensor) -> torch.Tensor:
     Returns:
         torch.Tensor: (B x N x H x W) with N total objects of batch
     """
-
+    @timeit
     def remap_values(remapping, x):
         index = torch.bucketize(x.ravel(), remapping[0])
         return remapping[1][index].reshape(x.shape)

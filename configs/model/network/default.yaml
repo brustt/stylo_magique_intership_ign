@@ -1,10 +1,26 @@
 defaults:
-  - image_encoder: ??
-  - prompt_encoder: sam_prompt_encoder
-  - mask_decoder: sam_mask_decoder
+  - bitemporal_embedding_fusion: default
+  - image_encoder: default
+  - prompt_encoder: default
+  - prompt_to_image: default
+  - tuner_strategy: adapter
   - _self_
 
-_target_: src.models.magic_pen.bisam_diff.BiSamDiff
+
+iou_head:
+  _target_: src.models.lestylonet.heads.IouPredHead
+  transformer_dim: 256
+  iou_head_hidden_dim:  256
+  num_mask_tokens: 3
+  iou_head_depth: 3
+
+mask_head:
+  _target_: src.models.lestylonet.heads.MaskHead
+  strategy: # not very useful
+    _target_: src.models.lestylonet.heads.SAMMaskHead
+    num_mask_tokens: 3
+    transformer_dim: 256
+
 params:
   sam_ckpt_path: ?? # defined globally in sam_type
   use_weights:

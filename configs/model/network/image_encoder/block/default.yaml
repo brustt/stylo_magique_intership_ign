@@ -1,4 +1,4 @@
-_target_: src.models.magic_pen.modules.BitemporalTransformerBlocks
+_target_: src.models.lestylonet.blocks.BitemporalTransformerBlock
 dim: 768
 num_heads: 12
 mlp_ratio: 4.0

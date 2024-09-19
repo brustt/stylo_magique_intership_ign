@@ -1,4 +1,4 @@
-_target_: src.models.segment_anything.modeling.prompt_encoder_dev.PromptEncoder
+_target_: src.models.lestylonet.prompt_encoder.PromptEncoder
 embed_dim: 256
 image_embedding_size: 
   - 64
