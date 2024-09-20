@@ -2,8 +2,7 @@
 
 Internship "Stylo Magique"  (SIMV, IGN).
 
-Segment Anything adaptation to bi-temporal change detection.
-
+Segment Anything adaptation to bi-temporal change detection. Adaptation to interactive segmentation with LoRA and adapters.
 
 
 [Details](https://ignf.sharepoint.com/sites/SIMV/SitePages/Stage-stylo-magique-2024.aspx?&OR=Teams-HL&CT=1726836826197&clickparams=eyJBcHBOYW1lIjoiVGVhbXMtRGVza3RvcCIsIkFwcFZlcnNpb24iOiIxNDE1LzI0MDgxNzAwNDIxIiwiSGFzRmVkZXJhdGVkVXNlciI6ZmFsc2V9)
