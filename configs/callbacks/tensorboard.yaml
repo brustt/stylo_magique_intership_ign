@@ -1,0 +1,6 @@
+tensorboard:
+  _target_: src.commons.tensorboard_callback.TensorBoardCallbackLogger
+  # log_rank_zero_only: False  # check for future how it is managed on multi gpu
+  params:
+    engine_metric: ${metrics}
+

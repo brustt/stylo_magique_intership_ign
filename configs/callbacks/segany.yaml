@@ -1,0 +1,4 @@
+defaults:
+  - tensorboard
+  - rich_progress_bar
+  - _self_

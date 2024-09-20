@@ -1,0 +1,5 @@
+defaults:
+  - default
+
+name: levir-cd
+_target_: src.data.datamodule.CDDataModule

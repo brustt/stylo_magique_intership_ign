@@ -1,0 +1,15 @@
+defaults:
+  - network: bisam_concat
+  - optimizer: null
+  - scheduler:  null
+  - loss: null
+  - _self_
+
+instance:
+  _target_: src.models.magic_pen.task.MagicPenModule
+  network: ${model.network} # try to merge instead with @_here_
+  optimizer: ${model.optimizer}
+  scheduler: ${model.scheduler}
+  loss: ${model.loss}
+  compile: ${compile}
+  task_name: ??

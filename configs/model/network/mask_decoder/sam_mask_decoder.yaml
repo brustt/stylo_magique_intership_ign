@@ -1,0 +1,8 @@
+defaults:
+  - transformer: twowaytransformer
+
+_target_: src.models.segment_anything.modeling.mask_decoder_dev.MaskDecoder
+num_multimask_outputs: 3
+transformer_dim: 256
+iou_head_depth: 3
+iou_head_hidden_dim: 256

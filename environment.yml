@@ -1,0 +1,38 @@
+name: mp
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pytorch[build=cuda*]
+  - torchvision=0.15
+  - ca-certificates
+  - openssl
+  - jupyterlab-lsp
+  - jupyterlab[version='>=4.1.0,<5.0.0a0']
+  - jupyter-lsp-python
+  - certifi
+  - gh
+  - pandas
+  - rasterio
+  - matplotlib
+  - scikit-image
+  - black
+  - ipykernel
+  - kornia
+  - tensorboard
+  - seaborn
+  - pytorch-lightning
+  - lightning
+  - torchmetrics
+  - tqdm
+  - hydra-core
+  - rich=13.*
+  - scikit-learn
+  - pip:
+    - deprecated
+    - torch_tb_profiler
+    - pycocotools
+    - opencv-python-headless
+    - hydra-colorlog
+    - rootutils
+    - timm=0.6.12

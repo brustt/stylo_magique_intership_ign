@@ -1,0 +1,10 @@
+name: levir-cd
+_target_: src.data.datamodule.CDDataModule
+
+params:
+  prompt_type: ??
+  n_prompt: ??
+  loc: null
+  batch_size: 2
+  num_worker: 4
+  pin_memory: False

@@ -1,0 +1,7 @@
+_target_: src.models.commons.losses.Losses
+losses: {
+  DICE : {
+    params: {},
+    weight: 1.0
+  }
+}

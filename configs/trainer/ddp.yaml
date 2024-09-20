@@ -1,0 +1,9 @@
+defaults:
+  - default
+
+strategy: ddp # ddp_find_unused_parameters_true # may slower the run : https://lightning.ai/releases/2.0.0/
+
+accelerator: gpu
+devices: 8 # num_gpu
+num_nodes: 1
+sync_batchnorm: True

@@ -1,0 +1,14 @@
+defaults:
+  - image_encoder: ??
+  - prompt_encoder: sam_prompt_encoder
+  - mask_decoder: sam_mask_decoder
+  - _self_
+
+_target_: src.models.magic_pen.bisam_diff.BiSamDiff
+params:
+  sam_ckpt_path: ?? # defined globally in sam_type
+  use_weights:
+    - image_encoder
+  ft_mode: ??
+
+

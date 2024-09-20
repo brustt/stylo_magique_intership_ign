@@ -1,0 +1,10 @@
+# https://www.tensorflow.org/tensorboard/
+
+tensorboard:
+  _target_: lightning.pytorch.loggers.tensorboard.TensorBoardLogger
+  save_dir: "${paths.output_dir}/tensorboard/" # output_dir based configs/hydra/
+  name: null
+  # log_graph: False
+  default_hp_metric: False
+  # prefix: ""
+  # version: ""

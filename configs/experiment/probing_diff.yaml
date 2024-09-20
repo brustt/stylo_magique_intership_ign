@@ -1,0 +1,27 @@
+# @package _global_
+
+defaults:  
+  - override /model: diff
+  - override /model/loss: focal
+  - override /model/optimizer: adam
+  - override /model/scheduler: reduce_plateau
+  - override /data: ??
+  - _self_
+
+tags: ["train"]
+task_name: "train_probing_diff"
+
+data:
+  params:
+    prompt_type: "sample"
+    n_prompt: 1
+    n_shape: 3
+    loc: "center"
+
+model:
+  instance:
+    task_name: ${task_name}
+    network:
+      params:
+        sam_ckpt_path: ${sam_ckpt_path} 
+        ft_mode: "probing"

@@ -1,0 +1,30 @@
+# @package _global_
+
+defaults:  
+  - override /model: concat
+  - override /model/network/image_encoder: vit-b_adapter # not best way w.r.t small type
+  - override /model/loss: focal
+  - override /model/optimizer: adam
+  - override /model/scheduler: reduce_plateau
+  - override /data: ??
+  - _self_
+
+tags: ["train"]
+task_name: "train_adapter_concat"
+
+data:
+  params:
+    prompt_type: "sample"
+    n_prompt: 1
+    n_shape: 3
+    loc: "center"
+
+
+# override vit-b for adapter
+model:
+  instance:
+    task_name: ${task_name}
+    network:
+      params:
+        sam_ckpt_path: ${sam_ckpt_path} 
+        ft_mode: "adapter"

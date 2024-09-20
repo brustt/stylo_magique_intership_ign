@@ -128,6 +128,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# vs code
+.vscode/
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -170,3 +173,22 @@ cython_debug/
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+data/*
+models/*
+
+*.tif
+*.tiff
+
+.virtual_documents/
+
+
+# sim link
+lightning_logs
+tmp/
+checkpoints/* 
+checkpoints
+outputs/
+logs/
+logs
+reports/

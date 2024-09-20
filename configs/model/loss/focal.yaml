@@ -1,0 +1,14 @@
+_target_: src.models.commons.losses.Losses
+losses: {
+  FOCAL : {
+    params: {
+      gamma: 2, # exponent term
+      alpha: 0.25, # weighting factor in range (0,1) to balance positive vs negative examples 
+      reduction: "mean" # mean or sum or None
+    },
+    weight: 1.0
+    }
+}
+
+# https://pytorch.org/vision/main/_modules/torchvision/ops/focal_loss.html#sigmoid_focal_loss
+# https://github.com/clcarwin/focal_loss_pytorch/blob/master/focalloss.py

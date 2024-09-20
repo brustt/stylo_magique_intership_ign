@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - override /data: ??
+  - _self_
+data:
+  params:
+    prompt_type: "grid"
+    n_prompt: 30
+    ds_sample: 4
+

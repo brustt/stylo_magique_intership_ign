@@ -1,0 +1,5 @@
+defaults:
+  - default
+
+name: second
+_target_: src.data.datamodule.CDDataModule

@@ -1,0 +1,25 @@
+name: magic_pen
+channels:
+  - conda-forge
+dependencies:
+  - pandas
+  - matplotlib
+  - scikit-image
+  - ipykernel
+  - kornia
+  - tensorboard
+  - seaborn
+  - torchmetrics
+  - tqdm
+  - lightning
+  - conda-build
+  - hydra-core
+  - rich=13.*
+  - pip:
+    - deprecated
+    - torch_tb_profiler
+    - pycocotools
+    - opencv-python-headless
+    - hydra-colorlog
+    - rootutils
+    - timm=0.6.12

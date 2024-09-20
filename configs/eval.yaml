@@ -1,0 +1,23 @@
+# TODO: 
+defaults:
+  - data: ??
+  - model: ??
+  - sam_type: ??
+  - experiment: ??
+  - metrics: default
+  - callbacks: segany
+  - logger: tensorboard 
+  - trainer: default
+  - paths: default
+  - extras: default
+  - hydra: default
+  - hparams_search: null # config for hyperparameter optimization
+  - optional local: default # optional local config for machine/user specific settings
+  - debug: null # debugging config (enable through command line, e.g. `python train.py debug=default)
+  - _self_
+
+tags: ["dev"]
+# data_dir: ${paths.data_dir}/${dataset.name}/
+compile: True # compile model for faster training with pytorch 2.0
+seed: 12 # seed for random number generators in pytorch, numpy and python.random
+# experiment_name: ${dataset.name}_${model.name}
