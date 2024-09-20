@@ -1,0 +1,5 @@
+_target_: src.models.lestylonet.heads.IouPredHead
+transformer_dim: 256
+iou_head_hidden_dim:  256
+num_mask_tokens: 3
+iou_head_depth: 3

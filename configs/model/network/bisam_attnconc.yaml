@@ -1,6 +1,0 @@
-defaults:
-  - default
-  - _self_
-
-_target_: src.models.magic_pen.bisam_attnconc.BiSamAttn
-embedding_dim: 256

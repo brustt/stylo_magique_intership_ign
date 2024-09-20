@@ -1,6 +1,0 @@
-iou_type_mAP: segm
-type_decision_mAP: ci
-max_detection_thresholds:
-  - 10
-  - 100
-  - 1000

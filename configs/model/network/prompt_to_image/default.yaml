@@ -3,7 +3,7 @@ _target_: src.models.lestylonet.prompt_to_image.PromptToImageFusion
 transformer_dim: 256
 num_multimask_outputs: 3
 transformer:
-  _target_: src.models.lestylonet.prompt_to_image.PromptToImageFusion.TwoWayTransformer
+  _target_: src.models.lestylonet.prompt_to_image.TwoWayTransformer
   depth: 2
   embedding_dim: 256
   mlp_dim: 2048
