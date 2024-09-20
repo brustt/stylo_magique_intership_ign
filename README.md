@@ -1,23 +1,26 @@
 # stage_stylo_magique_2024
 
-Repo du Stage "Stylo Magique" SIMV.
+Internship "Stylo Magique"  (SIMV, IGN).
 
-Equipe : 
-* Martin Dizier
-* Samy Khelifi
-* Nicolas Gonthier
+Segment Anything adaptation to bi-temporal change detection.
 
-### Installation [Deprecated]
 
-* Créer le dossier `models/`.
-* Créer lien symbolique vers `/var/data/dl` dans `~/data`. Mettre à jour `root_data_path` au besoin (cf  `magic_pen/config.py`)
-* Créer dossier de logs `lightnings_logs` à la racine du projet
-* Télécharger les checkpoints SAM dans `models/` (voir ci dessous)
-* Créer environenment conda depuis le fichier d'environnement : 
+
+[Details](https://ignf.sharepoint.com/sites/SIMV/SitePages/Stage-stylo-magique-2024.aspx?&OR=Teams-HL&CT=1726836826197&clickparams=eyJBcHBOYW1lIjoiVGVhbXMtRGVza3RvcCIsIkFwcFZlcnNpb24iOiIxNDE1LzI0MDgxNzAwNDIxIiwiSGFzRmVkZXJhdGVkVXNlciI6ZmFsc2V9)
+
+Team : 
+* Martin Dizier (intern)
+* Samy Khelifi (SIMV)
+* Nicolas Gonthier (SIMV, LASTIG)
+
+
+
+### Installation 
+* Create env :
 `mamba env create -f environment.yml`
-* Activer environement `mp`
-* Créer `.env` à la racine du projet
-* Install packages du repo : `pip install -e .`
+* Activate env `mp`
+* Create `.env` at the project root
+* Install repo packages : `pip install -e .`
 
 
 Checkpoints SAM : 
@@ -25,16 +28,26 @@ Checkpoints SAM :
 * vit_b: [ViT-B SAM model](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth).
 
 ### Run
-En attente...
 
+```
+python src/train.py experiment=<experiment_name> sam_type=small data=levir-cd trainer=gpu compile=False task_name=<name> 
+```
+* experiment_name : Adaptation method with fusion module
+Possible value of experiment_name : see configs/experiment/
 
+* task_name : for directory logs
 ### Set environment variable
 create `.env` file and put project paths :
 
 ```
 PROJECT_PATH = <..>
 DATA_PATH = <..>
+SAM_DATA_DEMO_PATH =<..> # useless let it empty
 CHECKPOINTS_PATH = <..>
+LOGS_PATH = <..>
+PYTHONPATH=<..>
+SLURM_JOB_ID=0 # get JZ job id for log directory name
+HYDRA_FULL_ERROR=1
 ```
 
 python = 3.10
